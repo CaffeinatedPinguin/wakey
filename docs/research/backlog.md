@@ -8,8 +8,8 @@ Lista tematów do zbadania osobnym agentem albo z ekspertem, zanim dojdzie do da
 |---|---|---|---|
 | 0 | Roadmapa etapów 0–9 (plan v0.16 zaginął) | przed etapem 0 | grill-me z właścicielem |
 | 1 | Stack Java, dwie bazy i agent | przed etapem 0 | zamknięte: `docs/decisions/0001-stack.md` |
-| 1.5 | Frontend: biblioteka komponentów, formularze, wykresy | przed etapem 1, wykresy przed 5 | agent |
-| 2 | Pomiary sieciowe w Javie (serwer) i Go (agent) | przed etapem 1 | agent |
+| 1.5 | Frontend: biblioteka komponentów, formularze, wykresy | przed etapem 1, wykresy przed 5 | raport: `docs/research/frontend.md`; czeka na grill-me |
+| 2 | Pomiary sieciowe w Javie (serwer) i Go (agent) | przed etapem 1 | raporty: `docs/research/net-java.md`, `docs/research/net-go.md`; czeka na grill-me |
 | 3 | UI/UX | przed etapem 1, najpóźniej przed 5 | agent (brief: `docs/research/ui-ux-brief.md`) |
 | 4 | Dostawcy w UE (VPS, email, magazyn, watchdog) | przed etapem 2 | agent |
 | 5 | Kanały push i treść powiadomień | przed etapem 2 | agent |

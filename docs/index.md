@@ -10,6 +10,9 @@ English translation (backlog item 13).
 | [decisions/0001-stack.md](decisions/0001-stack.md) | Backend, databases, agent and CI stack | Choosing a library, tool or database feature |
 | [research/backlog.md](research/backlog.md) | Open research topics and when each is needed | Planning the next stage or a research task |
 | [research/ui-ux-brief.md](research/ui-ux-brief.md) | Brief that produced the UI/UX spec | Revisiting UI/UX research scope |
+| [research/frontend.md](research/frontend.md) | Frontend options and minimal dependency set (item 1.5) | Choosing a frontend library or writing own UI code |
+| [research/net-java.md](research/net-java.md) | Server network checks on JDK 25 (item 2a) | Building the server check executor |
+| [research/net-go.md](research/net-go.md) | Go agent checks, distribution and parity (item 2b) | Building the agent or its release |
 
 ## Rules
 
