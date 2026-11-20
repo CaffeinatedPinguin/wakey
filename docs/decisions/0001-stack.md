@@ -1,9 +1,10 @@
 # ADR 0001: Stack backendu, baz i agenta
 
 **Status:** przyjęty
+**Superseded-by:** —
 **Data:** 2026-11-19
 **Zakres:** etap 0 i dalsze
-**Dokumenty:** `research/backlog.md` (v1.1), `docs/product-features.md` (v0.9), `uptime-monitor-plan.md` (v0.16, poza tym katalogiem)
+**Dokumenty:** `docs/research/backlog.md` (v1.1), `docs/specs/product-features.md` (v0.9)
 
 ## Kontekst
 
@@ -108,11 +109,10 @@ Produkt: open source uptime monitor (self-host i chmura w UE), jeden frontend Re
 - Domyślne TTL lease, rozmiary batchy, pula połączeń, limit skali HSQLDB.
 - Klucz tabeli wyników pomiarów (złożony vs BIGINT identity).
 - Windows/macOS agent: później.
-- `uptime-monitor-plan.md` v0.16 nie ma w tym katalogu; ADR powołuje się na niego z nazwy.
+- Roadmapa etapów: plan v0.16 nie istnieje w repo; do odtworzenia (`docs/research/backlog.md`, pkt 0).
 
 ## Referencje
 
-- `research/backlog.md` (v1.1), pkt 1, 1.5, 2.
-- `docs/product-features.md` (v0.9), sekcje 0, 2, 12.
-- `research/ui-ux-spec.md` (UI/UX).
-- `uptime-monitor-plan.md` (v0.16, poza repo).
+- `docs/research/backlog.md` (v1.1), pkt 1, 1.5, 2.
+- `docs/specs/product-features.md` (v0.9), sekcje 0, 2, 12.
+- `docs/specs/ui-ux.md` (UI/UX).

@@ -1,8 +1,8 @@
 # Brief researchu UI/UX: uptime monitor (v1)
 
-Dokument dla osobnego agenta, który robi research UI/UX. Jest samowystarczalny: nie trzeba znać innych dokumentów, choć szczegóły są w `uptime-monitor-plan.md` (v0.16, poza repo) i `docs/product-features.md` (v0.9).
+Dokument dla osobnego agenta, który robi research UI/UX. Jest samowystarczalny: nie trzeba znać innych dokumentów, choć szczegóły są w `docs/specs/product-features.md` (v0.9).
 
-**Wynik researchu:** `research/ui-ux-spec.md`.
+**Wynik researchu:** `docs/specs/ui-ux.md`.
 
 ---
 
@@ -224,4 +224,4 @@ Przestrzenie i plany, rejestracja (zaproszenia, lista oczekujących), sposoby lo
 8. **Lista propozycji zmian funkcji**, jeśli research je wskaże (osobno, z uzasadnieniem).
 
 ## 10. Poza zakresem
-Wybór biblioteki komponentów i technologii frontendu (osobny pkt 1.5 w `research/backlog.md`), kod, branding i nazwa produktu, ceny planów.
+Wybór biblioteki komponentów i technologii frontendu (osobny pkt 1.5 w `docs/research/backlog.md`), kod, branding i nazwa produktu, ceny planów.

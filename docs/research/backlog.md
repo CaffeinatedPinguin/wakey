@@ -1,15 +1,16 @@
 # Research backlog: uptime monitor (v1.1)
 
-Lista tematów do zbadania osobnym agentem albo z ekspertem, zanim dojdzie do danego etapu. Etapy według `uptime-monitor-plan.md` v0.16, sekcja 14 (plan poza tym katalogiem). Kolejność według tego, kiedy wynik jest potrzebny.
+Lista tematów do zbadania osobnym agentem albo z ekspertem, zanim dojdzie do danego etapu. Kolejność według tego, kiedy wynik jest potrzebny. Numery etapów (0–9) pochodzą z planu wdrożenia v0.16, którego nie ma w repo; roadmapa jest do odtworzenia (pkt 0).
 
-**Zmiany v1 → v1.1 (2026-11-19):** pkt 1 zamknięty decyzją w `decisions/0001-stack.md`; dodany pkt 1.5 (frontend); pkt 2 rozszerzony o Go dla agenta.
+**Zmiany v1 → v1.1 (2026-11-19):** pkt 1 zamknięty decyzją w `docs/decisions/0001-stack.md`; dodany pkt 1.5 (frontend); pkt 2 rozszerzony o Go dla agenta.
 
 | # | Temat | Kiedy potrzebny | Kto |
 |---|---|---|---|
-| 1 | Stack Java, dwie bazy i agent | przed etapem 0 | zamknięte: `decisions/0001-stack.md` |
+| 0 | Roadmapa etapów 0–9 (plan v0.16 zaginął) | przed etapem 0 | grill-me z właścicielem |
+| 1 | Stack Java, dwie bazy i agent | przed etapem 0 | zamknięte: `docs/decisions/0001-stack.md` |
 | 1.5 | Frontend: biblioteka komponentów, formularze, wykresy | przed etapem 1, wykresy przed 5 | agent |
 | 2 | Pomiary sieciowe w Javie (serwer) i Go (agent) | przed etapem 1 | agent |
-| 3 | UI/UX | przed etapem 1, najpóźniej przed 5 | agent (brief: `research/ui-ux-brief.md`) |
+| 3 | UI/UX | przed etapem 1, najpóźniej przed 5 | agent (brief: `docs/research/ui-ux-brief.md`) |
 | 4 | Dostawcy w UE (VPS, email, magazyn, watchdog) | przed etapem 2 | agent |
 | 5 | Kanały push i treść powiadomień | przed etapem 2 | agent |
 | 6 | Semantyka heartbeatów i cronów | przed etapem 3 | agent |
@@ -19,11 +20,12 @@ Lista tematów do zbadania osobnym agentem albo z ekspertem, zanim dojdzie do da
 | 10 | Model zagrożeń | przed etapem 8 | agent, potem przegląd człowieka |
 | 11 | Nazwa projektu i znak towarowy | przed etapem 8 | agent |
 | 12 | Prawo: regulamin, prywatność, DPA, kanały spoza UE | w trakcie etapu 8 | prawnik (agent może przygotować pytania) |
+| 13 | Tłumaczenie dokumentacji na angielski | przed publikacją open source | agent |
 
 ---
 
 ## 1. Stack Java, dwie bazy i agent (przed etapem 0) — ZAMKNIĘTE
-Decyzja: `decisions/0001-stack.md`.
+Decyzja: `docs/decisions/0001-stack.md`.
 - Java 25 LTS, najnowszy stabilny Spring Boot 4.x (bramka zgodności na etapie 0), Maven.
 - Spring Data JDBC dla agregatów, `JdbcClient`/`JdbcTemplate` dla batchy i raportów; Liquibase XML.
 - PostgreSQL albo HSQLDB w trybie pliku i jednego procesu; wspólny podzbiór SQL i testy na obu bazach w CI.
@@ -33,7 +35,7 @@ Decyzja: `decisions/0001-stack.md`.
 
 ## 1.5. Frontend: biblioteka komponentów, formularze i wykresy (przed etapem 1, wykresy przed 5)
 Technologie frontendu; projekt UI/UX pozostaje w pkt 3.
-- **Biblioteka komponentów:** dostępność WCAG 2.2 AA, tryb jasny i ciemny, i18n PL/EN, dopasowanie do tokenów z `research/ui-ux-spec.md`.
+- **Biblioteka komponentów:** dostępność WCAG 2.2 AA, tryb jasny i ciemny, i18n PL/EN, dopasowanie do tokenów z `docs/specs/ui-ux.md`.
 - **Formularze ze schematu:** deskryptor typów checków z backendu, progressive disclosure, źródło wartości i „Przywróć”, walidacja inline, zachowanie formularza przy weryfikacji.
 - **Wykresy przy 5 000 checków:** preagregacja po stronie API, lekkie sparkline w liście, wykres faz per lokalizacja, zakresy 24 h–365 dni, zachowanie przy braku danych.
 - **Publiczna status page:** ten sam frontend, osobny shell, snapshot i wiek danych przy awarii API, aktualizacje live (SSE z fallbackiem), stan filtrów w URL.
@@ -57,7 +59,7 @@ Technologie frontendu; projekt UI/UX pozostaje w pkt 3.
 - Wynik: rekomendacja implementacji agenta i lista ryzyk.
 
 ## 3. UI/UX (przed etapem 1, najpóźniej przed 5)
-Osobny brief: `research/ui-ux-brief.md`.
+Osobny brief: `docs/research/ui-ux-brief.md`.
 
 ## 4. Dostawcy w UE (przed etapem 2)
 - VPS: dwóch dostawców z UE z różnymi sieciami (pod przyszły drugi VPS), IPv6, ceny, polityka wobec ruchu monitorującego.

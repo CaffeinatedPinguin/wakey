@@ -1,7 +1,11 @@
-# Uptime monitor: funkcje komponentów i UI (v0.8)
+# Funkcje produktu: uptime monitor (v0.9)
 
-Uzupełnia `uptime-monitor-plan.md` (v0.16). Plan mówi **jak** system jest zbudowany i **kiedy** co wchodzi (sekcja 14), ten dokument mówi **co** każdy komponent robi dla użytkownika.
+Ten dokument mówi **co** każdy komponent robi dla użytkownika. **Jak** jest zbudowany: `docs/decisions/`. **Kiedy** co wchodzi: roadmapa etapów do odtworzenia (`docs/research/backlog.md`, pkt 0).
 Oznaczenia: **MVP**, **v1**, **później**.
+
+**Zmiany względem v0.8:**
+- **Agent:** Go, Linux + Docker w MVP, bez automatycznych aktualizacji; podpisane wydania i powiadomienie o nowej wersji zostają.
+- **Stack:** decyzje backendu, baz i agenta w `docs/decisions/0001-stack.md`; frontend bez zmian (React + Vite, szczegóły w `docs/research/backlog.md` pkt 1.5).
 
 **Zmiany względem v0.7:**
 - **Logowanie:** self-host dowolne OIDC i lokalny admin; chmura GitHub, Google, link w emailu, opcjonalnie własne OIDC przestrzeni.
@@ -12,6 +16,26 @@ Oznaczenia: **MVP**, **v1**, **później**.
 - **Otwarte:** kanały spoza UE (po konsultacji prawnej), wygląd `UNKNOWN` na status page (research UI/UX).
 
 ---
+
+## Contents
+
+- [0. Zasady przekrojowe](#0-zasady-przekrojowe)
+- [1. Checki](#1-checki)
+- [2. Agent](#2-agent)
+- [2a. Weryfikacja własności celów](#2a-weryfikacja-własności-celów)
+- [3. Alerty i powiadomienia](#3-alerty-i-powiadomienia)
+- [4. Incydenty i planned work](#4-incydenty-i-planned-work)
+- [5. Status page](#5-status-page)
+- [6. Przegląd (dashboard)](#6-przegląd-dashboard)
+- [7. Szczegóły checka](#7-szczegóły-checka)
+- [8. Użytkownicy, role, dostęp](#8-użytkownicy-role-dostęp)
+- [9. API, plik konfiguracyjny i różnice](#9-api-plik-konfiguracyjny-i-różnice)
+- [10. Raporty](#10-raporty)
+- [11. Ustawienia przestrzeni](#11-ustawienia-przestrzeni)
+- [12. Administracja instancji](#12-administracja-instancji)
+- [13. Decyzje (podjęte)](#13-decyzje-podjęte)
+- [14. Otwarte](#14-otwarte)
+
 
 ## 0. Zasady przekrojowe
 
@@ -93,7 +117,8 @@ Nazwa, typ, cel, interwał, timeout, ponowienia (liczba i opóźnienie, w granic
 
 ## 2. Agent
 
-Szczegóły w planie, sekcja 5. Zasada naczelna: **agent ma jak najmniejsze pole manewru.**
+Zasada naczelna: **agent ma jak najmniejsze pole manewru.**
+Implementacja: **Go** (statyczna binarka). MVP: **Linux + Docker**, aktualizacje ręczne (bez auto-update).
 
 | Funkcja | Etap |
 |---|---|
@@ -110,7 +135,8 @@ Szczegóły w planie, sekcja 5. Zasada naczelna: **agent ma jak najmniejsze pole
 | Monitoring agenta: offline (domyślnie 3 × najkrótszy interwał, nie mniej niż 2 min) i opóźnienie wykonania | MVP |
 | Diagnostyka w UI: wersja, ostatni kontakt, ostatni błąd, stan łączenia (połączony / ponawia / uśpiony), bufor, cele odrzucone przez lokalną listę, odsetek błędów z kategorią „lokalizacja” | MVP |
 | **Pełna funkcjonalność:** checki z agenta mają te same wykresy, uptime, alerty i miejsce na status page co checki z serwera | MVP |
-| Powiadomienie o nowej wersji, podpisane wydania | MVP |
+| Systemy: Linux (binarka) i Docker w MVP; Windows i macOS później | MVP |
+| Powiadomienie o nowej wersji, podpisane wydania, aktualizacja ręczna (bez auto-update) | MVP |
 | Działa bez uprawnień administratora, bez otwartych portów i bez powłoki dla serwera | MVP |
 | mTLS | v1 |
 
@@ -392,8 +418,8 @@ Część tego samego frontendu co panel. Dane ze snapshotu w pamięci API, z kop
 4. UI i plik równorzędne: edycja w UI, eksport do pliku, wykrywanie różnic widoczne w UI i przy wdrożeniu.
 5. Wdrożenie z różnicą: bez konfliktu wgrywa się samo, a konflikt czeka na decyzję. Tryb „plik zawsze wygrywa” jest w konfiguracji.
 6. Okno offline agenta konfigurowalne, domyślnie 3 × najkrótszy interwał, nie mniej niż 2 min.
-7. Lekcje z cudzych błędów (flapping, martwy kanał, limit powiadomień, opóźnienie wykonania, stronicowanie) wchodzą w MVP, w etapach według planu (sekcja 14).
-8. Lekcje z post-mortemów (kontrola wejścia, okres rozruchu, buforowanie pingów, limity na wejściu, masowe wyciszenie, meta-alert, fałszywe alarmy, porzucone checki, oś z hierarchią, pełny self-host) wchodzą w MVP, w etapach według planu (sekcja 14).
+7. Lekcje z cudzych błędów (flapping, martwy kanał, limit powiadomień, opóźnienie wykonania, stronicowanie) wchodzą w MVP, w etapach według roadmapy.
+8. Lekcje z post-mortemów (kontrola wejścia, okres rozruchu, buforowanie pingów, limity na wejściu, masowe wyciszenie, meta-alert, fałszywe alarmy, porzucone checki, oś z hierarchią, pełny self-host) wchodzą w MVP, w etapach według roadmapy.
 9. **Żadnych nieograniczonych ponowień.** Jedna wspólna polityka. Wyjątek: ponowne łączenie (agent → API, API → baza) przechodzi po limicie w stan „uśpiony” z próbą co 5 minut i alertem.
 10. **W chmurze każdy cel musi być zweryfikowany** (domena, IP, email). Tryb „niezweryfikowane z ograniczeniami” można odblokować dla instancji, planu albo przestrzeni. Checki przez agenta nie wymagają weryfikacji.
 11. **Agent albo lokalizacja za firewallem nie daje fali `DOWN`:** kategoria błędu, wzorzec zbiorowego błędu, „do sprawdzenia konfiguracji”.
@@ -405,7 +431,8 @@ Część tego samego frontendu co panel. Dane ze snapshotu w pamięci API, z kop
 17. **Wersja schematu** w pliku konfiguracyjnym i eksporcie przestrzeni, z automatyczną migracją starszej wersji.
 18. **Klucz szyfrowania sekretów** z osobną kopią poza VPS i rotacją. Test odtworzenia sprawdza odszyfrowanie.
 19. Częstotliwość zrzutu bazy ustala operator.
+20. **Stack:** Java 25 LTS, Spring Boot 4.x, Maven, Spring Data JDBC + `JdbcClient`, Liquibase XML, PostgreSQL/HSQLDB (plik, jeden proces). **Agent:** Go, Linux + Docker w MVP, aktualizacje ręczne. Szczegóły: `docs/decisions/0001-stack.md`.
 
 ## 14. Otwarte
 1. Kanały powiadomień spoza UE w chmurze: po konsultacji prawnej.
-2. Wygląd `UNKNOWN` z naszej winy na status page: osobny research UI/UX (brief: `uptime-monitor-brief-ui-ux.md`).
+2. Wygląd `UNKNOWN` z naszej winy na status page: osobny research UI/UX (brief: `docs/research/ui-ux-brief.md`).

@@ -1,6 +1,6 @@
 # Specyfikacja UI/UX: uptime monitor (v1.1)
 
-**Wersja:** 1.1 — połączenie `research/ui-ux-brief.md`, specyfikacji UI/UX v1.0 i raportu „Research UX/UI Monitora Dostępności” (PDF)  
+**Wersja:** 1.1 — połączenie `docs/research/ui-ux-brief.md`, specyfikacji UI/UX v1.0 i raportu „Research UX/UI Monitora Dostępności” (PDF)  
 **Stan:** 19 listopada 2026 r.  
 **Zakres:** architektura informacji, nawigacja, ekrany, przepływy, komponenty, tokeny wizualne, język, powiadomienia, decyzje UX dla MVP z miejscem na v1.
 
@@ -9,6 +9,28 @@
 To specyfikacja zachowania, nie projekt graficzny ani specyfikacja backendu. Przed implementacją wizualną trzeba przygotować makiety kluczowych ekranów i podjąć decyzje z sekcji 12.
 
 ---
+
+## Contents
+
+- [0. Jak czytać ten dokument](#0-jak-czytać-ten-dokument)
+- [1. Najważniejsze decyzje UX](#1-najważniejsze-decyzje-ux)
+- [2. Model stanów i oznaczeń](#2-model-stanów-i-oznaczeń)
+- [3. Architektura informacji i nawigacja](#3-architektura-informacji-i-nawigacja)
+- [4. Specyfikacja ekranów](#4-specyfikacja-ekranów)
+- [5. Kluczowe przepływy](#5-kluczowe-przepływy)
+- [6. Wspólne komponenty](#6-wspólne-komponenty)
+- [7. Konfiguracja i GitOps w UI](#7-konfiguracja-i-gitops-w-ui)
+- [8. Tokeny wizualne i dostępność](#8-tokeny-wizualne-i-dostępność)
+- [9. Język PL/EN i powiadomienia](#9-język-plen-i-powiadomienia)
+- [10. Research konkurencji — wnioski](#10-research-konkurencji--wnioski)
+- [11. Odpowiedzi na pytania z briefu (sekcja 8)](#11-odpowiedzi-na-pytania-z-briefu-sekcja-8)
+- [12. Propozycje zmian i decyzje do podjęcia](#12-propozycje-zmian-i-decyzje-do-podjęcia)
+- [13. Priorytety projektowania](#13-priorytety-projektowania)
+- [14. Skrót decyzji dla implementacji](#14-skrót-decyzji-dla-implementacji)
+- [15. Rejestr zmian v1.0 → v1.1](#15-rejestr-zmian-v10--v11)
+- [16. Źródła](#16-źródła)
+- [17. Końcowa rekomendacja](#17-końcowa-rekomendacja)
+
 
 # 0. Jak czytać ten dokument
 
@@ -834,7 +856,7 @@ Problemy zgłaszane przez pojedynczych użytkowników to sygnały, nie uniwersal
 
 # 16. Źródła
 
-**Brief:** `research/ui-ux-brief.md` — sekcje 3–10; szczegóły w `uptime-monitor-plan.md` (v0.16, poza repo) i `docs/product-features.md` (v0.9).
+**Brief:** `docs/research/ui-ux-brief.md` — sekcje 3–10; szczegóły w `docs/specs/product-features.md` (v0.9).
 
 **Produkty i dokumentacja**
 - Uptime Kuma — https://github.com/louislam/uptime-kuma · issues #6181, #6361, #7079, #6813, #2889, #7616

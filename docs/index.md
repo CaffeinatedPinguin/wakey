@@ -1,0 +1,18 @@
+# wakey docs index
+
+One line per document: `file — what it owns — read when`. Documents are in Polish until the
+English translation (backlog item 13).
+
+| File | Owns | Read when |
+|---|---|---|
+| [specs/product-features.md](specs/product-features.md) | What the product does: components, roles, MVP/v1/later | Any product or feature work |
+| [specs/ui-ux.md](specs/ui-ux.md) | UI behaviour, screens, components and design tokens | Frontend or UX work |
+| [decisions/0001-stack.md](decisions/0001-stack.md) | Backend, databases, agent and CI stack | Choosing a library, tool or database feature |
+| [research/backlog.md](research/backlog.md) | Open research topics and when each is needed | Planning the next stage or a research task |
+| [research/ui-ux-brief.md](research/ui-ux-brief.md) | Brief that produced the UI/UX spec | Revisiting UI/UX research scope |
+
+## Rules
+
+- One line per file; no nested lists, no status.
+- `research/` holds research briefs and reports; they inform decisions but are not decisions.
+- Every link resolves in a fresh clone.
