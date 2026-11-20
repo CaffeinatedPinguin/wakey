@@ -15,13 +15,13 @@ Produkt: open source uptime monitor (self-host i chmura w UE), jeden frontend Re
 ### Backend
 
 - Java 25 LTS.
-- Spring Boot w najnowszym stabilnym 4.x. Dokładna wersja wybrana na etapie 0 po sprawdzeniu zgodności springdoc, Liquibase, Testcontainers i Spring Data JDBC. Jeśli brak zgodności, ostatnia zgodna wersja 4.x; nie zmieniamy stosu.
+- Spring Boot w najnowszym stabilnym 4.x. Dokładna wersja wybrana na etapie 0 po sprawdzeniu zgodności springdoc, Liquibase, Testcontainers i 
 - Maven (Maven Wrapper). Multi-module: parent + `server` (+ wspólny moduł serwerowy, jeśli potrzebny). Agent to osobny moduł Go poza Mavenem; UI osobno.
 - Jedna aplikacja Spring Boot z rolami włączanymi konfiguracją (`app.roles`), warunkowe beany. Self-host domyślnie wszystkie role w jednym procesie; chmura może je rozdzielić.
 
 ### Baza i migracje
 
-- Spring Data JDBC dla agregatów; `JdbcClient`/`JdbcTemplate` dla batchy, raportów i zapytań o dużej objętości. Bez JPA/Hibernate.
+- Spring Data  dla agregatów; `JdbcClient`/`JdbcTemplate` dla batchy, raportów i zapytań o dużej objętości. Bez JPA/Hibernate.
 - Encje konfiguracyjne i domenowe: UUID generowane w aplikacji. Spring Data JDBC wymaga `Persistable`/`@Version` do rozpoznania nowej encji, inaczej `save()` wykona UPDATE. Do potwierdzenia testem.
 - Wyniki pomiarów: klucz złożony (`check_id`, `ts`) albo BIGINT identity; decyzja w projekcie schematu, testowana na obu bazach.
 - Liquibase XML, forward-only. Zmiany `dbms`-specyficzne niedozwolone. Przed migracją zrzut bazy zgodnie z funkcjami.
