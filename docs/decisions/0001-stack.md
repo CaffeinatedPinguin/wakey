@@ -1,7 +1,7 @@
 # ADR 0001: Stack backendu, baz i agenta
 
-**Status:** przyjęty
-**Superseded-by:** —
+**Status:** superseded
+**Superseded-by:** [0002-stack.md](0002-stack.md) (2026-11-21)
 **Data:** 2026-11-19
 **Zakres:** etap 0 i dalsze
 **Dokumenty:** `docs/research/backlog.md` (v1.1), `docs/specs/product-features.md` (v0.9)

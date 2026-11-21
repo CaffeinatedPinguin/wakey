@@ -118,7 +118,7 @@ Nazwa, typ, cel, interwał, timeout, ponowienia (liczba i opóźnienie, w granic
 ## 2. Agent
 
 Zasada naczelna: **agent ma jak najmniejsze pole manewru.**
-Implementacja: **Go** (statyczna binarka). MVP: **Linux + Docker**, aktualizacje ręczne (bez auto-update).
+Implementacja: **Go** (statyczna binarka, osobne repozytorium). MVP: **Linux + Docker**, aktualizacje ręczne (bez auto-update).
 
 | Funkcja | Etap |
 |---|---|
@@ -136,7 +136,8 @@ Implementacja: **Go** (statyczna binarka). MVP: **Linux + Docker**, aktualizacje
 | Diagnostyka w UI: wersja, ostatni kontakt, ostatni błąd, stan łączenia (połączony / ponawia / uśpiony), bufor, cele odrzucone przez lokalną listę, odsetek błędów z kategorią „lokalizacja” | MVP |
 | **Pełna funkcjonalność:** checki z agenta mają te same wykresy, uptime, alerty i miejsce na status page co checki z serwera | MVP |
 | Systemy: Linux (binarka) i Docker w MVP; Windows i macOS później | MVP |
-| Powiadomienie o nowej wersji, podpisane wydania, aktualizacja ręczna (bez auto-update) | MVP |
+| Powiadomienie o nowej wersji, aktualizacja ręczna (bez auto-update) | MVP |
+| Podpisane wydania | później (ADR 0002) |
 | Działa bez uprawnień administratora, bez otwartych portów i bez powłoki dla serwera | MVP |
 | mTLS | v1 |
 
@@ -431,7 +432,7 @@ Część tego samego frontendu co panel. Dane ze snapshotu w pamięci API, z kop
 17. **Wersja schematu** w pliku konfiguracyjnym i eksporcie przestrzeni, z automatyczną migracją starszej wersji.
 18. **Klucz szyfrowania sekretów** z osobną kopią poza VPS i rotacją. Test odtworzenia sprawdza odszyfrowanie.
 19. Częstotliwość zrzutu bazy ustala operator.
-20. **Stack:** Java 25 LTS, Spring Boot 4.x, Maven, Spring Data JDBC + `JdbcClient`, Liquibase XML, PostgreSQL/HSQLDB (plik, jeden proces). **Agent:** Go, Linux + Docker w MVP, aktualizacje ręczne. Szczegóły: `docs/decisions/0001-stack.md`.
+20. **Stack:** Java 25 LTS, Spring Boot 4.x MVC na wątkach wirtualnych, checki przez Reactor Netty, Maven, Spring Data JDBC + `JdbcClient`, Liquibase XML, PostgreSQL/HSQLDB (plik, jeden proces). **Agent:** Go w osobnym repozytorium, Linux + Docker w MVP, aktualizacje ręczne, bez podpisów w MVP. **Frontend:** Mantine, Chart.js, TanStack. Szczegóły: `docs/decisions/0002-stack.md`, `0003-network-checks.md`, `0004-frontend.md`.
 
 ## 14. Otwarte
 1. Kanały powiadomień spoza UE w chmurze: po konsultacji prawnej.
