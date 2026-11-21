@@ -94,6 +94,7 @@ Osobny brief: `docs/research/ui-ux-brief.md`.
 - Wynik: lista zagrożeń z obecnym zabezpieczeniem i lukami.
 
 ## 11. Nazwa projektu i znak towarowy (przed etapem 8)
+- Do tego czasu „wakey” to nazwa robocza w kodzie (ADR 0002). Przy zmianie nazwy trzeba zmienić pakiet i `groupId` `dev.wakey`, prefiks `wakey.*`/`WAKEY_*`, nazwę obrazu i ewentualnie prefiksy tokenów.
 - Wolna nazwa: GitHub, rejestry pakietów, domena, kolizje z istniejącymi narzędziami monitoringu.
 - Wstępne sprawdzenie w bazach znaków towarowych UE.
 

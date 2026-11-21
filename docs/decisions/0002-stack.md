@@ -20,7 +20,7 @@ Zasady właściciela, które rozstrzygały wybory:
 ### Serwer
 - Java 25 LTS, Spring Boot 4.x (najnowsza wspierana linia OSS; dokładna wersja po bramce zgodności na etapie 0), Spring MVC na Tomcacie z wątkami wirtualnymi. Bez WebFluxa.
 - Checki wykonuje asynchroniczny klient Reactor Netty w warstwie executora; szczegóły w [0003](0003-network-checks.md). Reactor nie wychodzi poza tę warstwę.
-- Jedna aplikacja z rolami włączanymi konfiguracją (`app.roles`): API, executor, alerty, agregacje. Moduły komunikują się przez interfejsy i bazę, bez współdzielonego stanu w pamięci, tak aby każdą rolę dało się uruchomić jako osobny proces samą konfiguracją. Szczegóły modułów, portów i komunikacji między rolami: [0005-server-architecture.md](0005-server-architecture.md).
+- Jedna aplikacja z rolami włączanymi konfiguracją (`wakey.roles`): API, executor, alerty, agregacje. Moduły komunikują się przez interfejsy i bazę, bez współdzielonego stanu w pamięci, tak aby każdą rolę dało się uruchomić jako osobny proces samą konfiguracją. Szczegóły modułów, portów i komunikacji między rolami: [0005-server-architecture.md](0005-server-architecture.md).
 - Build: Maven + Maven Wrapper.
 - Obserwowalność: Spring Boot Actuator (health dla Dockera, tylko jawnie wystawione endpointy) i Micrometer jako jedyne API metryk od etapu 0. Eksport do OTLP (dodatkowa zależność i konfiguracja, bez zmian w kodzie) w etapie 8 ([roadmap.md](../specs/roadmap.md)).
 
@@ -43,6 +43,15 @@ Zasady właściciela, które rozstrzygały wybory:
 - Go (stdlib + `golang.org/x/net`), statyczna binarka, Linux + Docker w MVP, aktualizacje ręczne.
 - Osobne repozytorium agenta; kontrakt JSON i wspólne wektory testowe z serwerem.
 
+### Licencja i nazewnictwo
+- Licencja **AGPL-3.0-or-later** (SPDX), jak OpenStatus i Checkmate. Chroni chmurę w UE przed gotowym klonem SaaS, a self-hosterom niczego nie odbiera. Kontrybucje bez DCO i CLA: obowiązuje zasada inbound = outbound z regulaminu GitHuba (sekcja D.6). Konkurencja: Uptime Kuma MIT, Gatus Apache-2.0, Healthchecks BSD-3.
+- Nazwa robocza „wakey” wszędzie od etapu 0:
+  - główny pakiet Javy i `groupId`: `dev.wakey`;
+  - konfiguracja: `wakey.*`, w zmiennych środowiska `WAKEY_*`;
+  - obraz: `ghcr.io/<owner>/wakey`;
+  - tokeny: `wk_` (API), `wka_` (agent).
+- Jeśli sprawdzenie nazwy i znaku towarowego w etapie 8 (backlog pkt 11) wypadnie źle, te elementy zmienia jeden mechaniczny refaktor. Repo jest wtedy jeszcze prywatne, więc nie ma użytkowników do migracji.
+
 ### Dostarczanie
 - Self-host: obraz Docker + docker compose (HSQLDB w pliku domyślnie, profil PostgreSQL). Bez Kubernetesa i Helma.
 - Wydania bez podpisów w MVP.
@@ -54,7 +63,8 @@ Zasady właściciela, które rozstrzygały wybory:
 - Dwa toolchainy (Java/Maven i Go) w dwóch repozytoriach; zmiana kontraktu agenta wymaga dwóch PR.
 - Dwa modele wykonania w jednym procesie (wątki wirtualne i pętla Netty); callbacki klienta checków nie mogą blokować.
 - HSQLDB: limit pliku `.data` 64 GB domyślnie, brak partycjonowania; retencja i kubełki muszą to uwzględnić.
-- Liquibase na FSL: przy zmianie licencji albo warunków plan B to Flyway OSS.
+- Liquibase na FSL: przy zmianie licencji albo warunków plan B to Flyway OSS. Jako biblioteka jest zgodny z AGPL wakey; Spring, Netty i pozostałe zależności Apache-2.0 też.
+- AGPL może ograniczyć adopcję w firmach, które jej zakazują. To świadomy koszt ochrony chmury. Bez CLA nie będzie licencji komercyjnej (dual licensing), a zmiana licencji wymaga zgody autorów kontrybucji.
 - Brak podpisów wydań w MVP zmienia [product-features.md](../specs/product-features.md) (agent).
 - Do zrobienia na etapie 0: bramka zgodności wersji (Boot 4.x, Liquibase, Testcontainers, Spring Data JDBC, Reactor Netty), spike executora z 5 000 checków, testy lease na obu bazach.
 - Otwarte: zawartość `maven-ci.yml` (kierunek w [github-ci.md](../research/github-ci.md)), kopie zapasowe i odtwarzanie, szczegóły agenta Go (format konfiguracji, bufor) — do ustalenia.

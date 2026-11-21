@@ -36,6 +36,7 @@ Raport (nie decyzja) przed założeniem repozytorium na GitHubie i etapem 0 ([ro
 
 - **Repo prywatne na początku, publiczne od publikacji w etapie 9.** Konsekwencja: na prywatnym repo w darmowym planie rulesety, code scanning i push protection nie działają (skill `github-new-repo`). Do czasu upublicznienia ochronę `main` zapewnia dyscyplina PR i `ci-required` w CI, a nie ruleset. Ponowne `apply.sh` po upublicznieniu włącza resztę.
 - **Kanban na GitHub Projects** z polem statusu. Baseline zostawia tylko 4 etykiety (`bug`, `enhancement`, `needs-info`, `dependencies`), więc tablica nie opiera się na etykietach. Etapy roadmapy jako kamienie milowe albo pole „Etap”, do wyboru przy zakładaniu tablicy.
+- **Licencja AGPL-3.0-or-later** (ADR 0002). Krok 1 z `new-repository.md` używa `--license mit`, więc dla wakey trzeba `--license agpl-3.0`.
 - **CI: wariant (b), nowy `maven-ci.yml` w `templates`.** Workflow wielokrotnego użytku dla Mavena, z obsługą frontendu w pnpm w tym samym repo. Wymaga:
   - opisu wejść i wyjść w `templates/docs/workflows.md`;
   - wpisu w `ACTION_PATTERNS`;

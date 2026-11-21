@@ -24,7 +24,8 @@ Domain: ../../gitlab/ai/domains/backend/AGENTS.md and ../../gitlab/ai/domains/fr
 ## Local rules
 
 - Dependencies: use a proven, long-supported library with a large community for anything non-trivial or security-sensitive; write trivial things yourself. Every new dependency needs the owner's approval.
-- Keep server modules separable: roles (`app.roles`) talk only through the queue port and the database, never shared in-memory state (ADR 0005).
+- Keep server modules separable: roles (`wakey.roles`) talk only through the queue port and the database, never shared in-memory state (ADR 0005).
+- Names: root package and `groupId` `dev.wakey`, configuration prefix `wakey.*` (`WAKEY_*`), license AGPL-3.0-or-later (ADR 0002).
 - A rule from an ADR that can be checked statically becomes an ArchUnit or lint rule, not a review comment.
 - Docs stay in Polish until backlog item 13 (English translation); new docs may be in Polish.
 - `docs/research/` is a local doc type for research briefs and reports. A report recommends; only an ADR in `docs/decisions/` decides.
