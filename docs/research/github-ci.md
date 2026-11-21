@@ -32,10 +32,13 @@ Raport (nie decyzja) przed założeniem repozytorium na GitHubie i etapem 0 ([ro
 5. **Dependabot.** Do włączenia ekosystemy `maven`, `npm` (pnpm), `docker` i `github-actions`, każdy z grupą `security`, zgodnie z szablonem.
 6. **Agent Go** (osobne repo, [0002](../decisions/0002-stack.md)): ogólny `ci.yml` z `setup-go` i `scripts/ci.sh`, bez nowych workflowów.
 
-## Do decyzji przy zakładaniu repo
+## Ustalone (2026-11-21, zapisane w [0002](../decisions/0002-stack.md))
 
-- **Publiczne od startu czy prywatne do etapu 9?** Na prywatnym repo w darmowym planie rulesety, code scanning i push protection nie działają (skill `github-new-repo`). Roadmapa przewiduje publikację open source w etapie 9, po nazwie, prawie i tłumaczeniu dokumentacji.
-- **Kanban:** baseline zostawia tylko 4 etykiety (`bug`, `enhancement`, `needs-info`, `dependencies`), więc tablica nie powinna opierać się na etykietach. Naturalny wybór to GitHub Projects z polem statusu, a etapy roadmapy jako kamienie milowe albo pole „Etap”.
+- **Repo prywatne na początku, publiczne od publikacji w etapie 9.** Konsekwencja: na prywatnym repo w darmowym planie rulesety, code scanning i push protection nie działają (skill `github-new-repo`). Do czasu upublicznienia ochronę `main` zapewnia dyscyplina PR i `ci-required` w CI, a nie ruleset. Ponowne `apply.sh` po upublicznieniu włącza resztę.
+- **Kanban na GitHub Projects** z polem statusu. Baseline zostawia tylko 4 etykiety (`bug`, `enhancement`, `needs-info`, `dependencies`), więc tablica nie opiera się na etykietach. Etapy roadmapy jako kamienie milowe albo pole „Etap”, do wyboru przy zakładaniu tablicy.
+
+## Nadal do decyzji
+
 - Wariant (a) czy (b) z punktu 1.
 
 ## Źródła
