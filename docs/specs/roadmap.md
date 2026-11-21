@@ -30,6 +30,7 @@ Ten dokument mówi, **w jakiej kolejności** powstają funkcje z [product-featur
 
 - Funkcja z oznaczeniem MVP w spec, której nie ma w tabeli, trafia do etapu swojej sekcji spec: checki do 1, alerty do 2, incydenty do 4, status page do 5, agent do 6, plik do 7, administracja chmury do 9.
 - Element fundamentu z etapów 0–1 może mieć ekran później. Zapis do audytu działa od etapu 1, a przeglądarka dziennika może przyjść później.
+- Zasady bezpieczeństwa z [0006-api-contract.md](../decisions/0006-api-contract.md) (sekcja „Zasady bezpieczeństwa z incydentów konkurencji”) wchodzą w etapie podanym w ich tabeli: testy endpointów i ciasteczka w 0, sekrety tylko do zapisu, schematy celu i wspólna brama ruchu wychodzącego w 1, szablony powiadomień w 2.
 - Etap jest skończony, gdy jego zakres działa na obu bazach i przechodzi wszystkie sprawdzenia statyczne.
 - v1 i „później” w spec zaczynają się po etapie 9.
 

@@ -151,6 +151,22 @@ Wzorzec jak w `chaos-view/apps/velma`:
 - axios sam przepisuje ciasteczko `XSRF-TOKEN` do nagłówka `X-XSRF-TOKEN` (domyślne nazwy Springa). Nie ma Bearer ani `oidc-client-ts`.
 - Daty obsługuje **Day.js** z wbudowanymi wtyczkami `utc` i `timezone` (strefa IANA przestrzeni).
 
+### Zasady bezpieczeństwa z incydentów konkurencji
+Decyzja z 2026-11-22. Każda zasada odpowiada na znany incydent w podobnym narzędziu. W nawiasie podany jest etap, w którym musi działać ([roadmap.md](../specs/roadmap.md)).
+
+| Zasada | Etap | Na jaki incydent odpowiada |
+|---|---|---|
+| **Test wszystkich endpointów:** test wylicza endpointy z kontraktów OpenAPI i sprawdza, że bez uwierzytelnienia każdy zwraca 401. Wyjątek to jawna lista publicznych (`/ping`, `/public/v1`). Nowy endpoint bez reguły dostępu wywala build. | 0 | Uptime Kuma: endpoint z danymi o pingach bez sprawdzenia uprawnień ujawniał prywatne monitory ([CVE-2026-32230](https://advisories.gitlab.com/npm/uptime-kuma/CVE-2026-32230/)) |
+| **Test flag ciasteczka sesji:** `HttpOnly`, `Secure` i `SameSite=Lax` są sprawdzane testem, nie tylko konfiguracją. | 0 | Gatus: ciasteczko sesji OIDC bez `Secure` ([GHSA-wwqf-6p54-3cfq](https://cve.circl.lu/vuln/ghsa-wwqf-6p54-3cfq)) |
+| **Sesja nie przeżywa zmiany uprawnień:** <br>– maksymalny czas życia sesji, konfigurowalny, domyślnie 12 h, po którym następuje ponowne logowanie i ponowne sprawdzenie grupy w IdP; <br>– zmiana roli albo usunięcie z przestrzeni unieważnia sesje tego użytkownika (Spring Session JDBC, wyszukiwanie po użytkowniku). | 0–1 | Uptime Kuma: zmiana hasła nie unieważniała sesji ([CVE-2023-49804](https://advisories.gitlab.com/npm/uptime-kuma/CVE-2023-49804/)). U nas usunięcie z grupy w IdP zadziała dopiero przy kolejnym logowaniu. |
+| **Sekrety w API tylko do zapisu:** odpowiedź pokazuje „ustawione” albo maskę, nigdy wartość (hasła i tokeny kanałów, klucze). Ustawienia instancji widzi tylko Admin. | 1 | Checkmate: zwykły użytkownik czytał sekrety aplikacji przez `/api/v1/settings` ([CVE-2025-48024](https://nvd.nist.gov/vuln/detail/CVE-2025-48024)) |
+| **Zamknięty zestaw schematów celu:** <br>– checki przyjmują tylko `http`/`https` oraz jawne cele TCP i DNS; <br>– inne schematy (np. `file:`) są odrzucane przy zapisie z błędem walidacji. | 1 | Uptime Kuma: `file://` w monitorze „real browser” czytał lokalne pliki ([CVE-2024-56331](https://advisories.gitlab.com/npm/uptime-kuma/CVE-2024-56331/)) |
+| **Jedna brama ruchu wychodzącego:** checki, webhooki, Pushover, email przez API i wywołania weryfikacji celów przechodzą przez tę samą politykę i przypięcie IP ([0003](0003-network-checks.md)). Webhook nie jest obejściem ochrony przed SSRF. | 1–2 | SSRF przez webhooki, np. [Grafana OnCall CVE-2024-5526](https://grafana.com/security/security-advisories/cve-2024-5526/) |
+| **Szablony powiadomień bez logiki:** <br>– tylko podstawianie nazwanych pól (`{{check.name}}`) z escapowaniem zależnym od formatu (JSON, tekst); <br>– bez pętli, filtrów, include'ów i silnika szablonów z dostępem do plików lub kodu; <br>– trywialny, własny kod z testami złośliwych wejść. | 2 | Uptime Kuma: wstrzyknięcie kodu w szablonach powiadomień, które pozwalało czytać pliki ([GHSA-vffh-c9pq-4crh](https://advisories.gitlab.com/npm/uptime-kuma/GHSA-vffh-c9pq-4crh/)), z niepełną pierwszą poprawką ([CVE-2026-33130](https://www.tenable.com/cve/CVE-2026-33130)) |
+| **Bez wtyczek ładowanych w czasie działania.** Nowy typ checka albo kanału to kod w repo, przechodzący przez review i CI. | stale | Uptime Kuma: wtyczka z RCE i path traversal w nazwie repozytorium wtyczek ([CVE-2023-36821](https://advisories.gitlab.com/npm/uptime-kuma/CVE-2023-36821/), [CVE-2023-36822](https://advisories.gitlab.com/npm/uptime-kuma/CVE-2023-36822/)) |
+
+Pełny model zagrożeń to backlog pkt 10, w etapie 8. Te zasady są jego punktem startu.
+
 ## Consequences
 
 - Nowe zależności serwera: springdoc-openapi, Bean Validation (`spring-boot-starter-validation`), `spring-boot-starter-security`, `spring-boot-starter-oauth2-client`, `spring-session-jdbc`. W bramce zgodności na etapie 0 trzeba sprawdzić linię springdoc dla Boot 4, schemat Spring Session JDBC dla HSQLDB i wersjonowanie API w Spring Framework 7.

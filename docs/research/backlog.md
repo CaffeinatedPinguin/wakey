@@ -88,6 +88,7 @@ Osobny brief: `docs/research/ui-ux-brief.md`.
 - Mapowanie pojęć przy imporcie z Kuma (importer w v1).
 
 ## 10. Model zagrożeń (przed etapem 8)
+- Punkt startu: zasady z incydentów konkurencji w `docs/decisions/0006-api-contract.md` (sekcja „Zasady bezpieczeństwa z incydentów konkurencji”).
 - Agent (przejęty serwer, przejęty agent), SSRF i brama ruchu wychodzącego, weryfikacja celów, izolacja przestrzeni, link w emailu, zgłoszenia nadużyć.
 - Lista kontrolna według uznanego standardu weryfikacji bezpieczeństwa aplikacji.
 - Wynik: lista zagrożeń z obecnym zabezpieczeniem i lukami.
