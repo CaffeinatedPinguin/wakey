@@ -5,6 +5,7 @@ Oznaczenia: **MVP**, **v1**, **później**.
 
 **Zmiany względem v0.9 (2026-11-21):**
 - **Logowanie w MVP tylko przez dostawców zewnętrznych:** self-host dowolne OIDC; chmura GitHub, Google i własne OIDC przestrzeni. Lokalny admin, 2FA i link w emailu przechodzą na później. Self-host wymaga więc dostawcy OIDC: to jedyny wyjątek od zasady „bez usług zewnętrznych do startu”. Szczegóły w `docs/decisions/0006-api-contract.md`.
+- **Role z grup SSO w MVP:** administrator instancji i role w domyślnej przestrzeni przychodzą z claimu grup dostawcy OIDC (było v1).
 
 **Zmiany względem v0.8:**
 - **Agent:** Go, Linux + Docker w MVP, bez automatycznych aktualizacji; podpisane wydania i powiadomienie o nowej wersji zostają.
@@ -327,7 +328,8 @@ Część tego samego frontendu co panel. Dane ze snapshotu w pamięci API, z kop
 | 2FA dla kont lokalnych | później |
 | Tokeny API z zakresem (odczyt lub zapis) i datą ważności | MVP |
 | Lista aktywnych sesji i wylogowanie wszędzie | MVP |
-| Mapowanie grup z SSO na role | v1 |
+| **Role z grup SSO:** administrator instancji i role w domyślnej przestrzeni z claimu grup dostawcy OIDC, liczone przy każdym logowaniu (jak w Grafanie) | MVP |
+| Mapowanie grup z SSO na role w kolejnych przestrzeniach | v1 |
 | SAML, SCIM | później |
 
 ---

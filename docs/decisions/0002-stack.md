@@ -46,7 +46,7 @@ Zasady właściciela, które rozstrzygały wybory:
 ### Dostarczanie
 - Self-host: obraz Docker + docker compose (HSQLDB w pliku domyślnie, profil PostgreSQL). Bez Kubernetesa i Helma.
 - Wydania bez podpisów w MVP.
-- Repozytorium GitHub: prywatne do publikacji open source (etap 9), potem publiczne. Zadania na tablicy GitHub Projects. Co bierzemy z `templates`: [github-ci.md](../research/github-ci.md).
+- Repozytorium GitHub: prywatne do publikacji open source (etap 9), potem publiczne. Zadania na tablicy GitHub Projects. CI przez nowy wspólny `maven-ci.yml` w repozytorium `templates`. Co bierzemy z `templates`: [github-ci.md](../research/github-ci.md).
 - Powiadomienie o nowej wersji: serwer raz na dobę sprawdza GitHub Releases; włączone domyślnie, z wyłącznikiem.
 
 ## Consequences
@@ -57,7 +57,7 @@ Zasady właściciela, które rozstrzygały wybory:
 - Liquibase na FSL: przy zmianie licencji albo warunków plan B to Flyway OSS.
 - Brak podpisów wydań w MVP zmienia [product-features.md](../specs/product-features.md) (agent).
 - Do zrobienia na etapie 0: bramka zgodności wersji (Boot 4.x, Liquibase, Testcontainers, Spring Data JDBC, Reactor Netty), spike executora z 5 000 checków, testy lease na obu bazach.
-- Otwarte: CI (GitHub Actions, minimalny pipeline; co bierzemy z `templates`: [github-ci.md](../research/github-ci.md)), kopie zapasowe i odtwarzanie, szczegóły agenta Go (format konfiguracji, bufor) — do ustalenia.
+- Otwarte: zawartość `maven-ci.yml` (kierunek w [github-ci.md](../research/github-ci.md)), kopie zapasowe i odtwarzanie, szczegóły agenta Go (format konfiguracji, bufor) — do ustalenia.
 
 ## Links
 

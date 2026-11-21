@@ -76,6 +76,13 @@ Jak robią inni:
   - self-host: dowolny dostawca OIDC;
   - chmura: GitHub, Google i własne OIDC przestrzeni.
   - Bez kont z hasłem, 2FA i linku w emailu w MVP.
+- **Role z dostawcy OIDC** (decyzja z 2026-11-22), wzorem `role_attribute_path` z Grafany, w uproszczonej formie:
+  - konfiguracja instancji podaje nazwę claimu (domyślnie `groups`) i prostą mapę grup na role: administrator instancji oraz Admin, Edytor albo Podgląd w domyślnej przestrzeni. Bez JMESPath i bez nowej biblioteki; w kodzie jeden `GrantedAuthoritiesMapper` albo własny `OidcUserService`;
+  - mapowanie liczy się przy każdym logowaniu. IdP jest źródłem prawdy, więc rola z IdP nadpisuje rolę nadaną w wakey;
+  - użytkownik bez zmapowanej grupy i bez zaproszenia nie ma dostępu do żadnej przestrzeni (domyślnie odmowa);
+  - **administrator instancji** (plany, przestrzenie, nadużycia, stan systemu) wymaga IdP, który wysyła grupy (Authelia, Keycloak, Authentik, Pocket ID, Entra). Takich administratorów może być kilku, co chroni przed utratą dostępu. Role Admin w przestrzeniach to osobny poziom, nadawany też zaproszeniami;
+  - GitHub i Google nie wysyłają grup, więc konta z nich dostają role tylko przez zaproszenia. W chmurze operator loguje się przez własnego dostawcę OIDC;
+  - odrzucone: lista emaili w konfiguracji (drugi mechanizm obok IdP) i „pierwszy zalogowany zostaje adminem” jak w Uptime Kuma (wyścig o przejęcie wystawionej instancji).
 - **Tokeny API** są nieprzezroczyste:
   - postać: `wk_` + 32 losowe bajty, przesyłane jako `Authorization: Bearer`;
   - w bazie tylko skrót SHA-256, zakres (odczyt/zapis), data ważności i ostatnie użycie;
@@ -129,7 +136,7 @@ Wzorzec jak w `chaos-view/apps/velma`:
 - Nowe zależności frontendu: zod, axios, dayjs, openapi-typescript (dev). Uzupełniają [0004-frontend.md](0004-frontend.md).
 - Bez oasdiff zmianę łamiącą w `v1` wychwyci tylko review diffu kontraktu. To świadome ryzyko.
 - Kursor wszędzie oznacza, że lista checków nie ma numerów stron. UI używa „wczytaj więcej” albo przewijania, a liczniki pochodzą z podsumowania.
-- **Zmiana spec:** self-host potrzebuje dostawcy OIDC (np. Authelia, Pocket ID, Keycloak), więc zasada „self-host bez usług zewnętrznych do startu” ma ten wyjątek. Lokalny admin, 2FA i link w emailu przechodzą na później. Do ustalenia przy etapie użytkowników: jak wskazać pierwszego Admina (np. email albo subject OIDC w konfiguracji instancji).
+- **Zmiana spec:** self-host potrzebuje dostawcy OIDC (np. Authelia, Pocket ID, Keycloak), więc zasada „self-host bez usług zewnętrznych do startu” ma ten wyjątek. Lokalny admin, 2FA i link w emailu przechodzą na później. Mapowanie grup z SSO na role przechodzi ze spec v1 do MVP (administrator instancji i role w domyślnej przestrzeni); mapowanie na role w kolejnych przestrzeniach zostaje w v1.
 - Limity per instancja: przy HA każda instancja liczy osobno, dopóki nie powstanie adapter Redis.
 
 ## Links

@@ -32,14 +32,16 @@ Raport (nie decyzja) przed założeniem repozytorium na GitHubie i etapem 0 ([ro
 5. **Dependabot.** Do włączenia ekosystemy `maven`, `npm` (pnpm), `docker` i `github-actions`, każdy z grupą `security`, zgodnie z szablonem.
 6. **Agent Go** (osobne repo, [0002](../decisions/0002-stack.md)): ogólny `ci.yml` z `setup-go` i `scripts/ci.sh`, bez nowych workflowów.
 
-## Ustalone (2026-11-21, zapisane w [0002](../decisions/0002-stack.md))
+## Ustalone (2026-11-21/22, zapisane w [0002](../decisions/0002-stack.md))
 
 - **Repo prywatne na początku, publiczne od publikacji w etapie 9.** Konsekwencja: na prywatnym repo w darmowym planie rulesety, code scanning i push protection nie działają (skill `github-new-repo`). Do czasu upublicznienia ochronę `main` zapewnia dyscyplina PR i `ci-required` w CI, a nie ruleset. Ponowne `apply.sh` po upublicznieniu włącza resztę.
 - **Kanban na GitHub Projects** z polem statusu. Baseline zostawia tylko 4 etykiety (`bug`, `enhancement`, `needs-info`, `dependencies`), więc tablica nie opiera się na etykietach. Etapy roadmapy jako kamienie milowe albo pole „Etap”, do wyboru przy zakładaniu tablicy.
+- **CI: wariant (b), nowy `maven-ci.yml` w `templates`.** Workflow wielokrotnego użytku dla Mavena, z obsługą frontendu w pnpm w tym samym repo. Wymaga:
+  - opisu wejść i wyjść w `templates/docs/workflows.md`;
+  - wpisu w `ACTION_PATTERNS`;
+  - walidacji `tools/check.sh` (actionlint i zizmor).
 
-## Nadal do decyzji
-
-- Wariant (a) czy (b) z punktu 1.
+  Ma też rozwiązać punkty 2 i 3: ścieżkę health w teście dymnym i porównanie tagu z wersją w `pom.xml`. Zmiana idzie przez PR w `templates`, przed pierwszym CI wakey.
 
 ## Źródła
 

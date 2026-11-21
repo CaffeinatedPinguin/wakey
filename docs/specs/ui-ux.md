@@ -460,7 +460,7 @@ Oddzielona od ustawień przestrzeni.
 
 ## 4.13 Logowanie i pierwsze uruchomienie
 
-**Self-host:** logowanie przez OIDC skonfigurowane w instancji (sposób wskazania pierwszego Admina do ustalenia; lokalny admin i 2FA później, ADR 0006) → podstawowe ustawienia → pierwszy check → kanał → test dostarczenia → aktywacja polityki.
+**Self-host:** logowanie przez OIDC skonfigurowane w instancji (administrator instancji wynika z grupy w IdP; lokalny admin i 2FA później, ADR 0006) → podstawowe ustawienia → pierwszy check → kanał → test dostarczenia → aktywacja polityki.
 
 **Chmura:** GitHub / Google (link w emailu później) → kod zaproszenia lub lista oczekujących → przestrzeń → jasna informacja o ograniczeniach planu darmowego („jedna lokalizacja, bez SLA”) → pierwszy check → weryfikacja → kanał i test.
 
