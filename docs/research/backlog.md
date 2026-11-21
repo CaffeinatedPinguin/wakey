@@ -1,12 +1,12 @@
 # Research backlog: uptime monitor (v1.1)
 
-Lista tematów do zbadania osobnym agentem albo z ekspertem, zanim dojdzie do danego etapu. Kolejność według tego, kiedy wynik jest potrzebny. Numery etapów (0–9) pochodzą z planu wdrożenia v0.16, którego nie ma w repo; roadmapa jest do odtworzenia (pkt 0).
+Lista tematów do zbadania osobnym agentem albo z ekspertem, zanim dojdzie do danego etapu. Kolejność według tego, kiedy wynik jest potrzebny. Etapy (0–9): [roadmap.md](../specs/roadmap.md).
 
 **Zmiany v1 → v1.1 (2026-11-19):** pkt 1 zamknięty decyzją w `docs/decisions/0001-stack.md`; dodany pkt 1.5 (frontend); pkt 2 rozszerzony o Go dla agenta.
 
 | # | Temat | Kiedy potrzebny | Kto |
 |---|---|---|---|
-| 0 | Roadmapa etapów 0–9 (plan v0.16 zaginął) | przed etapem 0 | grill-me z właścicielem |
+| 0 | Roadmapa etapów 0–9 | przed etapem 0 | zamknięte: `docs/specs/roadmap.md` |
 | 1 | Stack Java, dwie bazy i agent | przed etapem 0 | zamknięte: `docs/decisions/0002-stack.md` (zastępuje 0001); otwarte w ADR: CI, backup, szczegóły agenta |
 | 1.5 | Frontend: biblioteka komponentów, formularze, wykresy | przed etapem 1, wykresy przed 5 | zamknięte: `docs/decisions/0004-frontend.md` |
 | 2 | Pomiary sieciowe w Javie (serwer) i Go (agent) | przed etapem 1 | serwer zamknięty: `docs/decisions/0003-network-checks.md`; agent: `docs/research/net-go.md`, szczegóły w repo agenta |
@@ -25,13 +25,7 @@ Lista tematów do zbadania osobnym agentem albo z ekspertem, zanim dojdzie do da
 ---
 
 ## 1. Stack Java, dwie bazy i agent (przed etapem 0) — ZAMKNIĘTE
-Decyzja: `docs/decisions/0001-stack.md`.
-- Java 25 LTS, najnowszy stabilny Spring Boot 4.x (bramka zgodności na etapie 0), Maven.
-- Spring Data JDBC dla agregatów, `JdbcClient`/`JdbcTemplate` dla batchy i raportów; Liquibase XML.
-- PostgreSQL albo HSQLDB w trybie pliku i jednego procesu; wspólny podzbiór SQL i testy na obu bazach w CI.
-- Wątki wirtualne dla executora; własna tabela lease z fencing tokenem dla lidera.
-- Agent: Go, Linux + Docker w MVP, bez automatycznych aktualizacji.
-- Frontend: React + Vite + TypeScript; biblioteka UI, formularze i wykresy w pkt 1.5.
+Decyzje: `docs/decisions/0002-stack.md` (zastępuje 0001), architektura serwera i API w `0005`–`0007`.
 
 ## 1.5. Frontend: biblioteka komponentów, formularze i wykresy (przed etapem 1, wykresy przed 5)
 Technologie frontendu; projekt UI/UX pozostaje w pkt 3.

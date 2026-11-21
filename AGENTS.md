@@ -28,7 +28,7 @@ Domain: ../../gitlab/ai/domains/backend/AGENTS.md and ../../gitlab/ai/domains/fr
 - A rule from an ADR that can be checked statically becomes an ArchUnit or lint rule, not a review comment.
 - Docs stay in Polish until backlog item 13 (English translation); new docs may be in Polish.
 - `docs/research/` is a local doc type for research briefs and reports. A report recommends; only an ADR in `docs/decisions/` decides.
-- Stage numbers (0–9) come from a lost plan v0.16; the roadmap is backlog item 0.
+- Stage numbers (0–9) and their scope come from `docs/specs/roadmap.md`.
 
 ## Verify
 

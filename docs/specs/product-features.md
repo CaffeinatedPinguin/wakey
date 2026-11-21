@@ -1,6 +1,6 @@
 # Funkcje produktu: uptime monitor (v0.10)
 
-Ten dokument mówi **co** każdy komponent robi dla użytkownika. **Jak** jest zbudowany: `docs/decisions/`. **Kiedy** co wchodzi: roadmapa etapów do odtworzenia (`docs/research/backlog.md`, pkt 0).
+Ten dokument mówi **co** każdy komponent robi dla użytkownika. **Jak** jest zbudowany: `docs/decisions/`. **Kiedy** co wchodzi: `docs/specs/roadmap.md`.
 Oznaczenia: **MVP**, **v1**, **później**.
 
 **Zmiany względem v0.9 (2026-11-21):**

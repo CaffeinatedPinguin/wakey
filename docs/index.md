@@ -7,6 +7,7 @@ English translation (backlog item 13).
 |---|---|---|
 | [specs/product-features.md](specs/product-features.md) | What the product does: components, roles, MVP/v1/later | Any product or feature work |
 | [specs/ui-ux.md](specs/ui-ux.md) | UI behaviour, screens, components and design tokens | Frontend or UX work |
+| [specs/roadmap.md](specs/roadmap.md) | Stages 0–9: order, scope, milestones and research needed per stage | Planning a stage or deciding when a feature lands |
 | [decisions/0001-stack.md](decisions/0001-stack.md) | Superseded first stack decision; still owns the shared SQL subset rules | Writing SQL for both databases |
 | [decisions/0002-stack.md](decisions/0002-stack.md) | Server, databases, result storage, leader/HA, agent, build and delivery | Choosing a library, tool or database feature |
 | [decisions/0003-network-checks.md](decisions/0003-network-checks.md) | HTTP client, DNS, connections, HTTP/2 and ICMP for server checks | Building the check executor |
