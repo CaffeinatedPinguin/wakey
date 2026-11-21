@@ -20,7 +20,7 @@ Zasady właściciela, które rozstrzygały wybory:
 ### Serwer
 - Java 25 LTS, Spring Boot 4.x (najnowsza wspierana linia OSS; dokładna wersja po bramce zgodności na etapie 0), Spring MVC na Tomcacie z wątkami wirtualnymi. Bez WebFluxa.
 - Checki wykonuje asynchroniczny klient Reactor Netty w warstwie executora; szczegóły w [0003](0003-network-checks.md). Reactor nie wychodzi poza tę warstwę.
-- Jedna aplikacja z rolami włączanymi konfiguracją (`app.roles`): API, executor, alerty, agregacje. Moduły komunikują się przez interfejsy i bazę, bez współdzielonego stanu w pamięci, tak aby każdą rolę dało się uruchomić jako osobny proces samą konfiguracją.
+- Jedna aplikacja z rolami włączanymi konfiguracją (`app.roles`): API, executor, alerty, agregacje. Moduły komunikują się przez interfejsy i bazę, bez współdzielonego stanu w pamięci, tak aby każdą rolę dało się uruchomić jako osobny proces samą konfiguracją. Szczegóły modułów, portów i komunikacji między rolami: [0005-server-architecture.md](0005-server-architecture.md).
 - Build: Maven + Maven Wrapper.
 
 ### Bazy i dane

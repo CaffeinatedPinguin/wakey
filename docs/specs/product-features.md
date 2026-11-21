@@ -1,7 +1,10 @@
-# Funkcje produktu: uptime monitor (v0.9)
+# Funkcje produktu: uptime monitor (v0.10)
 
 Ten dokument mówi **co** każdy komponent robi dla użytkownika. **Jak** jest zbudowany: `docs/decisions/`. **Kiedy** co wchodzi: roadmapa etapów do odtworzenia (`docs/research/backlog.md`, pkt 0).
 Oznaczenia: **MVP**, **v1**, **później**.
+
+**Zmiany względem v0.9 (2026-11-21):**
+- **Logowanie w MVP tylko przez dostawców zewnętrznych:** self-host dowolne OIDC; chmura GitHub, Google i własne OIDC przestrzeni. Lokalny admin, 2FA i link w emailu przechodzą na później. Self-host wymaga więc dostawcy OIDC: to jedyny wyjątek od zasady „bez usług zewnętrznych do startu”. Szczegóły w `docs/decisions/0006-api-contract.md`.
 
 **Zmiany względem v0.8:**
 - **Agent:** Go, Linux + Docker w MVP, bez automatycznych aktualizacji; podpisane wydania i powiadomienie o nowej wersji zostają.
@@ -79,7 +82,7 @@ Nikt nie wgrywa własnego HTML, CSS ani skryptów: ani w panelu, ani na status p
 - UI w dwóch językach od startu (PL, EN). Teksty są wydzielone, więc kolejne języki dochodzą bez zmian w kodzie.
 - Czas zapisywany w UTC. Strefa czasowa przestrzeni jest używana do wyświetlania i harmonogramów: w wykresach, cronach, oknach serwisowych i raportach.
 - Najważniejsze akcje (potwierdzenie, masowe wyciszenie, pauza, stan systemu) działają wygodnie na telefonie.
-- Self-host ma pełną funkcjonalność i nie wymaga żadnej usługi zewnętrznej do startu.
+- Self-host ma pełną funkcjonalność i nie wymaga żadnej usługi zewnętrznej do startu, z jednym wyjątkiem: dostawcy OIDC do logowania (ADR 0006).
 
 ---
 
@@ -316,10 +319,12 @@ Część tego samego frontendu co panel. Dane ze snapshotu w pamięci API, z kop
 |---|---|
 | Role: **Admin** (wszystko), **Edytor** (checki, progi, incydenty, status pages, weryfikacja celów), **Podgląd** (tylko odczyt) | MVP |
 | Zaproszenia mailem | MVP |
-| **Self-host:** lokalny admin i SSO przez dowolnego dostawcę OIDC | MVP |
-| **Chmura:** logowanie przez GitHub, Google albo jednorazowy link w emailu (krótka ważność, limit żądań) | MVP |
+| **Self-host:** SSO przez dowolnego dostawcę OIDC | MVP |
+| **Chmura:** logowanie przez GitHub albo Google | MVP |
 | **Własne OIDC przestrzeni** (chmura): firma podpina własne SSO do swojej przestrzeni | MVP |
-| 2FA dla kont lokalnych | MVP |
+| Lokalny admin z hasłem (self-host bez dostawcy OIDC) | później |
+| Jednorazowy link w emailu (krótka ważność, limit żądań) | później |
+| 2FA dla kont lokalnych | później |
 | Tokeny API z zakresem (odczyt lub zapis) i datą ważności | MVP |
 | Lista aktywnych sesji i wylogowanie wszędzie | MVP |
 | Mapowanie grup z SSO na role | v1 |
@@ -394,7 +399,7 @@ Część tego samego frontendu co panel. Dane ze snapshotu w pamięci API, z kop
 | Przestrzenie: lista, zużycie, plan, zawieszenie | MVP |
 | Plany: definicje limitów (w tym powiadomień i checków niezweryfikowanych), przypisanie | MVP |
 | Rejestracja: tryb (zamknięta, zaproszenia, lista oczekujących), kody, limit kont | MVP |
-| **Sposoby logowania:** lokalny admin, OIDC, a w chmurze GitHub, Google, link w emailu i zgoda na własne OIDC przestrzeni | MVP |
+| **Sposoby logowania:** OIDC, a w chmurze GitHub, Google i zgoda na własne OIDC przestrzeni (lokalny admin i link w emailu później) | MVP |
 | **Tryb weryfikacji celów:** wymagana / z ograniczeniami / wyłączona, z odblokowaniem dla planu albo wybranej przestrzeni, ważność tokenu, okres ponownej weryfikacji, okres łaski, nazwy wejścia dla wywołań z IPv4 i IPv6 | MVP |
 | **Zgłoszenia nadużyć status pages:** lista zgłoszeń, zawieszenie i przywrócenie strony jednym kliknięciem, powód widoczny dla właściciela | MVP |
 | Lokalizacje i cele kontrolne, próg wzorca zbiorowego błędu, próg opóźnienia wykonania | MVP |
@@ -427,7 +432,7 @@ Część tego samego frontendu co panel. Dane ze snapshotu w pamięci API, z kop
 12. **Adres IP weryfikowany dwiema metodami:** wywołanie z weryfikowanego IP albo adres z tokenem, który odpytujemy. Współdzielony adres (NAT, VPN) to świadome ograniczenie, osłonięte globalnym limitem na cel.
 13. **Kworum:** przy 1–2 lokalizacjach „wszystkie”, przy więcej niż 2 „większość”. Konfigurowalne per check.
 14. **Bez własnego HTML, CSS i skryptów** nigdzie. Status page: logo i kolory. Zgłaszanie nadużyć i zawieszanie stron w chmurze.
-15. **Logowanie:** self-host dowolne OIDC i lokalny admin; chmura GitHub, Google, link w emailu, opcjonalnie własne OIDC przestrzeni.
+15. **Logowanie:** w MVP tylko dostawcy zewnętrzni: self-host dowolne OIDC; chmura GitHub, Google, opcjonalnie własne OIDC przestrzeni. Lokalny admin, 2FA i link w emailu później (ADR 0006).
 16. **Tylko część wspólna bazy produkcyjnej i wbudowanej**, blokada lidera jako tabela, CI na obu bazach.
 17. **Wersja schematu** w pliku konfiguracyjnym i eksporcie przestrzeni, z automatyczną migracją starszej wersji.
 18. **Klucz szyfrowania sekretów** z osobną kopią poza VPS i rotacją. Test odtworzenia sprawdza odszyfrowanie.

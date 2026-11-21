@@ -460,9 +460,9 @@ Oddzielona od ustawień przestrzeni.
 
 ## 4.13 Logowanie i pierwsze uruchomienie
 
-**Self-host:** kreator → lokalny admin → 2FA → podstawowe ustawienia → pierwszy check → kanał → test dostarczenia → aktywacja polityki. Dalej OIDC wg konfiguracji.
+**Self-host:** logowanie przez OIDC skonfigurowane w instancji (sposób wskazania pierwszego Admina do ustalenia; lokalny admin i 2FA później, ADR 0006) → podstawowe ustawienia → pierwszy check → kanał → test dostarczenia → aktywacja polityki.
 
-**Chmura:** GitHub / Google / link w emailu → kod zaproszenia lub lista oczekujących → przestrzeń → jasna informacja o ograniczeniach planu darmowego („jedna lokalizacja, bez SLA”) → pierwszy check → weryfikacja → kanał i test.
+**Chmura:** GitHub / Google (link w emailu później) → kod zaproszenia lub lista oczekujących → przestrzeń → jasna informacja o ograniczeniach planu darmowego („jedna lokalizacja, bez SLA”) → pierwszy check → weryfikacja → kanał i test.
 
 **Kolejność:** nie blokować pierwszego checka wymogiem kanału. Ścieżka: check → kanał → „Wyślij test” → polityka → test całego przepływu. Puste stany zawsze wskazują następną czynność.
 
@@ -473,7 +473,7 @@ Oddzielona od ustawień przestrzeni.
 Każdy przepływ ma punkty tarcia (⚠) i rozwiązania (→).
 
 ### 5.1 Od zera do pierwszego alertu na telefonie
-Start (self-host: admin + 2FA; chmura: logowanie + info o planie) → pierwszy check: adres, Testuj, Zapisz → weryfikacja (chmura) → kanał (Pushover/email) → „Wyślij test” → polityka → test łańcucha.  
+Start (self-host: logowanie OIDC; chmura: logowanie + info o planie) → pierwszy check: adres, Testuj, Zapisz → weryfikacja (chmura) → kanał (Pushover/email) → „Wyślij test” → polityka → test łańcucha.  
 ⚠ Check zapisany, ale brak kanału lub polityki. → Podpowiedź „Dodaj kanał” w formularzu checka; Przegląd pokazuje „Alerty nie trafią do nikogo — brak aktywnej polityki”.  
 ⚠ Propagacja DNS, zły odbiorca, spam, osiągnięty limit planu. → Dokładne komunikaty, status potwierdzenia odbiorcy.
 
