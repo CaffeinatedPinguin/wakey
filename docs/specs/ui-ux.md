@@ -57,7 +57,7 @@ Przy sprzeczności wymaganie briefu ma pierwszeństwo przed rekomendacją UX.
 | Homelab / solo admin | Szybki start, cisza, gdy wszystko działa, głośny alert na telefon, gdy coś pada |
 | Mały zespół | Role, wspólne potwierdzanie alertów, incydenty i status page dla klientów |
 | Odwiedzający status page | W ~3 sekundy: czy działa, od kiedy nie działa, co zespół robi. Najczęściej na telefonie |
-| Administrator instancji | Stan systemu, plany i limity, nadużycia — także z telefonu w podróży |
+| Admin | Stan systemu, plany i limity, nadużycia — także z telefonu w podróży |
 
 ## 0.3 Niezmienne ograniczenia (z briefu)
 
@@ -166,7 +166,7 @@ Wspólne: język stanów, tokeny, StatusBadge, HistoryBar, renderer SafeRichText
 
 - Lewy sidebar ~220–240 px: Przegląd, Checki, Incydenty, Status pages, Ustawienia.
 - Górny pasek: przełącznik przestrzeni, globalne wyszukiwanie (skrót `/`), szybkie dodanie checka, przełącznik PL/EN i motywu, profil.
-- **Administracja instancji** — widoczna tylko dla właściciela, jako osobny przycisk o odmiennym akcencie kolorystycznym, żeby nie pomylić ustawień przestrzeni z konfiguracją serwera.
+- **Administracja instancji** — widoczna tylko dla Admina, jako osobny przycisk o odmiennym akcencie kolorystycznym, żeby nie pomylić ustawień przestrzeni z konfiguracją serwera.
 - Typy checków, lokalizacje i agenci nie są głównymi pozycjami nawigacji.
 - Stopka panelu i status page: „Kod źródłowy”.
 
@@ -439,7 +439,7 @@ Pogrupowane, żeby było mniej zakładek:
 | Automatyzacja | Tryb incydentów automatycznych, okno alertu zbiorczego |
 | Powiadomienia | Kanały, polityki, log dostarczeń |
 | Lokalizacje i agenci | Instalacja, diagnostyka, dozwolone cele |
-| Zespół i logowanie | Role Admin / Edytor / Podgląd, zaproszenia, OIDC (w chmurze własne OIDC przestrzeni) |
+| Zespół i logowanie | Role Edytor / Podgląd w przestrzeni, zaproszenia, OIDC (w chmurze własne OIDC przestrzeni) |
 | Tokeny API i sekrety | Tokeny: zakres, unieważnianie. Sekrety: zawsze zamaskowane, tylko „Podmień” |
 | Plan i limity | Zużycie, ograniczenia |
 | Konfiguracja | Eksport do pliku, lista różnic, import/uzgadnianie |
@@ -460,7 +460,7 @@ Oddzielona od ustawień przestrzeni.
 
 ## 4.13 Logowanie i pierwsze uruchomienie
 
-**Self-host:** logowanie przez OIDC skonfigurowane w instancji (administrator instancji wynika z grupy w IdP; lokalny admin i 2FA później, ADR 0006) → podstawowe ustawienia → pierwszy check → kanał → test dostarczenia → aktywacja polityki.
+**Self-host:** logowanie przez OIDC skonfigurowane w instancji (Admin wynika z grupy w IdP; lokalny admin i 2FA później, ADR 0006) → podstawowe ustawienia → pierwszy check → kanał → test dostarczenia → aktywacja polityki.
 
 **Chmura:** GitHub / Google (link w emailu później) → kod zaproszenia lub lista oczekujących → przestrzeń → jasna informacja o ograniczeniach planu darmowego („jedna lokalizacja, bez SLA”) → pierwszy check → weryfikacja → kanał i test.
 

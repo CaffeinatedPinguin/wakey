@@ -76,19 +76,40 @@ Jak robią inni:
   - self-host: dowolny dostawca OIDC;
   - chmura: GitHub, Google i własne OIDC przestrzeni.
   - Bez kont z hasłem, 2FA i linku w emailu w MVP.
-- **Role z dostawcy OIDC** (decyzja z 2026-11-22), wzorem `role_attribute_path` z Grafany, w uproszczonej formie:
-  - konfiguracja instancji podaje nazwę claimu (domyślnie `groups`) i prostą mapę grup na role: administrator instancji oraz Admin, Edytor albo Podgląd w domyślnej przestrzeni. Bez JMESPath i bez nowej biblioteki; w kodzie jeden `GrantedAuthoritiesMapper` albo własny `OidcUserService`;
-  - mapowanie liczy się przy każdym logowaniu. IdP jest źródłem prawdy, więc rola z IdP nadpisuje rolę nadaną w wakey;
-  - użytkownik bez zmapowanej grupy i bez zaproszenia nie ma dostępu do żadnej przestrzeni (domyślnie odmowa);
-  - **administrator instancji** (plany, przestrzenie, nadużycia, stan systemu) wymaga IdP, który wysyła grupy (Authelia, Keycloak, Authentik, Pocket ID, Entra). Takich administratorów może być kilku, co chroni przed utratą dostępu. Role Admin w przestrzeniach to osobny poziom, nadawany też zaproszeniami;
-  - GitHub i Google nie wysyłają grup, więc konta z nich dostają role tylko przez zaproszenia. W chmurze operator loguje się przez własnego dostawcę OIDC;
-  - odrzucone: lista emaili w konfiguracji (drugi mechanizm obok IdP) i „pierwszy zalogowany zostaje adminem” jak w Uptime Kuma (wyścig o przejęcie wystawionej instancji).
 - **Tokeny API** są nieprzezroczyste:
   - postać: `wk_` + 32 losowe bajty, przesyłane jako `Authorization: Bearer`;
   - w bazie tylko skrót SHA-256, zakres (odczyt/zapis), data ważności i ostatnie użycie;
   - nie są JWT;
   - nie wymagają CSRF.
 - Odrzucony wariant: frontend sam prowadzi OIDC i wysyła JWT do bezstanowego serwera. Odpada, bo GitHub (OAuth2 bez OIDC, wymiana kodu wymaga sekretu) nie zadziała, Google daje JWT tylko jako ID token, a token w JavaScripcie jest dostępny dla XSS.
+
+### Role i dostęp
+Decyzja z 2026-11-22. Trzy role w dwóch poziomach:
+
+| Rola | Zakres | Co może | Skąd |
+|---|---|---|---|
+| **Admin** | cała aplikacja | wszystko: przestrzenie, plany, użytkownicy, nadużycia, stan systemu, każda przestrzeń | grupa z claimu dostawcy OIDC |
+| **Edytor** | swoja przestrzeń (klient) | wszystko w przestrzeni: checki, kanały, incydenty, status pages, tokeny, zaproszenia do tej przestrzeni | zaproszenie od Admina albo Edytora tej przestrzeni |
+| **Podgląd** | swoja przestrzeń | tylko odczyt | zaproszenie |
+
+- **Przestrzeń to jedyna granica dostępu** (jak workspace w OpenStatus i projekt w Healthchecks).
+  - Użytkownik widzi tylko przestrzenie, w których jest członkiem; cudza przestrzeń zwraca 404.
+  - Status pages, checki, kanały i tokeny należą do przestrzeni.
+  - Plan jest przypisany do przestrzeni, a jego limity (np. liczba status pages) liczą się per przestrzeń.
+  - Bez uprawnień do pojedynczego checka. Kto chce rozdzielić dostęp, tworzy drugą przestrzeń.
+- **Admin pochodzi z OIDC**, wzorem `role_attribute_path` z Grafany w najprostszej formie:
+  - konfiguracja instancji podaje nazwę claimu (domyślnie `groups`) i nazwę grupy Admina;
+  - bez JMESPath i bez nowej biblioteki; w kodzie jeden `GrantedAuthoritiesMapper` albo własny `OidcUserService`;
+  - rola liczy się przy każdym logowaniu, a IdP jest źródłem prawdy. Adminów może być kilku, co chroni przed utratą dostępu;
+  - wymaga IdP, który wysyła grupy (Authelia, Keycloak, Authentik, Pocket ID, Entra). GitHub i Google ich nie wysyłają, więc w chmurze Admin loguje się przez własnego dostawcę OIDC.
+- **Role w przestrzeniach tylko z zaproszeń.** Mapowanie grup SSO na role w przestrzeniach to v1.
+- Użytkownik, który nie jest Adminem i nie ma zaproszenia, nie ma dostępu do żadnej przestrzeni (domyślnie odmowa, jak `role_attribute_strict` w Grafanie).
+- **Zakres tokenu API nie przekracza roli właściciela** (wzorem Healthchecks). Podgląd tworzy tylko tokeny do odczytu, a obniżenie roli ogranicza też tokeny tego użytkownika.
+- Odrzucone:
+  - osobna rola Admin w przestrzeni obok Admina aplikacji (za dużo poziomów);
+  - lista emaili Adminów w konfiguracji (drugi mechanizm obok IdP);
+  - „pierwszy zalogowany zostaje adminem” jak w Uptime Kuma (wyścig o przejęcie wystawionej instancji);
+  - plan per konto z wieloma przestrzeniami jak w Healthchecks (do ewentualnego rozważenia przy chmurze w etapie 9).
 
 ### Powierzchnie HTTP
 | Prefiks | Klient | Uwierzytelnianie |
@@ -136,7 +157,7 @@ Wzorzec jak w `chaos-view/apps/velma`:
 - Nowe zależności frontendu: zod, axios, dayjs, openapi-typescript (dev). Uzupełniają [0004-frontend.md](0004-frontend.md).
 - Bez oasdiff zmianę łamiącą w `v1` wychwyci tylko review diffu kontraktu. To świadome ryzyko.
 - Kursor wszędzie oznacza, że lista checków nie ma numerów stron. UI używa „wczytaj więcej” albo przewijania, a liczniki pochodzą z podsumowania.
-- **Zmiana spec:** self-host potrzebuje dostawcy OIDC (np. Authelia, Pocket ID, Keycloak), więc zasada „self-host bez usług zewnętrznych do startu” ma ten wyjątek. Lokalny admin, 2FA i link w emailu przechodzą na później. Mapowanie grup z SSO na role przechodzi ze spec v1 do MVP (administrator instancji i role w domyślnej przestrzeni); mapowanie na role w kolejnych przestrzeniach zostaje w v1.
+- **Zmiana spec:** self-host potrzebuje dostawcy OIDC (np. Authelia, Pocket ID, Keycloak), więc zasada „self-host bez usług zewnętrznych do startu” ma ten wyjątek. Lokalny admin, 2FA i link w emailu przechodzą na później. Rola Admin z grup SSO wchodzi do MVP. Mapowanie grup na role w przestrzeniach zostaje w v1. Role upraszczają się do trzech: Admin (cała aplikacja), Edytor i Podgląd (przestrzeń).
 - Limity per instancja: przy HA każda instancja liczy osobno, dopóki nie powstanie adapter Redis.
 
 ## Links

@@ -5,7 +5,7 @@ Oznaczenia: **MVP**, **v1**, **później**.
 
 **Zmiany względem v0.9 (2026-11-21):**
 - **Logowanie w MVP tylko przez dostawców zewnętrznych:** self-host dowolne OIDC; chmura GitHub, Google i własne OIDC przestrzeni. Lokalny admin, 2FA i link w emailu przechodzą na później. Self-host wymaga więc dostawcy OIDC: to jedyny wyjątek od zasady „bez usług zewnętrznych do startu”. Szczegóły w `docs/decisions/0006-api-contract.md`.
-- **Role z grup SSO w MVP:** administrator instancji i role w domyślnej przestrzeni przychodzą z claimu grup dostawcy OIDC (było v1).
+- **Trzy role:** Admin (cała aplikacja, z grupy dostawcy OIDC), Edytor (wszystko w swojej przestrzeni, czyli u klienta) i Podgląd (odczyt w przestrzeni). Bez osobnego Admina przestrzeni. Role w przestrzeniach tylko z zaproszeń.
 
 **Zmiany względem v0.8:**
 - **Agent:** Go, Linux + Docker w MVP, bez automatycznych aktualizacji; podpisane wydania i powiadomienie o nowej wersji zostają.
@@ -51,8 +51,8 @@ Konfiguracja ma trzy poziomy. Niższy poziom nadpisuje wyższy, ale tylko w gran
 | Poziom | Kto ustawia | Przykłady |
 |---|---|---|
 | **Instancja** | właściciel instancji (plik lub zmienne środowiska) | domyślny interwał, okno offline agenta, cele kontrolne, próg wzorca zbiorowego błędu, częstotliwość kontroli wejścia, okres rozruchu, próg opóźnienia wykonania, próg meta-alertu, limity na wejściu, polityka ponowień (limity i odstępy), polityka ruchu wychodzącego, tryb weryfikacji celów, ważność tokenu weryfikacji, okres ponownej weryfikacji, progi porzuconych checków, okres ostrzegawczy limitów, zachowanie przy wdrożeniu z różnicą, dostępne sposoby logowania, częstotliwość zrzutu bazy |
-| **Plan** | właściciel instancji | limity checków, minimalny interwał, retencja, liczba agentów i status pages, limit powiadomień w czasie, checki niezweryfikowane (jeśli tryb odblokowany) |
-| **Przestrzeń i check** | użytkownik z rolą Edytor lub Admin | interwał, ponowienia (w granicach twardego limitu), kworum (domyślnie „wszystkie” przy 1–2 lokalizacjach, „większość” przy więcej), progi, flapping, polityki alertów, tryb i opóźnienie incydentów |
+| **Plan** | Admin | limity checków, minimalny interwał, retencja, liczba agentów i status pages, limit powiadomień w czasie, checki niezweryfikowane (jeśli tryb odblokowany) |
+| **Przestrzeń i check** | Edytor tej przestrzeni albo Admin | interwał, ponowienia (w granicach twardego limitu), kworum (domyślnie „wszystkie” przy 1–2 lokalizacjach, „większość” przy więcej), progi, flapping, polityki alertów, tryb i opóźnienie incydentów |
 
 - UI zawsze pokazuje wartość efektywną i to, skąd pochodzi (np. „300 s, domyślne instancji”).
 - Wartość spoza granic planu jest odrzucana przy zapisie z czytelnym komunikatem, a nie po cichu przycinana.
@@ -318,7 +318,7 @@ Część tego samego frontendu co panel. Dane ze snapshotu w pamięci API, z kop
 ## 8. Użytkownicy, role, dostęp
 | Funkcja | Etap |
 |---|---|
-| Role: **Admin** (wszystko), **Edytor** (checki, progi, incydenty, status pages, weryfikacja celów), **Podgląd** (tylko odczyt) | MVP |
+| Role: **Admin** (cała aplikacja: przestrzenie, plany, użytkownicy, administracja instancji), **Edytor** (wszystko w swojej przestrzeni, także zaproszenia i tokeny), **Podgląd** (tylko odczyt w przestrzeni, tylko tokeny do odczytu). Przestrzeń to jedyna granica dostępu, plan jest per przestrzeń | MVP |
 | Zaproszenia mailem | MVP |
 | **Self-host:** SSO przez dowolnego dostawcę OIDC | MVP |
 | **Chmura:** logowanie przez GitHub albo Google | MVP |
@@ -328,8 +328,8 @@ Część tego samego frontendu co panel. Dane ze snapshotu w pamięci API, z kop
 | 2FA dla kont lokalnych | później |
 | Tokeny API z zakresem (odczyt lub zapis) i datą ważności | MVP |
 | Lista aktywnych sesji i wylogowanie wszędzie | MVP |
-| **Role z grup SSO:** administrator instancji i role w domyślnej przestrzeni z claimu grup dostawcy OIDC, liczone przy każdym logowaniu (jak w Grafanie) | MVP |
-| Mapowanie grup z SSO na role w kolejnych przestrzeniach | v1 |
+| **Rola Admin z grupy SSO:** z claimu grup dostawcy OIDC, liczona przy każdym logowaniu (jak w Grafanie) | MVP |
+| Mapowanie grup SSO na role w przestrzeniach | v1 |
 | SAML, SCIM | później |
 
 ---
