@@ -22,6 +22,7 @@ English translation (backlog item 13).
 | [research/stack-ops.md](research/stack-ops.md) | Agent language, process model, build, repo, CI, distribution, releases (item 1) | Build, release or deployment decisions |
 | [research/frontend.md](research/frontend.md) | Frontend options and minimal dependency set (item 1.5) | Choosing a frontend library or writing own UI code |
 | [research/net-java.md](research/net-java.md) | Server network checks on JDK 25 (item 2a) | Building the server check executor |
+| [research/github-ci.md](research/github-ci.md) | What wakey reuses from the `templates` repo (baseline, workflows, actionlint/zizmor check) and the gaps | Creating the GitHub repo, CI or release workflow |
 | [research/net-go.md](research/net-go.md) | Go agent checks, distribution and parity (item 2b) | Building the agent or its release |
 
 ## Rules

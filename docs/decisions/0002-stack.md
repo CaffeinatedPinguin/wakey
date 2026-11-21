@@ -56,7 +56,7 @@ Zasady właściciela, które rozstrzygały wybory:
 - Liquibase na FSL: przy zmianie licencji albo warunków plan B to Flyway OSS.
 - Brak podpisów wydań w MVP zmienia [product-features.md](../specs/product-features.md) (agent).
 - Do zrobienia na etapie 0: bramka zgodności wersji (Boot 4.x, Liquibase, Testcontainers, Spring Data JDBC, Reactor Netty), spike executora z 5 000 checków, testy lease na obu bazach.
-- Otwarte: CI (GitHub Actions, minimalny pipeline), kopie zapasowe i odtwarzanie, szczegóły agenta Go (format konfiguracji, bufor) — do ustalenia.
+- Otwarte: CI (GitHub Actions, minimalny pipeline; co bierzemy z `templates`: [github-ci.md](../research/github-ci.md)), kopie zapasowe i odtwarzanie, szczegóły agenta Go (format konfiguracji, bufor) — do ustalenia.
 
 ## Links
 
