@@ -1,9 +1,9 @@
 FROM eclipse-temurin:25-jre-alpine@sha256:69c2a26e9894016e274c880fa542956d005b3755f84db765145185e87405bd89
 
-# Unprivileged user; the default HSQLDB file lives in ./data under the workdir.
+# Unprivileged user; the database connection comes from the environment.
 RUN addgroup -S wakey \
     && adduser -S -G wakey wakey \
-    && mkdir -p /app/data \
+    && mkdir -p /app \
     && chown -R wakey:wakey /app
 
 WORKDIR /app

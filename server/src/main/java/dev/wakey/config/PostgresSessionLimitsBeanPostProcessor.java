@@ -8,6 +8,7 @@ import org.springframework.beans.factory.config.BeanPostProcessor;
 
 final class PostgresSessionLimitsBeanPostProcessor implements BeanPostProcessor {
 
+    // postgres-only: pgjdbc turns the `options` connection property into PostgreSQL server settings.
     private static final String OPTIONS_PROPERTY = "options";
 
     private final ObjectProvider<DatabaseProperties> properties;
@@ -18,8 +19,7 @@ final class PostgresSessionLimitsBeanPostProcessor implements BeanPostProcessor 
 
     @Override
     public Object postProcessAfterInitialization(Object bean, String beanName) {
-        if (bean instanceof HikariDataSource dataSource
-                && DatabaseSessionLimitsConfiguration.isPostgreSql(dataSource)) {
+        if (bean instanceof HikariDataSource dataSource) {
             applySessionLimits(dataSource);
         }
         return bean;

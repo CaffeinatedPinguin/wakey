@@ -46,8 +46,8 @@ Jak robią inni: Uptime Kuma i Checkmate dzielą kod na warstwy techniczne; Heal
   - dostarczenie co najmniej raz, konsumenci idempotentni, kolejność gwarantowana tylko w obrębie klucza (np. ID checka);
   - wiadomość jest samowystarczalna: wersjonowany JSON z ID i potrzebnymi danymi. Konsument nie czyta tabel producenta jako części przekazania;
   - producent zapisuje wiadomość w tej samej transakcji co zmianę stanu (transakcyjny outbox).
-- Pierwszy adapter to tabela w bazie. Konsument odpytuje „wszystko po kursorze” mniej więcej co sekundę. Bez `LISTEN/NOTIFY`, bo HSQLDB go nie ma, i bez brokera.
-- Jeden test kontraktowy portu uruchamiamy na każdej implementacji: dziś na PostgreSQL i HSQLDB, później na Redisie albo innej kolejce. Wymiana na zewnętrzną kolejkę to nowy adapter plus przekaźnik z outboxa. Kod producentów się nie zmienia.
+- Pierwszy adapter to tabela w bazie. Konsument odpytuje „wszystko po kursorze” mniej więcej co sekundę. `LISTEN/NOTIFY` jest teraz możliwe ([0008](0008-postgresql-only.md)), ale zamiana odpytywania na powiadomienia to osobna decyzja; bez brokera.
+- Jeden test kontraktowy portu uruchamiamy na każdej implementacji: dziś na PostgreSQL, później na Redisie albo innej kolejce. Wymiana na zewnętrzną kolejkę to nowy adapter plus przekaźnik z outboxa. Kod producentów się nie zmienia.
 - ArchUnit pilnuje, że moduł jednej roli nie woła bezpośrednio serwisu modułu innej roli.
 
 **Dlaczego publikujący czekają na siebie nawzajem.** Każda publikacja najpierw przesuwa wspólny licznik w bazie i trzyma jego wiersz zablokowany do końca transakcji, więc druga publikacja nie dostanie kursora, dopóki pierwsza się nie zatwierdzi. Dzięki temu konsument nie odczyta późniejszej wiadomości i nie przesunie kursora ponad wcześniejszą, jeszcze niezatwierdzoną. To serializuje publikację — przy obecnej skali to nie problem, a gdy stanie się wąskim gardłem, rozwiązaniem jest zewnętrzna kolejka jako nowy adapter.
@@ -105,7 +105,7 @@ Zawsze SLF4J przez `@Slf4j`, placeholdery `{}`, wyjątek jako ostatni argument. 
 
 ### Testy integracyjne (2026-11-22)
 
-Testy integracyjne korzystają z jednego współdzielonego kontenera i jednego kontekstu Springa na bazę. Wzorzec to singleton container: statyczne pole z kontenerem w abstrakcyjnej klasie bazowej (`dev.wakey.testsupport`), start w bloku statycznym i `@ServiceConnection`; bez `@Testcontainers`/`@Container`, bo ich cykl życia zatrzymuje współdzielony kontener po pierwszej klasie testowej.
+Testy integracyjne korzystają z jednego współdzielonego kontenera PostgreSQL i jednego kontekstu Springa na przebieg. Wzorzec to singleton container: statyczne pole z kontenerem w abstrakcyjnej klasie bazowej (`dev.wakey.testsupport`), start w bloku statycznym i `@ServiceConnection`; bez `@Testcontainers`/`@Container`, bo ich cykl życia zatrzymuje współdzielony kontener po pierwszej klasie testowej.
 
 ## Consequences
 
