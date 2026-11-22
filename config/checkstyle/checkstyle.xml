@@ -10,6 +10,10 @@
     <property name="optional" value="false"/>
   </module>
 
+  <module name="FileLength">
+    <property name="max" value="400"/>
+  </module>
+
   <module name="TreeWalker">
     <module name="NeedBraces">
       <property name="allowSingleLineStatement" value="false"/>
@@ -39,5 +43,28 @@
     <module name="AvoidStarImport"/>
     <module name="EmptyCatchBlock"/>
     <module name="InnerAssignment"/>
+    <module name="IllegalCatch"/>
+    <module name="IllegalThrows"/>
+    <module name="NPathComplexity">
+      <property name="max" value="200"/>
+    </module>
+    <module name="ClassFanOutComplexity">
+      <property name="max" value="20"/>
+    </module>
+    <module name="ReturnCount">
+      <property name="max" value="2"/>
+      <property name="maxForVoid" value="1"/>
+    </module>
+    <module name="ParameterAssignment"/>
+    <module name="ModifiedControlVariable"/>
+    <module name="MissingSwitchDefault"/>
+    <module name="FallThrough"/>
+    <module name="EqualsHashCode"/>
+    <module name="FinalClass"/>
+    <module name="HideUtilityClassConstructor">
+      <property name="ignoreAnnotatedBy" value="SpringBootApplication"/>
+    </module>
+    <module name="VisibilityModifier"/>
+    <module name="MutableException"/>
   </module>
 </module>

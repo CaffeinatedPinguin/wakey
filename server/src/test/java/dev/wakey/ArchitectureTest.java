@@ -9,6 +9,7 @@ import com.tngtech.archunit.core.domain.JavaClasses;
 import com.tngtech.archunit.core.domain.JavaMethodCall;
 import com.tngtech.archunit.core.importer.ClassFileImporter;
 import com.tngtech.archunit.lang.ArchRule;
+import com.tngtech.archunit.library.GeneralCodingRules;
 import java.util.Set;
 import org.junit.jupiter.api.Test;
 
@@ -67,6 +68,41 @@ class ArchitectureTest {
 
     private static final ArchRule NO_CYCLES_BETWEEN_FIRST_LEVEL_PACKAGES =
             slices().matching("dev.wakey.(*)..").should().beFreeOfCycles();
+
+    private static final ArchRule NO_STANDARD_STREAMS = GeneralCodingRules.NO_CLASSES_SHOULD_ACCESS_STANDARD_STREAMS;
+
+    private static final ArchRule NO_GENERIC_EXCEPTIONS = GeneralCodingRules.NO_CLASSES_SHOULD_THROW_GENERIC_EXCEPTIONS;
+
+    private static final ArchRule NO_JAVA_UTIL_LOGGING = GeneralCodingRules.NO_CLASSES_SHOULD_USE_JAVA_UTIL_LOGGING;
+
+    private static final ArchRule NO_FIELD_INJECTION = GeneralCodingRules.NO_CLASSES_SHOULD_USE_FIELD_INJECTION;
+
+    private static final ArchRule NO_DEPRECATED_API = GeneralCodingRules.DEPRECATED_API_SHOULD_NOT_BE_USED;
+
+    @Test
+    void doesNotAccessStandardStreams() {
+        NO_STANDARD_STREAMS.check(CLASSES);
+    }
+
+    @Test
+    void doesNotThrowGenericExceptions() {
+        NO_GENERIC_EXCEPTIONS.check(CLASSES);
+    }
+
+    @Test
+    void doesNotUseJavaUtilLogging() {
+        NO_JAVA_UTIL_LOGGING.check(CLASSES);
+    }
+
+    @Test
+    void doesNotUseFieldInjection() {
+        NO_FIELD_INJECTION.check(CLASSES);
+    }
+
+    @Test
+    void doesNotUseDeprecatedApi() {
+        NO_DEPRECATED_API.check(CLASSES);
+    }
 
     @Test
     void doesNotUseJavaNetHttp() {

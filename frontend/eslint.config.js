@@ -45,7 +45,8 @@ export default defineConfig([
     files: ['**/*.{ts,tsx}'],
     extends: [
       js.configs.recommended,
-      tseslint.configs.recommendedTypeChecked,
+      tseslint.configs.strictTypeChecked,
+      tseslint.configs.stylisticTypeChecked,
       reactHooks.configs.flat.recommended,
     ],
     languageOptions: {
@@ -59,10 +60,22 @@ export default defineConfig([
     rules: {
       complexity: ['error', 10],
       curly: ['error', 'all'],
+      eqeqeq: ['error', 'always'],
       'max-depth': ['error', 2],
+      'max-lines': ['error', 300],
       'max-lines-per-function': ['error', 40],
       'max-params': ['error', 4],
+      'max-statements': ['error', 15],
+      'no-console': 'error',
+      'no-else-return': 'error',
+      'no-implicit-coercion': 'error',
+      'no-nested-ternary': 'error',
+      'no-param-reassign': 'error',
+      'prefer-const': 'error',
       'no-restricted-imports': ['error', { patterns: [literalFeatureImport] }],
+      '@typescript-eslint/consistent-type-imports': 'error',
+      '@typescript-eslint/explicit-module-boundary-types': 'error',
+      '@typescript-eslint/switch-exhaustiveness-check': 'error',
     },
   },
   {
