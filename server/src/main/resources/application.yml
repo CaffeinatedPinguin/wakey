@@ -1,0 +1,24 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: wakey-server
+  threads:
+    virtual:
+      enabled: true
+  datasource:
+    url: jdbc:hsqldb:file:./data/wakey;shutdown=true
+    username: sa
+    password: ""
+  liquibase:
+    change-log: classpath:db/changelog/db.changelog-master.xml
+
+management:
+  endpoints:
+    web:
+      base-path: /
+      exposure:
+        include: health
+      path-mapping:
+        health: healthz
