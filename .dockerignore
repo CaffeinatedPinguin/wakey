@@ -1,0 +1,7 @@
+.git
+.idea
+.vscode
+data
+server/target
+frontend/node_modules
+frontend/dist

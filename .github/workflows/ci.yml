@@ -1,5 +1,5 @@
-# One job = one required check "ci-required" (the ruleset on main requires it).
-# The project commands live in scripts/ci.sh - the same thing runs locally.
+# Thin caller for the shared workflows in CaffeinatedPinguin/templates, pinned to one SHA.
+# One job = one required check: the ruleset on main waits for "ci-required".
 name: ci
 
 on:
@@ -8,50 +8,111 @@ on:
   push:
     branches: [main]
   workflow_dispatch:
+    inputs:
+      pr:
+        description: Pull request number to verify (checked out as refs/pull/<n>/head)
+        required: false
+        default: ""
+        type: string
 
 permissions: {}
 
+# Every PR gets its own group, so a new push cancels the previous run.
+# A push to main is never cancelled.
 concurrency:
   group: ci-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
-  ci-required:
+  changes:
+    permissions:
+      contents: read
+    uses: CaffeinatedPinguin/templates/.github/workflows/changes.yml@a69893e7e66de1704d65312252ae3ed77d1b066c
+    with:
+      groups: |
+        server: server/* pom.xml mvnw mvnw.cmd .mvn/* config/* Dockerfile .dockerignore
+        frontend: frontend/*
+
+  server:
+    needs: changes
+    if: contains(fromJSON(needs.changes.outputs.groups), 'server')
+    permissions:
+      contents: read
+    uses: CaffeinatedPinguin/templates/.github/workflows/maven-ci.yml@a69893e7e66de1704d65312252ae3ed77d1b066c
+    with:
+      ref: ${{ github.event.inputs.pr && format('refs/pull/{0}/head', github.event.inputs.pr) || '' }}
+      check-release-tag: false
+      # The jar is needed only by the docker job, which never runs for a PR.
+      artifact-name: ${{ github.event_name != 'pull_request' && 'server-jar' || '' }}
+      artifact-path: server/target/wakey-server-*.jar
+
+  frontend:
+    needs: changes
+    if: contains(fromJSON(needs.changes.outputs.groups), 'frontend')
+    permissions:
+      contents: read
+    uses: CaffeinatedPinguin/templates/.github/workflows/node-ci.yml@a69893e7e66de1704d65312252ae3ed77d1b066c
+    with:
+      ref: ${{ github.event.inputs.pr && format('refs/pull/{0}/head', github.event.inputs.pr) || '' }}
+      working-directory: frontend
+      scripts: format:check lint typecheck test build
+      artifact-name: ""
+      check-release-tag: false
+
+  docker:
+    needs: server
+    # The smoke test is slow: run it after a merge to main and on a manual run, never in a PR.
+    if: github.event_name != 'pull_request'
+    permissions:
+      contents: read
+      # The nested publish job asks for this, but it does not run with push: false.
+      packages: write
+    uses: CaffeinatedPinguin/templates/.github/workflows/docker.yml@a69893e7e66de1704d65312252ae3ed77d1b066c
+    with:
+      ref: ${{ github.event.inputs.pr && format('refs/pull/{0}/head', github.event.inputs.pr) || '' }}
+      image-name: wakey
+      artifact-name: server-jar
+      artifact-path: dist
+      smoke-paths: /healthz
+      push: false
+
+  docs:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 5
     permissions:
       contents: read
     steps:
-      - name: PR title is a Conventional Commit
-        if: github.event_name == 'pull_request' && github.event.pull_request.user.login != 'dependabot[bot]'
-        env:
-          TITLE: ${{ github.event.pull_request.title }}
-        run: |
-          re='^(feat|fix|docs|refactor|perf|test|build|ci|chore|revert)(\([a-z0-9._/-]+\))?!?: [^[:space:]].*[^.[:space:]]$'
-          if [[ ! "$TITLE" =~ $re && ! "$TITLE" =~ ^Revert\ \" ]]; then
-            echo "::error::PR title = the commit on main. Format: 'type(scope): summary', no trailing period. Example: 'fix(cli): handle empty config'"
-            exit 1
-          fi
-
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+      - name: Markdown links
+        run: scripts/ci.sh
 
-      - name: Dependency review (blocks new vulnerable dependencies)
-        if: github.event_name == 'pull_request'
-        uses: actions/dependency-review-action@bbc44d14a204704ccc493733616cd1e93a0321ec # v5.0.1
-        with:
-          fail-on-severity: high
+  conventions:
+    if: github.event_name == 'pull_request'
+    permissions: {}
+    uses: CaffeinatedPinguin/templates/.github/workflows/conventions.yml@a69893e7e66de1704d65312252ae3ed77d1b066c
 
-      # Uncomment the project runtime (the version is pinned by bin/pin-actions.sh):
-      # - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
-      #   with: { node-version-file: .nvmrc, cache: npm }
-      # - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
-      #   with: { python-version-file: .python-version }
-      # - uses: actions/setup-go@d8cbb8045d7f43706b9177cceb36c1f91a6644d5 # v7.1.0
-      #   with: { go-version-file: go.mod }
+  dependency-review:
+    if: github.event_name == 'pull_request'
+    permissions:
+      contents: read
+    uses: CaffeinatedPinguin/templates/.github/workflows/dependency-review.yml@a69893e7e66de1704d65312252ae3ed77d1b066c
+    with:
+      fail-on-severity: high
 
-      - name: lint / typecheck / test / build
+  # The baseline required check: passes when every needed job is green or skipped.
+  ci-required:
+    if: always()
+    needs: [changes, server, frontend, docker, docs, conventions, dependency-review]
+    runs-on: ubuntu-latest
+    timeout-minutes: 1
+    permissions: {}
+    steps:
+      - name: All jobs green
+        env:
+          RESULTS: ${{ join(needs.*.result, ' ') }}
         run: |
-          if [[ -x scripts/ci.sh ]]; then timeout 12m scripts/ci.sh
-          else echo "::warning::scripts/ci.sh is missing - CI tests nothing."; fi
+          for r in $RESULTS; do
+            [[ "$r" == success || "$r" == skipped ]] || { echo "::error::job result: $r"; exit 1; }
+          done
