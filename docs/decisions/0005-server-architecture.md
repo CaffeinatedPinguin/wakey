@@ -23,6 +23,7 @@ Jak robią inni: Uptime Kuma i Checkmate dzielą kod na warstwy techniczne; Heal
   - dostępu do innego modułu tylko przez jego pakiet główny;
   - jawnej mapy dozwolonych zależności między modułami i między rolami. Nowa krawędź to świadoma zmiana widoczna w diffie testu;
   - zasad z ADR: typy Reactora tylko w executorze ([0003](0003-network-checks.md)); zakaz `java.net.http`; czas tylko przez wstrzyknięty `java.time.Clock` (zakaz `Instant.now()`, `LocalDateTime.now()` itp.); pakiety `..domain..` bez `org.springframework..`.
+- Mapa dozwolonych zależności między modułami (`MODULE_DEPENDENCIES`) i przypisanie modułów do ról (`MODULE_ROLES`) są stałymi w `ArchitectureTest`. Nowy moduł lub nowa krawędź wymaga świadomego wpisu w obu stałych i jest widoczna w diffie testu. Krawędź między rolami jest zabroniona niezależnie od mapy: moduł roli może zależeć tylko od modułów swojej roli i modułów wspólnych, a komunikacja między rolami idzie przez port kolejki.
 - Każdą nową zasadę z ADR, którą da się sprawdzić statycznie, dopisujemy jako regułę ArchUnit. Reguły kodu (formatowanie, nulle, złożoność) opisuje [0007-static-checks.md](0007-static-checks.md).
 
 ### Porty (interfejsy)
