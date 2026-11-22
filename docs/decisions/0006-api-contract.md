@@ -13,7 +13,7 @@ Spec ([product-features.md](../specs/product-features.md), sekcje 0, 8 i 9) zak�
 - limit żądań zwraca 429 z czasem ponowienia;
 - tokeny API mają zakres i datę ważności.
 
-Ogólne standardy właściciela (`ai/domains/backend/AGENTS.md`, `ai/domains/frontend/`) wymagają dodatkowo:
+Ogólne standardy właściciela (backend/frontend) wymagają dodatkowo:
 - DTO i walidacji na granicach;
 - błędów bez szczegółów implementacji;
 - autoryzacji domyślnie odmawiającej;
@@ -139,7 +139,7 @@ Decyzja z 2026-11-22. Trzy role w dwóch poziomach:
   - bez `Idempotency-Key`.
 
 ### Klient API we frontendzie
-Wzorzec jak w `chaos-view/apps/velma`:
+Wzorzec:
 - `openapi-typescript` plus własny skrypt `generate-api.mjs`. Skrypt generuje `contract.ts`, `schema.ts` i `types.ts` z aliasami per `operationId`.
 - Tryb `--check` wykrywa dryf i jest podpięty pod `build`, `typecheck` i `test`.
 - Schematy Zod piszemy ręcznie w `features/*/api/*.schemas.ts`. **Każdy schemat ma `satisfies z.ZodType<typ z kontraktu>`**, więc rozjazd z OpenAPI nie przejdzie kompilacji.

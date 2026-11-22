@@ -6,7 +6,7 @@
 
 ## Context
 
-Serwer to jedna aplikacja Spring Boot z rolami (API, executor, alerty, agregacje), które mają dać się uruchomić jako osobne procesy samą konfiguracją ([0002-stack.md](0002-stack.md)). Właściciel chce KISS, SOLID, DRY i AHA, niezależności od konkretnych implementacji tam, gdzie się opłaca, oraz jak najwięcej reguł pilnowanych statycznie, bo kod w dużej części pisze AI, a AI zapomina o zasadach. Ogólne zasady backendu (DTO jako rekordy, walidacja na granicach, lekka architektura heksagonalna tylko przy realnej logice) pochodzą z `ai/domains/backend/AGENTS.md`; ten ADR dodaje decyzje lokalne. Decyzje zapadły w grill-me 2026-11-21.
+Serwer to jedna aplikacja Spring Boot z rolami (API, executor, alerty, agregacje), które mają dać się uruchomić jako osobne procesy samą konfiguracją ([0002-stack.md](0002-stack.md)). Właściciel chce KISS, SOLID, DRY i AHA, niezależności od konkretnych implementacji tam, gdzie się opłaca, oraz jak najwięcej reguł pilnowanych statycznie, bo kod w dużej części pisze AI, a AI zapomina o zasadach. Ogólne zasady backendu (DTO jako rekordy, walidacja na granicach, lekka architektura heksagonalna tylko przy realnej logice) pochodzą z ogólnych standardów właściciela (backend/frontend); ten ADR dodaje decyzje lokalne. Decyzje zapadły w grill-me 2026-11-21.
 
 Jak robią inni: Uptime Kuma i Checkmate dzielą kod na warstwy techniczne; Healthchecks (aplikacje Django) i Gatus (pakiety Go) dzielą według funkcji. Nikt nie stosuje pełnej architektury heksagonalnej, ale wszyscy mają jeden interfejs dla otwartych zbiorów (typy monitorów, kanały powiadomień). Nikt nie wymusza granic modułów testem; Gatus dostaje część za darmo z `internal/` w Go.
 

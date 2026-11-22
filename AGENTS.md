@@ -3,7 +3,7 @@
 Open source uptime monitor (self-host and EU cloud): Java/Spring Boot server, Go agent, one
 React + Vite frontend for the panel and public status pages. One maintainer; long-lived project.
 
-Domain: ../../gitlab/ai/domains/backend/AGENTS.md and ../../gitlab/ai/domains/frontend/AGENTS.md (generic rules; this file adds only local ones)
+Domain: backend and frontend (the maintainer's generic rules live outside this repository; this file adds only local ones)
 
 ## Read when
 
@@ -30,10 +30,13 @@ Domain: ../../gitlab/ai/domains/backend/AGENTS.md and ../../gitlab/ai/domains/fr
 - Docs stay in Polish until backlog item 13 (English translation); new docs may be in Polish.
 - `docs/research/` is a local doc type for research briefs and reports. A report recommends; only an ADR in `docs/decisions/` decides.
 - Stage numbers (0–9) and their scope come from `docs/specs/roadmap.md`.
+- The repository is public: no file, commit or pull request may contain the names of the owner's other projects, local paths, workspace layout or personal data.
+- Pull requests come only from collaborators; settings and files follow the baseline of the public `CaffeinatedPinguin/templates` repository. Workflows avoid `pull_request_target`, `workflow_run` and `issue_comment`, and carry no secrets in pull requests.
 
 ## Verify
 
-- `powershell -NoProfile -ExecutionPolicy Bypass -File ../../gitlab/ai/tools/check-ai.ps1 -Root . -Kind repo` — must end with `CHECK-OK`.
+- `bash scripts/ci.sh` — checks the documentation links.
+- the maintainer's workspace check `check-ai.ps1 -Root . -Kind repo` ends with `CHECK-OK`.
 
 ## Never
 
