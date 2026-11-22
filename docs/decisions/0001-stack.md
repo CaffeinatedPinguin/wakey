@@ -42,7 +42,7 @@ Produkt: open source uptime monitor (self-host i chmura w UE), jeden frontend Re
 ### Executor i lider
 
 - Executor checków: wątki wirtualne; harmonogram na 1–2 wątkach platformowych; semafor globalny i per lokalizacja; ograniczona kolejka wyników; batchowany zapis; pula połączeń DB niezależna od liczby wątków. Bez WebFlux.
-- Spike na etapie 0/1: pinning w JDBC/Hikari i DNS; zachowanie przy 5 000 checków.
+- Pinning w JDBC/Hikari i DNS oraz zachowanie przy 5 000 checków sprawdzają testy pisane razem z executorem.
 - Leader lock: własna tabela `leader_lock(name, holder_id, fencing_token, expires_at)`, atomowy `UPDATE ... WHERE`, czas z bazy, TTL 30 s i odnowienie co 10 s (konfigurowalne). Brak odnowienia = natychmiastowe zaprzestanie pracy jako lider. Token fencing przekazywany do zadań; zadania idempotentne.
 
 ### CI
@@ -80,27 +80,27 @@ Produkt: open source uptime monitor (self-host i chmura w UE), jeden frontend Re
 - Dwa toolchainy (Java/Maven i Go), dwa release pipeline'y; kontrakt JSON i testy parity.
 - HSQLDB: jeden proces, brak partycjonowania/HA; limit skali do zmierzenia i opisania; PostgreSQL rekomendowany powyżej.
 - Migracje forward-only; backup przed migracją.
-- Dokładne wersje i zgodność ekosystemu są bramką etapu 0.
+- Dokładne wersje i zgodność ekosystemu sprawdza fala, która dodaje daną zależność.
 - Frontend czeka na 1.5; do tego czasu nie wybieramy bibliotek UI/wykresów.
 
 ## Ryzyka i mitygacje
 
 | Ryzyko | Mitygacja |
 |---|---|
-| Luki ekosystemu Boot 4 | Bramka zgodności; ostatnia zgodna wersja 4.x; pin |
+| Luki ekosystemu Boot 4 | Testy zgodności przy dodaniu zależności; ostatnia zgodna wersja 4.x; pin |
 | Dryf dialektów SQL | Wspólny podzbiór, SQL tylko w repozytoriach, testy na obu bazach |
 | Skala HSQLDB | Benchmark, dokumentowany limit, ścieżka PostgreSQL |
-| Pinning wątków w JDBC/DNS | Spike na etapie 0/1, testy obciążeniowe |
+| Pinning wątków w JDBC/DNS | Testy przy executorze, testy obciążeniowe |
 | Parity Go/Java | Wspólne wektory testowe i kontrakt JSON |
 | Dwa toolchainy | CI z cache, mały zakres agenta, jedna osoba utrzymuje oba |
 | Ręczne aktualizacje | Podpisane wydania, powiadomienie o wersji, procedura aktualizacji |
 
-## Bramka i spike etapu 0
+## Co sprawdzają testy pisane razem z funkcją
 
 1. Wersje: Java 25, Boot 4.x, springdoc, Liquibase, Testcontainers, Spring Data JDBC, Maven Wrapper; pin.
 2. Liquibase na HSQLDB (plik) i PostgreSQL (Testcontainers): UUID, `TIMESTAMP WITH TIME ZONE`, CLOB, identity/generated keys, `SELECT FOR UPDATE`, `LIMIT/OFFSET`, `LOWER ... LIKE`.
 3. Spring Data JDBC: nowa encja z UUID (`Persistable`/`@Version`), batch przez `JdbcClient`, testy na obu bazach.
-4. Wątki wirtualne: HttpClient, JDBC/Hikari, DNS; pinning; benchmark 5 000 checków.
+4. Wątki wirtualne: HttpClient, JDBC/Hikari, DNS; testy pinningu i obciążeniowe przy executorze (5 000 checków).
 5. Leader lease: acquire/renew/expire na obu bazach, utrata połączenia, fencing.
 6. Go agent: statyczna binarka, CA/tzdata, httptrace, własny resolver, łańcuch TLS, ICMP bez roota (Linux/Docker), `--network=host`, reconnect/buffer, wektory parity.
 7. Szkielet CI matrix i test HSQLDB file backup/restore.

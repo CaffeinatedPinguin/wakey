@@ -23,7 +23,7 @@ Jak robią inni: OpenStatus (fazy jak u nas) otwiera nowe połączenie przy każ
 ## Consequences
 
 - Fazy z callbacków trzeba złożyć w jedną strukturę wyniku; metryki Micrometer Reactor Netty to agregaty, nie oś czasu checku.
-- Przypięcie IP z zachowaniem SNI w Reactor Netty wymaga spike'u na etapie 0/1.
+- Przypięcie IP z zachowaniem SNI w Reactor Netty sprawdzają testy przy checkach HTTP na etapie 1.
 - Nowe połączenie na check kosztuje handshake TLS (ok. 17–83/s przy 5 000 checków co 1–5 min).
 - Z chmury nie da się pingować hosta bez otwartego portu; tylko przez agenta.
 - Agent Go robi to samo (httptrace, ALPN, nowe połączenie); zgodność pilnują wspólne wektory testowe.

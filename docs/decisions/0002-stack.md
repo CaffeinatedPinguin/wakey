@@ -18,7 +18,7 @@ Zasady właściciela, które rozstrzygały wybory:
 ## Decision
 
 ### Serwer
-- Java 25 LTS, Spring Boot 4.x (najnowsza wspierana linia OSS; dokładna wersja po bramce zgodności na etapie 0), Spring MVC na Tomcacie z wątkami wirtualnymi. Bez WebFluxa.
+- Java 25 LTS, Spring Boot 4.x (najnowsza wspierana linia OSS; dokładna wersja wybrana w fali, która ją dodaje), Spring MVC na Tomcacie z wątkami wirtualnymi. Bez WebFluxa.
 - Checki wykonuje asynchroniczny klient Reactor Netty w warstwie executora; szczegóły w [0003](0003-network-checks.md). Reactor nie wychodzi poza tę warstwę.
 - Jedna aplikacja z rolami włączanymi konfiguracją (`wakey.roles`): API, executor, alerty, agregacje. Moduły komunikują się przez interfejsy i bazę, bez współdzielonego stanu w pamięci, tak aby każdą rolę dało się uruchomić jako osobny proces samą konfiguracją. Szczegóły modułów, portów i komunikacji między rolami: [0005-server-architecture.md](0005-server-architecture.md).
 - Build: Maven + Maven Wrapper.
@@ -58,6 +58,9 @@ Zasady właściciela, które rozstrzygały wybory:
 - Repozytorium GitHub: publiczne od 2026-11-22; pull requesty tylko od współpracowników (collaborators); ustawienia i pliki z baseline repozytorium `templates`. Zadania na tablicy GitHub Projects `wakey` z polem Status; etapy roadmapy to kamienie milowe „Etap N — nazwa”. CI przez nowy wspólny `maven-ci.yml` w repozytorium `templates`. Co bierzemy z `templates`: [github-ci.md](../research/github-ci.md).
 - Powiadomienie o nowej wersji: serwer raz na dobę sprawdza GitHub Releases; włączone domyślnie, z wyłącznikiem.
 
+### Zgodność wersji
+- Bez spike'ów i bez osobnej bramki zgodności wersji (2026-11-22): zgodność bibliotek sprawdza bramka fali, która je dodaje, a ryzyka (pinning wątków w JDBC/DNS, executor przy 5 000 checków, przypięcie IP z SNI w Reactor Netty, lease na obu bazach) sprawdzają testy pisane razem z daną funkcją.
+
 ## Consequences
 
 - Dwa toolchainy (Java/Maven i Go) w dwóch repozytoriach; zmiana kontraktu agenta wymaga dwóch PR.
@@ -66,7 +69,7 @@ Zasady właściciela, które rozstrzygały wybory:
 - Liquibase na FSL: przy zmianie licencji albo warunków plan B to Flyway OSS. Jako biblioteka jest zgodny z AGPL wakey; Spring, Netty i pozostałe zależności Apache-2.0 też.
 - AGPL może ograniczyć adopcję w firmach, które jej zakazują. To świadomy koszt ochrony chmury. Bez CLA nie będzie licencji komercyjnej (dual licensing), a zmiana licencji wymaga zgody autorów kontrybucji.
 - Brak podpisów wydań w MVP zmienia [product-features.md](../specs/product-features.md) (agent).
-- Do zrobienia na etapie 0: bramka zgodności wersji (Boot 4.x, Liquibase, Testcontainers, Spring Data JDBC, Reactor Netty), spike executora z 5 000 checków, testy lease na obu bazach.
+- Do zrobienia na etapie 0: testy lease na obu bazach.
 - Otwarte: zawartość `maven-ci.yml` (kierunek w [github-ci.md](../research/github-ci.md)), kopie zapasowe i odtwarzanie, szczegóły agenta Go (format konfiguracji, bufor) — do ustalenia.
 
 ## Links

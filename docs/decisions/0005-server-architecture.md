@@ -61,7 +61,7 @@ Jak robią inni: Uptime Kuma i Checkmate dzielą kod na warstwy techniczne; Heal
 - Opóźnienie przekazania między rolami wynosi do ok. 1 s, a odpytywanie lekko obciąża bazę. W zamian rozdzielenie ról nie wymaga przepisywania przepływów.
 - Bez Spring Modulith tracimy generowane diagramy modułów, `@ApplicationModuleTest` i rejestr zdarzeń. Zdarzenia Modulitha działają w jednym procesie, więc i tak nie pasowały do ról w osobnych procesach.
 - Regułę modułów w ArchUnit piszemy sami (ok. 50–80 linii testu).
-- Harmonogram executora: przy 5 000 checków wystarcza `ScheduledExecutorService`. Koło czasowe (`HashedWheelTimer` z `netty-common`, już na classpath) rozważamy tylko wtedy, gdy spike na etapie 0 pokaże problem.
+- Harmonogram executora: przy 5 000 checków wystarcza `ScheduledExecutorService`. Koło czasowe (`HashedWheelTimer` z `netty-common`, już na classpath) rozważamy tylko wtedy, gdy problem pokażą testy albo pomiary na działającej instancji.
 - Nowa zależność: ArchUnit (tylko w testach).
 
 ## Links
