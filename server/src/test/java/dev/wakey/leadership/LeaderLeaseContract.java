@@ -18,24 +18,29 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.jdbc.core.simple.JdbcClient;
 
-abstract class AbstractLeaderLeaseTest {
+/**
+ * Contract that every {@link LeaderLease} implementation must satisfy, regardless of the database.
+ *
+ * <p>This is a JUnit 5 test interface: its {@link Test @Test} and {@link BeforeEach @BeforeEach}
+ * default methods run for every class that implements it. Concrete suites only choose a database
+ * base class, for example {@code PostgresLeaderLeaseTest extends PostgresIntegrationTest implements
+ * LeaderLeaseContract}.
+ */
+public interface LeaderLeaseContract {
 
-    private static final Duration TTL = Duration.ofSeconds(30);
-    private static final int HOLDERS = 8;
+    Duration TTL = Duration.ofSeconds(30);
 
-    private final JdbcClient jdbc;
+    int HOLDERS = 8;
 
-    AbstractLeaderLeaseTest(JdbcClient jdbc) {
-        this.jdbc = jdbc;
-    }
+    JdbcClient jdbc();
 
     @BeforeEach
-    void deleteLeases() {
-        jdbc.sql("DELETE FROM leader_lock").update();
+    default void deleteLeases() {
+        jdbc().sql("DELETE FROM leader_lock").update();
     }
 
     @Test
-    void firstAcquireTakesTheLeaseWithTokenOne() {
+    default void firstAcquireTakesTheLeaseWithTokenOne() {
         LeaseGrant grant = lease("holder-a", TTL).acquireOrRenew("checks").orElseThrow();
 
         assertThat(grant.name()).isEqualTo("checks");
@@ -45,7 +50,7 @@ abstract class AbstractLeaderLeaseTest {
     }
 
     @Test
-    void renewingOwnLeaseKeepsTokenAndExtendsExpiry() {
+    default void renewingOwnLeaseKeepsTokenAndExtendsExpiry() {
         LeaderLease lease = lease("holder-a", TTL);
         LeaseGrant first = lease.acquireOrRenew("checks").orElseThrow();
         LeaseGrant renewed = lease.acquireOrRenew("checks").orElseThrow();
@@ -56,13 +61,13 @@ abstract class AbstractLeaderLeaseTest {
     }
 
     @Test
-    void anotherHolderCannotTakeLiveLease() {
+    default void anotherHolderCannotTakeLiveLease() {
         assertThat(lease("holder-a", TTL).acquireOrRenew("checks")).isPresent();
         assertThat(lease("holder-b", TTL).acquireOrRenew("checks")).isEmpty();
     }
 
     @Test
-    void expiredLeaseIsTakenOverWithHigherToken() throws InterruptedException {
+    default void expiredLeaseIsTakenOverWithHigherToken() throws InterruptedException {
         LeaseGrant first = lease("holder-a", Duration.ofMillis(100))
                 .acquireOrRenew("checks")
                 .orElseThrow();
@@ -75,7 +80,7 @@ abstract class AbstractLeaderLeaseTest {
     }
 
     @Test
-    void releaseByOwnerFreesTheLeaseForAnotherHolder() {
+    default void releaseByOwnerFreesTheLeaseForAnotherHolder() {
         LeaderLease owner = lease("holder-a", TTL);
         LeaseGrant first = owner.acquireOrRenew("checks").orElseThrow();
 
@@ -87,7 +92,7 @@ abstract class AbstractLeaderLeaseTest {
     }
 
     @Test
-    void releaseByAnotherHolderDoesNothing() {
+    default void releaseByAnotherHolderDoesNothing() {
         LeaderLease owner = lease("holder-a", TTL);
         LeaseGrant first = owner.acquireOrRenew("checks").orElseThrow();
 
@@ -98,14 +103,14 @@ abstract class AbstractLeaderLeaseTest {
     }
 
     @Test
-    void leasesWithDifferentNamesAreIndependent() {
+    default void leasesWithDifferentNamesAreIndependent() {
         assertThat(lease("holder-a", TTL).acquireOrRenew("checks")).isPresent();
         assertThat(lease("holder-b", TTL).acquireOrRenew("alerts")).isPresent();
         assertThat(lease("holder-b", TTL).acquireOrRenew("checks")).isEmpty();
     }
 
     @Test
-    void exactlyOneOfEightConcurrentHoldersWins() throws Exception {
+    default void exactlyOneOfEightConcurrentHoldersWins() throws Exception {
         List<Callable<Optional<LeaseGrant>>> attempts = new ArrayList<>();
         for (int index = 0; index < HOLDERS; index++) {
             LeaderLease lease = lease("holder-" + index, TTL);
@@ -118,7 +123,7 @@ abstract class AbstractLeaderLeaseTest {
     }
 
     private JdbcLeaderLease lease(String holderId, Duration ttl) {
-        return new JdbcLeaderLease(jdbc, holderId, ttl);
+        return new JdbcLeaderLease(jdbc(), holderId, ttl);
     }
 
     private static List<Optional<LeaseGrant>> runConcurrently(List<Callable<Optional<LeaseGrant>>> attempts)

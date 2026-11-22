@@ -1,23 +1,15 @@
 package dev.wakey.leadership;
 
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
-import org.springframework.jdbc.core.simple.JdbcClient;
-import org.testcontainers.junit.jupiter.Container;
-import org.testcontainers.junit.jupiter.Testcontainers;
-import org.testcontainers.postgresql.PostgreSQLContainer;
+import dev.wakey.testsupport.PostgresIntegrationTest;
 
-@Testcontainers
-@SpringBootTest
-class PostgresLeaderLeaseTest extends AbstractLeaderLeaseTest {
+/**
+ * Runs the shared {@link LeaderLeaseContract} against PostgreSQL.
+ *
+ * <p>The singleton {@code PostgreSQLContainer}, its service connection and the shared application
+ * context live in {@link dev.wakey.testsupport.PostgresIntegrationTest}; this class only mixes in
+ * the contract.
+ */
+class PostgresLeaderLeaseTest extends PostgresIntegrationTest implements LeaderLeaseContract {
 
-    @Container
-    @ServiceConnection
-    static final PostgreSQLContainer POSTGRES = new PostgreSQLContainer("postgres:17-alpine");
-
-    @Autowired
-    PostgresLeaderLeaseTest(JdbcClient jdbc) {
-        super(jdbc);
-    }
+    // All test methods are default methods of the contract; this class only selects the database.
 }

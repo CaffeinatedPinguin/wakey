@@ -1,19 +1,14 @@
 package dev.wakey.leadership;
 
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.jdbc.core.simple.JdbcClient;
+import dev.wakey.testsupport.HsqldbIntegrationTest;
 
-@SpringBootTest(
-        properties = {
-            "spring.datasource.url=jdbc:hsqldb:mem:wakey-leader-lease-contract",
-            "spring.datasource.username=sa",
-            "spring.datasource.password="
-        })
-class HsqldbLeaderLeaseTest extends AbstractLeaderLeaseTest {
+/**
+ * Runs the shared {@link LeaderLeaseContract} against the HSQLDB in-memory database.
+ *
+ * <p>The datasource properties and the shared application context live in
+ * {@link dev.wakey.testsupport.HsqldbIntegrationTest}; this class only mixes in the contract.
+ */
+class HsqldbLeaderLeaseTest extends HsqldbIntegrationTest implements LeaderLeaseContract {
 
-    @Autowired
-    HsqldbLeaderLeaseTest(JdbcClient jdbc) {
-        super(jdbc);
-    }
+    // All test methods are default methods of the contract; this class only selects the database.
 }
