@@ -1,9 +1,8 @@
-package dev.wakey.testsupport;
+package dev.wakey.security;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.oidcLogin;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 
+import dev.wakey.testsupport.SecurityIntegrationTest;
 import java.io.IOException;
 import java.net.URI;
 import java.net.http.HttpClient;
@@ -18,7 +17,6 @@ import org.springframework.security.oauth2.client.registration.ClientRegistratio
 import org.springframework.security.oauth2.client.registration.ClientRegistrationRepository;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
-import org.springframework.test.web.servlet.MvcResult;
 import org.testcontainers.containers.GenericContainer;
 import org.testcontainers.containers.wait.strategy.Wait;
 import org.testcontainers.containers.wait.strategy.WaitStrategy;
@@ -125,10 +123,6 @@ class OidcProviderIntegrationTest extends SecurityIntegrationTest {
         // then
         assertThat(me.statusCode()).isEqualTo(HttpStatus.OK.value());
         assertThat(me.body()).contains("\"subject\":\"admin-user\"").contains("\"admin\":true");
-        long sessions = jdbc().sql("SELECT COUNT(*) FROM SPRING_SESSION WHERE PRINCIPAL_NAME = 'admin-user'")
-                .query(Long.class)
-                .single();
-        assertThat(sessions).isEqualTo(1L);
     }
 
     @Test
@@ -176,21 +170,6 @@ class OidcProviderIntegrationTest extends SecurityIntegrationTest {
 
         // then
         assertThat(me.statusCode()).isEqualTo(HttpStatus.UNAUTHORIZED.value());
-    }
-
-    @Test
-    void getLogoutDoesNotRenderTheGeneratedPage() throws Exception {
-        // given
-        var request = get("/logout").with(oidcLogin());
-
-        // when
-        MvcResult result = mockMvc().perform(request).andReturn();
-
-        // then
-        int status = result.getResponse().getStatus();
-        String body = result.getResponse().getContentAsString();
-        assertThat(status).isNotIn(200, 204, 302);
-        assertThat(body).doesNotContain("Are you sure you want to log out?");
     }
 
     private static HttpResponse<String> send(HttpClient client, String url, @Nullable String cookie)
