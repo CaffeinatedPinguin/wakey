@@ -87,7 +87,7 @@ Jak robią inni:
 
 Trzy łańcuchy `SecurityFilterChain`:
 
-- **bezstanowy** (`@Order(1)`) dla `/agent/v1/**`, `/ping/**`, `/public/v1/**`: `SessionCreationPolicy.STATELESS`, bez CSRF i bez request cache; każde żądanie wymaga uwierzytelnienia, odpowiedź to 401 (`HttpStatusEntryPoint`), łańcuch nigdy nie tworzy sesji. Mechanizmy tokenów dochodzą w kolejnych zadaniach.
+- **bezstanowy** (`@Order(1)`) dla `/agent/v1/**`, `/ping/**`, `/public/v1/**`: `SessionCreationPolicy.STATELESS`, bez CSRF i bez request cache; każde żądanie wymaga uwierzytelnienia, odpowiedź to 401, łańcuch nigdy nie tworzy sesji. CSRF jest tu wyłączony, bo łańcuch nie używa sesji ani ciasteczek, więc przeglądarka nie dokleja uwierzytelnienia; test `statelessSurfaceIgnoresTheSessionCookie` dowodzi, że ciasteczko sesji nie jest czytane. Mechanizmy tokenów dochodzą w kolejnych zadaniach.
 - **użytkownika** (`@Order(2)`) dla `/api/v1/**` oraz `/oauth2/**`, `/login/**`, `/logout`: `oauth2Login` włączany tylko wtedy, gdy istnieje `ClientRegistrationRepository` (bez dostawcy aplikacja wstaje bez logowania), `csrf.spa()` z ciasteczkiem `XSRF-TOKEN` i nagłówkiem `X-XSRF-TOKEN`, a `/api/v1/**` bez uwierzytelnienia dostaje 401 zamiast przekierowania.
 - **domyślny** (`@Order(3)`): `/healthz` publiczne, wszystko inne `denyAll`; anonimowy dostaje 401.
 
@@ -106,6 +106,8 @@ Nagłówki na wszystkich łańcuchach: domyślne Springa plus `Content-Security-
 Wylogowanie: tylko `POST /logout` z tokenem CSRF. Strona logowania jest ustawiona jawnie na `/oauth2/authorization/oidc` (`oauth2Login.loginPage`), więc Spring nie generuje HTML-owych stron logowania ani wylogowania, a `GET /logout` nie jest obsługiwany. Odpowiedź ma `Clear-Site-Data: "cookies"` (`HeaderWriterLogoutHandler` + `ClearSiteDataHeaderWriter`; przeglądarki honorują je tylko po HTTPS) i status 200 bez przekierowania (`HttpStatusReturningLogoutSuccessHandler`). Odłożone: RP-initiated logout (`OidcClientInitiatedLogoutSuccessHandler`) i back-channel logout. Back-channel wymaga rejestru sesji OIDC, który domyślnie żyje w pamięci, a aplikacja ma działać na kilku instancjach; RP-initiated wymaga ustalonego end-session dostawcy i wróci razem z listą sesji i „wyloguj wszędzie”.
 
 Logi: INFO przy udanym logowaniu (podmiot i informacja, czy Admin) oraz przy wylogowaniu, WARN przy nieudanym logowaniu. Źródłem są zdarzenia Spring Security (`AuthenticationSuccessEvent`, `AbstractAuthenticationFailureEvent`, `LogoutSuccessEvent`); logi nie zawierają tokenów ani sekretów.
+
+Odpowiedzi 401 i 403 są logowane: 401 na INFO z powodem `missing-authentication`, a 403 na WARN z powodem z zamkniętej listy (`csrf-token-missing`, `csrf-token-invalid`, `access-denied`). W logu jest metoda i ścieżka żądania, a obie przechodzą przez jedną funkcję czyszczącą, która zamienia znaki sterujące na widoczne escape'y i obcina tekst do 200 znaków, więc dane od klienta nie mogą wstrzyknąć linii logu. Bez nagłówków, ciasteczek, tokenów, parametrów zapytania i treści żądania.
 
 Na etap 1 przechodzą: limit prób logowania za portem `RateLimiter`, unieważnianie sesji po zmianie roli albo usunięciu z przestrzeni oraz „wyloguj wszędzie”.
 

@@ -1,0 +1,44 @@
+package dev.wakey.security;
+
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+import java.io.IOException;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.web.access.AccessDeniedHandler;
+import org.springframework.security.web.csrf.InvalidCsrfTokenException;
+import org.springframework.security.web.csrf.MissingCsrfTokenException;
+
+/** Logs every 403 with a fixed reason and the sanitized method and path, including CSRF rejections. */
+@Slf4j
+final class ForbiddenRequestLog implements AccessDeniedHandler {
+
+    private static final String ACCESS_DENIED = "access-denied";
+
+    private static final String CSRF_TOKEN_MISSING = "csrf-token-missing";
+
+    private static final String CSRF_TOKEN_INVALID = "csrf-token-invalid";
+
+    @Override
+    public void handle(HttpServletRequest request, HttpServletResponse response, AccessDeniedException exception)
+            throws IOException {
+        String reason = reasonFor(exception);
+        String method = LogSafeText.sanitize(request.getMethod());
+        String path = LogSafeText.sanitize(request.getRequestURI());
+        log.warn("request rejected: reason={} method={} path={}", reason, method, path);
+        if (response.isCommitted()) {
+            return;
+        }
+        response.sendError(HttpServletResponse.SC_FORBIDDEN);
+    }
+
+    private static String reasonFor(AccessDeniedException exception) {
+        String reason = ACCESS_DENIED;
+        if (exception instanceof MissingCsrfTokenException) {
+            reason = CSRF_TOKEN_MISSING;
+        } else if (exception instanceof InvalidCsrfTokenException) {
+            reason = CSRF_TOKEN_INVALID;
+        }
+        return reason;
+    }
+}
