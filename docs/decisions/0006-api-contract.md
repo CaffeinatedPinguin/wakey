@@ -83,6 +83,32 @@ Jak robią inni:
   - nie wymagają CSRF.
 - Odrzucony wariant: frontend sam prowadzi OIDC i wysyła JWT do bezstanowego serwera. Odpada, bo GitHub (OAuth2 bez OIDC, wymiana kodu wymaga sekretu) nie zadziała, Google daje JWT tylko jako ID token, a token w JavaScripcie jest dostępny dla XSS.
 
+### Konfiguracja bezpieczeństwa (2026-11-22)
+
+Trzy łańcuchy `SecurityFilterChain`:
+
+- **bezstanowy** (`@Order(1)`) dla `/agent/v1/**`, `/ping/**`, `/public/v1/**`: `SessionCreationPolicy.STATELESS`, bez CSRF i bez request cache; każde żądanie wymaga uwierzytelnienia, odpowiedź to 401 (`HttpStatusEntryPoint`), łańcuch nigdy nie tworzy sesji. Mechanizmy tokenów dochodzą w kolejnych zadaniach.
+- **użytkownika** (`@Order(2)`) dla `/api/v1/**` oraz `/oauth2/**`, `/login/**`, `/logout`: `oauth2Login` włączany tylko wtedy, gdy istnieje `ClientRegistrationRepository` (bez dostawcy aplikacja wstaje bez logowania), `csrf.spa()` z ciasteczkiem `XSRF-TOKEN` i nagłówkiem `X-XSRF-TOKEN`, a `/api/v1/**` bez uwierzytelnienia dostaje 401 zamiast przekierowania.
+- **domyślny** (`@Order(3)`): `/healthz` publiczne, wszystko inne `denyAll`; anonimowy dostaje 401.
+
+OIDC: rejestracja ma identyfikator `oidc` (`/oauth2/authorization/oidc`) i jest konfigurowana wyłącznie właściwościami Springa (`spring.security.oauth2.client.registration.oidc.*`, `...provider.oidc.*`; w produkcji przez `SPRING_SECURITY_OAUTH2_CLIENT_...`). W `application.yml` nie ma wartości dostawcy. PKCE jest włączone jawnie przez `ClientSettings.requireProofKey(true)` w customizerze rejestracji, bo Boot 4.2 nie ma właściwości `require-proof-key`.
+
+Rola Admin: bean `GrantedAuthoritiesMapper` czyta claim `wakey.security.admin-claim` (domyślnie `groups`) i dodaje `ROLE_ADMIN` tylko wtedy, gdy lista zawiera `wakey.security.admin-group` (pusta wartość oznacza, że nikt nie jest Adminem). Bez JMESPath i bez własnego `OidcUserService`.
+
+Sesje: Spring Session JDBC z `spring.session.jdbc.initialize-schema: never`; tabele `SPRING_SESSION` i `SPRING_SESSION_ATTRIBUTES` tworzy changeset Liquibase `0003-spring-session.xml` (forward-only, bez `dbms`, wspólny dla PostgreSQL i HSQLDB). Ciasteczko `SESSION` ma `HttpOnly`, `Secure` i `SameSite=Lax` (`server.servlet.session.cookie.*`). Ochrona przed session fixation zostaje domyślna (`changeSessionId`).
+
+Ochrona logowania: PKCE, parametry `state` i `nonce` oraz weryfikacja podpisu i wystawcy ID tokenu pochodzą ze Spring Security. Po sukcesie serwer zawsze przekierowuje na `wakey.security.frontend-url` (domyślnie `/`); nie używa adresu z parametru żądania ani zapisanego żądania, bo request cache jest wyłączony, a handler sukcesu ma `alwaysUse=true`. Po błędzie (zły `state`, odrzucony kod, błąd dostawcy) przekierowuje na `{frontend-url}?login=failed` z jednym stałym znacznikiem, bez szczegółów błędu w adresie i odpowiedzi; sesję unieważnia, a w logu zostaje WARN z typem wyjątku bez tokenów i sekretów.
+
+Limity sesji: bezczynność wyznacza `spring.session.timeout` (30m), a bezwzględny maksymalny wiek `wakey.security.session-max-age` (12h). Spring Session 4.2 nie ma gotowego mechanizmu bezwzględnego wieku, więc mały filtr przed wczytaniem kontekstu bezpieczeństwa unieważnia starszą sesję; żądanie API dostaje wtedy 401, a użytkownik loguje się ponownie i grupy są sprawdzane w IdP od nowa. Bez sekretów i danych sesji w logach.
+
+Nagłówki na wszystkich łańcuchach: domyślne Springa plus `Content-Security-Policy: default-src 'none'; frame-ancestors 'none'`, `Referrer-Policy: no-referrer` i `Permissions-Policy: camera=(), microphone=(), geolocation=()`.
+
+Wylogowanie: tylko `POST /logout` z tokenem CSRF. Strona logowania jest ustawiona jawnie na `/oauth2/authorization/oidc` (`oauth2Login.loginPage`), więc Spring nie generuje HTML-owych stron logowania ani wylogowania, a `GET /logout` nie jest obsługiwany. Odpowiedź ma `Clear-Site-Data: "cookies"` (`HeaderWriterLogoutHandler` + `ClearSiteDataHeaderWriter`; przeglądarki honorują je tylko po HTTPS) i status 200 bez przekierowania (`HttpStatusReturningLogoutSuccessHandler`). Odłożone: RP-initiated logout (`OidcClientInitiatedLogoutSuccessHandler`) i back-channel logout. Back-channel wymaga rejestru sesji OIDC, który domyślnie żyje w pamięci, a aplikacja ma działać na kilku instancjach; RP-initiated wymaga ustalonego end-session dostawcy i wróci razem z listą sesji i „wyloguj wszędzie”.
+
+Logi: INFO przy udanym logowaniu (podmiot i informacja, czy Admin) oraz przy wylogowaniu, WARN przy nieudanym logowaniu. Źródłem są zdarzenia Spring Security (`AuthenticationSuccessEvent`, `AbstractAuthenticationFailureEvent`, `LogoutSuccessEvent`); logi nie zawierają tokenów ani sekretów.
+
+Na etap 1 przechodzą: limit prób logowania za portem `RateLimiter`, unieważnianie sesji po zmianie roli albo usunięciu z przestrzeni oraz „wyloguj wszędzie”.
+
 ### Role i dostęp
 Decyzja z 2026-11-22. Trzy role w dwóch poziomach:
 
