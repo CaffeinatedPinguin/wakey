@@ -47,6 +47,11 @@
       <property name="query" value="//LITERAL_CATCH[SLIST/*[not(self::RCURLY or self::SINGLE_LINE_COMMENT or self::BLOCK_COMMENT_BEGIN)]][not(.//LITERAL_THROW)][not(.//METHOD_CALL/ELIST//IDENT/@text = ./PARAMETER_DEF/IDENT/@text)]"/>
       <message key="matchxpath.match" value="A catch block must rethrow the exception, wrap it with the original cause, or pass the caught exception to a call (for example a logger), otherwise the stack trace is lost."/>
     </module>
+    <module name="MatchXpath">
+      <!-- A single call argument may hold at most one method call; chains on an object and lambda bodies do not count. -->
+      <property name="query" value="//ELIST/EXPR[count(descendant::METHOD_CALL except (descendant::LAMBDA//METHOD_CALL | descendant::OBJBLOCK//METHOD_CALL)) &gt; 1]"/>
+      <message key="matchxpath.match" value="A call argument may contain at most one method call; extract the longer expression into a named variable."/>
+    </module>
     <module name="InnerAssignment"/>
     <module name="IllegalCatch"/>
     <module name="IllegalThrows"/>
