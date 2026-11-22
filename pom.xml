@@ -120,6 +120,23 @@
               <goal>check</goal>
             </goals>
           </execution>
+          <execution>
+            <id>checkstyle-test</id>
+            <phase>verify</phase>
+            <goals>
+              <goal>check</goal>
+            </goals>
+            <configuration>
+              <configLocation>${maven.multiModuleProjectDirectory}/config/checkstyle/checkstyle-test.xml</configLocation>
+              <sourceDirectories>
+                <sourceDirectory>${project.build.testSourceDirectory}</sourceDirectory>
+              </sourceDirectories>
+              <includeResources>false</includeResources>
+              <includeTestResources>false</includeTestResources>
+              <cacheFile>${project.build.directory}/checkstyle-test-cachefile</cacheFile>
+              <outputFile>${project.build.directory}/checkstyle-test-result.xml</outputFile>
+            </configuration>
+          </execution>
         </executions>
       </plugin>
     </plugins>

@@ -78,6 +78,37 @@ Testy integracyjne korzystają z jednego współdzielonego kontenera i jednego k
 
 Czego te reguły nie łapią: logowania na złym poziomie (np. `debug` zamiast `error`), braku lub bezsensowności komunikatu logu oraz tego, że samo `e.getMessage()` bywa puste. Globalna obsługa nieoczekiwanych wyjątków w HTTP (`@RestControllerAdvice` z logiem) przyjdzie z pierwszymi endpointami na etapie 1.
 
+### Struktura testów (2026-11-22)
+
+Testy czytamy jak zdania o zachowaniu, nie jak skróty implementacji.
+
+- Nazwa testu to zdanie o zachowaniu, bez przedrostków `should`/`test` (np. `expiredLeaseIsTakenOverWithAHigherToken`).
+- Jeden test sprawdza jedno zachowanie; asercje mówią o wymaganiu, a nie powtarzają implementacji.
+- Test dłuższy niż jedna instrukcja dzieli się komentarzami `// given` (przygotowanie), `// when` (akcja) i `// then` (asercje); `// given` pomijamy, gdy nie ma przygotowania.
+- Kontrakt, który musi spełniać każda implementacja na obu bazach, to interfejs testowy JUnit (`LeaderLeaseContract`, `MessageQueueContract`). Wspólne bazy i dostęp do beanów mieszkają w `dev.wakey.testsupport`, a klasy konkretne tylko wybierają bazę danych.
+- Ekonomia (AHA, DRY, KISS): testujemy wymagania, nie implementację; wspólne pomocniki tylko dla wiedzy, która musi zmieniać się razem; jednorazowych pomocników nie wyciągamy; klasy łączące bazę z kontraktem nie dostają rozbudowanego Javadoc.
+
+Regułę pilnuje `config/checkstyle/checkstyle-test.xml`, uruchamiany drugą egzekucją `maven-checkstyle-plugin` w fazie `verify` tylko dla katalogu testów (`server/src/test/java`).
+
+### Proste argumenty (2026-11-22)
+
+W całym kodzie, produkcyjnym i testowym, argument wywołania zawiera najwyżej jedno wywołanie metody. Dłuższe wyrażenie trafia do zmiennej z nazwą. Łańcuch wywołań na obiekcie (`builder.a(x).b(y)`, `jdbc.sql(...).param(...)`) i ciała lambd są dozwolone, bo reguła liczy tylko wywołania wewnątrz jednego argumentu.
+
+Przed:
+
+```java
+assertThat(results.stream().filter(Optional::isPresent).count()).isEqualTo(1L);
+```
+
+Po:
+
+```java
+long winners = results.stream().filter(Optional::isPresent).count();
+assertThat(winners).isEqualTo(1L);
+```
+
+Reguły pilnują `config/checkstyle/checkstyle.xml` (kod produkcyjny) i `config/checkstyle/checkstyle-test.xml` (testy).
+
 ## Consequences
 
 - Nowe zależności Javy (wtyczki builda i kompilatora): Spotless, palantir-java-format, Error Prone, NullAway, Checkstyle.

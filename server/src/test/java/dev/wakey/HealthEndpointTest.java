@@ -1,7 +1,6 @@
 package dev.wakey;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.fail;
 
 import dev.wakey.testsupport.HsqldbIntegrationTest;
 import java.util.Objects;
@@ -19,25 +18,33 @@ class HealthEndpointTest extends HsqldbIntegrationTest {
 
     @Test
     void healthEndpointIsUpOnHealthz() {
+        // when
         ResponseEntity<String> response =
                 client().get().uri("/healthz").retrieve().toEntity(String.class);
+        String body = Objects.requireNonNull(response.getBody());
 
+        // then
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
-        assertThat(Objects.requireNonNull(response.getBody())).contains("\"status\":\"UP\"");
+        assertThat(body).contains("\"status\":\"UP\"");
     }
 
     @Test
     void actuatorEnvironmentEndpointIsNotExposed() {
-        assertNotFound("/actuator/env");
-        assertNotFound("/env");
+        // when
+        int actuatorStatus = statusOf("/actuator/env");
+        int shortStatus = statusOf("/env");
+
+        // then
+        assertThat(actuatorStatus).isEqualTo(404);
+        assertThat(shortStatus).isEqualTo(404);
     }
 
-    private void assertNotFound(String path) {
+    private int statusOf(String path) {
         try {
             client().get().uri(path).retrieve().toBodilessEntity();
-            fail("Expected a 404 response for " + path);
+            return HttpStatus.OK.value();
         } catch (RestClientResponseException exception) {
-            assertThat(exception.getStatusCode().value()).isEqualTo(404);
+            return exception.getStatusCode().value();
         }
     }
 
