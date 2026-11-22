@@ -22,6 +22,7 @@ Zasady właściciela, które rozstrzygały wybory:
 - Checki wykonuje asynchroniczny klient Reactor Netty w warstwie executora; szczegóły w [0003](0003-network-checks.md). Reactor nie wychodzi poza tę warstwę.
 - Jedna aplikacja z rolami włączanymi konfiguracją (`wakey.roles`): API, executor, alerty, agregacje. Moduły komunikują się przez interfejsy i bazę, bez współdzielonego stanu w pamięci, tak aby każdą rolę dało się uruchomić jako osobny proces samą konfiguracją. Szczegóły modułów, portów i komunikacji między rolami: [0005-server-architecture.md](0005-server-architecture.md).
 - Build: Maven + Maven Wrapper.
+- Lombok 1.18.48 (scope `provided`, także w `annotationProcessorPaths` kompilatora): tylko adnotacje dozwolone w [0007](0007-static-checks.md) — `@Getter`, `@Setter`, `@RequiredArgsConstructor`, `@NoArgsConstructor(access = PRIVATE)`, `@Builder` i `@Slf4j`. Reszta jest zablokowana przez `lombok.config` (`@Data`, `@Value`, `@EqualsAndHashCode` itd.).
 - Obserwowalność: Spring Boot Actuator (health dla Dockera, tylko jawnie wystawione endpointy) i Micrometer jako jedyne API metryk od etapu 0. Eksport do OTLP (dodatkowa zależność i konfiguracja, bez zmian w kodzie) w etapie 8 ([roadmap.md](../specs/roadmap.md)).
 
 ### Bazy i dane

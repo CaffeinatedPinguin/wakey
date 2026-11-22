@@ -3,23 +3,16 @@ package dev.wakey;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.fail;
 
+import dev.wakey.testsupport.HsqldbIntegrationTest;
 import java.util.Objects;
 import org.junit.jupiter.api.Test;
-import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.server.LocalServerPort;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientResponseException;
 
-@SpringBootTest(
-        webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
-        properties = {
-            "spring.datasource.url=jdbc:hsqldb:mem:wakey-health",
-            "spring.datasource.username=sa",
-            "spring.datasource.password="
-        })
-class HealthEndpointTest {
+class HealthEndpointTest extends HsqldbIntegrationTest {
 
     @LocalServerPort
     private int port;

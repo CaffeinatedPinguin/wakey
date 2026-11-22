@@ -55,6 +55,41 @@ Jak robią inni: Uptime Kuma i Checkmate dzielą kod na warstwy techniczne; Heal
 - Wyniki pomiarów obsługuje `JdbcClient` z ręcznym `RowMapper`.
 - DTO API są zawsze osobnymi rekordami. Mapowanie piszemy ręcznie, bez MapStruct.
 
+### W prostych słowach: lider i lease
+
+**Po co?** Serwer wakey może kiedyś działać jako kilka kopii naraz (np. A, B, C). Część pracy ma robić tylko jedna z nich: odpalanie checków według harmonogramu, alerty, agregacje. Inaczej każdy alert przyszedłby trzy razy.
+
+**Lease to klucz do pokoju.** W bazie jest tabela `leader_lock`.
+- Kopia A bierze klucz na 30 s. Dopóki go ma, jest liderem i robi pracę w tle.
+- Lider co jakiś czas przedłuża klucz („wciąż żyję”).
+- Gdy A padnie i nie przedłuży, po 30 s klucz wygasa i bierze go kopia B.
+- Przy każdej zmianie właściciela rośnie numer — fencing token. A miał 1, B dostaje 2. Gdy A się „obudzi” i spróbuje coś zrobić ze starym numerem, da się go odrzucić, bo aktualny jest 2. To chroni przed dwoma liderami naraz.
+- Czas bierzemy z bazy, nie z zegara procesu, bo zegary różnych maszyn mogą się rozjechać.
+
+**Co się dzieli między kopie, a co nie:**
+
+| Rodzaj pracy | Dzielony między kopie? |
+|---|---|
+| Ruch HTTP: API, panel, wyniki od agentów | Tak — load balancer kieruje zapytania do dowolnej kopii; stan (sesje, dane) jest w bazie |
+| Harmonogram, alerty, agregacje | Nie — robi to tylko lider; reszta czeka w rezerwie, gotowa przejąć |
+| Kolejka między rolami | Nie dzieli obciążenia — pozwala uruchomić role (executor, alerty) jako osobne procesy |
+
+Konkurujący konsumenci (kilka kopii dzielących się pracą w tle) przyjdą dopiero, gdy jeden lider nie wyrobi ([0002](0002-stack.md)). W MVP działa jedna instancja; to wszystko jest gotowe na kolejne kopie bez przepisywania kodu.
+
+### Logowanie (2026-11-22)
+
+Logujemy dużo, żeby z logów było widać, co robi aplikacja — także na produkcji. Poziomy:
+- **INFO** — zmiany stanu i zdarzenia ważne na produkcji: start i stop ról, przejęcie lub utrata lidera, wysłany alert.
+- **DEBUG** — rutynowe kroki przydatne przy debugowaniu: każda próba, odnowienie lease, pominięcie.
+- **WARN** — sytuacje nieoczekiwane, ale obsłużone.
+- **ERROR** — błąd, który wymaga uwagi.
+
+Zawsze SLF4J przez `@Slf4j`, placeholdery `{}`, wyjątek jako ostatni argument. Nigdy nie logujemy sekretów, tokenów ani haseł.
+
+### Testy integracyjne (2026-11-22)
+
+Testy integracyjne korzystają z jednego współdzielonego kontenera i jednego kontekstu Springa na bazę. Wzorzec to singleton container: statyczne pole z kontenerem w abstrakcyjnej klasie bazowej (`dev.wakey.testsupport`), start w bloku statycznym i `@ServiceConnection`; bez `@Testcontainers`/`@Container`, bo ich cykl życia zatrzymuje współdzielony kontener po pierwszej klasie testowej.
+
 ## Consequences
 
 - Port kolejki to świadomy wyjątek od reguły portów: wymiana na Redis albo inną kolejkę jest znaną ścieżką rozwoju, a koszt portu jest mały.
