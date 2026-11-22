@@ -11,8 +11,13 @@ class PostgresSessionLimitsTest extends PostgresIntegrationTest {
 
     @Test
     void appliesTheConfiguredSessionLimitsToEveryPooledConnection() {
-        assertThat(show("idle_in_transaction_session_timeout")).isEqualTo("45s");
-        assertThat(show("lock_timeout")).isEqualTo("3s");
+        // when
+        String idleTimeout = show("idle_in_transaction_session_timeout");
+        String lockTimeout = show("lock_timeout");
+
+        // then
+        assertThat(idleTimeout).isEqualTo("45s");
+        assertThat(lockTimeout).isEqualTo("3s");
     }
 
     private String show(String setting) {

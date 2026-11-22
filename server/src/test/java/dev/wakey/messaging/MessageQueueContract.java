@@ -19,14 +19,19 @@ import org.springframework.transaction.support.TransactionTemplate;
  * Contract that every {@link MessageQueue} implementation must satisfy, regardless of the database.
  *
  * <p>This is a JUnit 5 test interface: its {@link Test} and {@link BeforeEach} default methods run
- * for every class that implements it. Concrete suites only choose a database base class, for example
- * {@code PostgresMessageQueueTest extends PostgresIntegrationTest implements MessageQueueContract}.
+ * for every class that implements it. Concrete suites only choose a database base class.
  */
 public interface MessageQueueContract {
 
-    MessageQueue queue();
+    <T> T bean(Class<T> type);
 
-    PlatformTransactionManager transactions();
+    default MessageQueue queue() {
+        return bean(MessageQueue.class);
+    }
+
+    default PlatformTransactionManager transactions() {
+        return bean(PlatformTransactionManager.class);
+    }
 
     JdbcClient jdbc();
 
@@ -178,7 +183,8 @@ public interface MessageQueueContract {
         });
 
         // then
-        assertThat(queue().poll("new-consumer", "first-ack", 10)).isEmpty();
+        List<QueuedMessage> remaining = queue().poll("new-consumer", "first-ack", 10);
+        assertThat(remaining).isEmpty();
     }
 
     @Test
