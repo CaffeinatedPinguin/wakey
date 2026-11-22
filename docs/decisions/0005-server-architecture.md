@@ -55,6 +55,15 @@ Jak robią inni: Uptime Kuma i Checkmate dzielą kod na warstwy techniczne; Heal
 
 Pierwszy `ack` danego konsumenta na danym temacie wykonany jednocześnie z dwóch procesów (np. przy zmianie lidera) może w PostgreSQL skończyć się błędem duplikatu i wycofaniem tej jednej transakcji. Nic nie ginie, bo dostarczanie jest „co najmniej raz” i wiadomość wróci przy następnym `poll`.
 
+**Gdy aplikacja zniknie bez zamknięcia połączenia.** Maszyna z aplikacją może zniknąć (awaria, zerwanie sieci) bez zamknięcia połączenia z bazą. PostgreSQL może wtedy długo nie zauważyć martwego klienta — domyślny keepalive TCP systemu to ok. 2 h — i przez ten czas trzymać blokadę wiersza licznika kolejki. Zabezpieczenia:
+- `idle_in_transaction_session_timeout` (np. `60s`): serwer zamyka sesję, która siedzi bezczynnie w otwartej transakcji, więc blokada znika.
+- `tcp_keepalives_idle`, `tcp_keepalives_interval`, `tcp_keepalives_count` po stronie serwera PostgreSQL: krótsze wykrywanie martwego połączenia TCP (0, domyślnie, zostawia ustawienia systemu).
+- `lock_timeout` dla publikujących (np. `5s`): publikacja kończy się błędem i ponowieniem zamiast czekać bez końca na wiersz licznika.
+
+Te parametry ustawia się w `postgresql.conf` (globalnie), przez `ALTER DATABASE ... SET` / `ALTER ROLE ... SET` (dla bazy albo roli aplikacji) lub w parametrach połączenia JDBC: pgjdbc przekazuje je do serwera przez `options`, np. `options=-c idle_in_transaction_session_timeout=60s -c lock_timeout=5s` (w URL wartość trzeba zakodować). `lock_timeout` lepiej ustawić dla roli aplikacji albo w połączeniu niż globalnie, bo dotyczy tylko publikujących. W tym zadaniu nie zmieniamy konfiguracji aplikacji.
+
+Gotowe blokady (ShedLock, `JdbcLockRegistry`) opierają się na czasie (TTL) i nie są związane z commitem, a licznik kolejki musi zwalniać blokadę dokładnie przy `COMMIT`/`ROLLBACK`.
+
 **Co monitorować w kolejce.** Kolejkę obserwujemy jak każdą kolejkę: czy producenci nie czekają za długo i czy konsumenci nadążają. Metryki przez Micrometer ([0002](0002-stack.md)):
 - czas czekania publikującego na wiersz licznika (timer, p99). Trwale ponad ok. 100 ms albo pojedyncze czekanie ponad 0,5 s (log WARN) znaczy, że serializacja publikacji staje się wąskim gardłem;
 - opóźnienie konsumenta: ostatni kursor minus kursor konsumenta, osobno dla konsumenta i tematu (gauge). Lag, który rośnie zamiast wracać do zera, znaczy, że konsument nie nadąża albo stoi.

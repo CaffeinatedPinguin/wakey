@@ -28,6 +28,7 @@ Produkt: open source uptime monitor (self-host i chmura w UE), jeden frontend Re
 - Encje konfiguracyjne i domenowe: UUID generowane w aplikacji. Spring Data JDBC wymaga `Persistable`/`@Version` do rozpoznania nowej encji, inaczej `save()` wykona UPDATE. Do potwierdzenia testem.
 - Wyniki pomiarów: klucz złożony (`check_id`, `ts`) albo BIGINT identity; decyzja w projekcie schematu, testowana na obu bazach.
 - Liquibase XML, forward-only. Zmiany `dbms`-specyficzne niedozwolone. Przed migracją zrzut bazy zgodnie z funkcjami.
+  - Układ changelogów (2026-11-22): `db.changelog-master.xml` tylko importuje pliki zmian przez `<include file="..." relativeToChangelogFile="true"/>` w jawnej kolejności (bez `includeAll`), a każdy changeset jest w osobnym pliku `changes/NNNN-<opis>.xml` z rosnącą numeracją. Nic nie zostało jeszcze wydane, więc zmiana ścieżki pliku — części tożsamości changesetu w Liquibase — nie wymaga migracji istniejących baz. Od pierwszego wydania pliku changesetu nie wolno przenosić ani zmieniać.
 - Bazy: PostgreSQL w chmurze i większych instalacjach; HSQLDB w trybie pliku i jednego procesu jako opcja self-host. Wybór konfiguracją przy uruchomieniu. HSQLDB server mode poza MVP.
 - Wspólny podzbiór SQL:
   - JSON jako CLOB/TEXT, walidacja w aplikacji.

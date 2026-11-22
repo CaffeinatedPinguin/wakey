@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        https://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+  <changeSet id="message-queue" author="wakey">
+    <createTable tableName="queue_sequence">
+      <column name="id" type="INTEGER">
+        <constraints primaryKey="true" primaryKeyName="pk_queue_sequence" nullable="false"/>
+      </column>
+      <column name="last_cursor" type="BIGINT">
+        <constraints nullable="false"/>
+      </column>
+    </createTable>
+    <insert tableName="queue_sequence">
+      <column name="id" valueNumeric="1"/>
+      <column name="last_cursor" valueNumeric="0"/>
+    </insert>
+
+    <createTable tableName="queue_message">
+      <column name="message_cursor" type="BIGINT">
+        <constraints primaryKey="true" primaryKeyName="pk_queue_message" nullable="false"/>
+      </column>
+      <column name="topic" type="VARCHAR(255)">
+        <constraints nullable="false"/>
+      </column>
+      <column name="message_key" type="VARCHAR(255)">
+        <constraints nullable="false"/>
+      </column>
+      <column name="payload" type="CLOB">
+        <constraints nullable="false"/>
+      </column>
+    </createTable>
+    <createIndex tableName="queue_message" indexName="ix_queue_message_topic_cursor">
+      <column name="topic"/>
+      <column name="message_cursor"/>
+    </createIndex>
+
+    <createTable tableName="queue_consumer_cursor">
+      <column name="consumer" type="VARCHAR(255)">
+        <constraints primaryKey="true" primaryKeyName="pk_queue_consumer_cursor" nullable="false"/>
+      </column>
+      <column name="topic" type="VARCHAR(255)">
+        <constraints primaryKey="true" primaryKeyName="pk_queue_consumer_cursor" nullable="false"/>
+      </column>
+      <column name="last_cursor" type="BIGINT">
+        <constraints nullable="false"/>
+      </column>
+    </createTable>
+  </changeSet>
+</databaseChangeLog>
