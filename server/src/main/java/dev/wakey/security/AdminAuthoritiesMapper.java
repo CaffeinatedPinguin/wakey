@@ -3,15 +3,18 @@ package dev.wakey.security;
 import java.util.Collection;
 import java.util.LinkedHashSet;
 import java.util.Set;
+import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.authority.mapping.GrantedAuthoritiesMapper;
 import org.springframework.security.oauth2.core.oidc.user.OidcUserAuthority;
 
-/** Adds {@code ROLE_ADMIN} when the configured claim contains the configured Admin group. */
+/** Adds the Admin authority when the configured claim contains the configured Admin group. */
 final class AdminAuthoritiesMapper implements GrantedAuthoritiesMapper {
 
-    private static final GrantedAuthority ADMIN = new SimpleGrantedAuthority("ROLE_ADMIN");
+    private static final String ADMIN_ROLE = "ROLE_ADMIN";
+
+    private static final GrantedAuthority ADMIN_AUTHORITY = new SimpleGrantedAuthority(ADMIN_ROLE);
 
     private final String adminClaim;
 
@@ -26,9 +29,15 @@ final class AdminAuthoritiesMapper implements GrantedAuthoritiesMapper {
     public Collection<? extends GrantedAuthority> mapAuthorities(Collection<? extends GrantedAuthority> authorities) {
         Set<GrantedAuthority> mapped = new LinkedHashSet<>(authorities);
         if (!adminGroup.isBlank() && hasAdminGroup(authorities)) {
-            mapped.add(ADMIN);
+            mapped.add(ADMIN_AUTHORITY);
         }
         return mapped;
+    }
+
+    static boolean isAdmin(Authentication authentication) {
+        return authentication.getAuthorities().stream()
+                .map(GrantedAuthority::getAuthority)
+                .anyMatch(ADMIN_ROLE::equals);
     }
 
     private boolean hasAdminGroup(Collection<? extends GrantedAuthority> authorities) {
