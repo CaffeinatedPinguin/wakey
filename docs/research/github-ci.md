@@ -35,7 +35,7 @@ Raport (nie decyzja) przed założeniem repozytorium na GitHubie i etapem 0 ([ro
 ## Ustalone (2026-11-21/22, zapisane w [0002](../decisions/0002-stack.md))
 
 - **Repo publiczne od 2026-11-22.** PR tylko od collaborators (Settings → Pull requests). Pełny baseline nałożony przez `apply.sh` (ruleset, push protection, CodeQL, zatwierdzanie uruchomień z forków).
-- **Kanban na GitHub Projects** z polem statusu. Baseline zostawia tylko 4 etykiety (`bug`, `enhancement`, `needs-info`, `dependencies`), więc tablica nie opiera się na etykietach. Etapy roadmapy jako kamienie milowe albo pole „Etap”, do wyboru przy zakładaniu tablicy.
+- **Kanban na GitHub Projects** z polem statusu. Baseline zostawia tylko 4 etykiety (`bug`, `enhancement`, `needs-info`, `dependencies`), więc tablica nie opiera się na etykietach. Etapy roadmapy to kamienie milowe od „Etap 0 — Fundament techniczny” do „Etap 9 — Start” (2026-11-22).
 - **Licencja AGPL-3.0-or-later** (ADR 0002). Krok 1 z `new-repository.md` używa `--license mit`, więc dla wakey trzeba `--license agpl-3.0`.
 - **CI: wariant (b), nowy `maven-ci.yml` w `templates`.** Workflow wielokrotnego użytku dla Mavena, z obsługą frontendu w pnpm w tym samym repo. Wymaga:
   - opisu wejść i wyjść w `templates/docs/workflows.md`;

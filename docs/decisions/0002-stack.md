@@ -55,7 +55,7 @@ Zasady właściciela, które rozstrzygały wybory:
 ### Dostarczanie
 - Self-host: obraz Docker + docker compose (HSQLDB w pliku domyślnie, profil PostgreSQL). Bez Kubernetesa i Helma.
 - Wydania bez podpisów w MVP.
-- Repozytorium GitHub: publiczne od 2026-11-22; pull requesty tylko od współpracowników (collaborators); ustawienia i pliki z baseline repozytorium `templates`. Zadania na tablicy GitHub Projects. CI przez nowy wspólny `maven-ci.yml` w repozytorium `templates`. Co bierzemy z `templates`: [github-ci.md](../research/github-ci.md).
+- Repozytorium GitHub: publiczne od 2026-11-22; pull requesty tylko od współpracowników (collaborators); ustawienia i pliki z baseline repozytorium `templates`. Zadania na tablicy GitHub Projects `wakey` z polem Status; etapy roadmapy to kamienie milowe „Etap N — nazwa”. CI przez nowy wspólny `maven-ci.yml` w repozytorium `templates`. Co bierzemy z `templates`: [github-ci.md](../research/github-ci.md).
 - Powiadomienie o nowej wersji: serwer raz na dobę sprawdza GitHub Releases; włączone domyślnie, z wyłącznikiem.
 
 ## Consequences
