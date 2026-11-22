@@ -17,18 +17,21 @@ class HsqldbStartupTest extends HsqldbIntegrationTest {
 
     @Test
     void contextStartsWithLiquibaseOnHsqldbAndHealthIsUp() {
-        var changelogTables = jdbc().sql(
+        // when
+        Integer changelogTables = jdbc().sql(
                         "select count(*) from information_schema.tables where upper(table_name) = 'DATABASECHANGELOG'")
                 .query(Integer.class)
                 .single();
-        assertThat(changelogTables).isEqualTo(1);
-
         ResponseEntity<String> response = RestClient.create("http://localhost:" + port)
                 .get()
                 .uri("/healthz")
                 .retrieve()
                 .toEntity(String.class);
+        String body = Objects.requireNonNull(response.getBody());
+
+        // then
+        assertThat(changelogTables).isEqualTo(1);
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
-        assertThat(Objects.requireNonNull(response.getBody())).contains("\"status\":\"UP\"");
+        assertThat(body).contains("\"status\":\"UP\"");
     }
 }

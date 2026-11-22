@@ -1,0 +1,20 @@
+<?xml version="1.0"?>
+<!DOCTYPE module PUBLIC
+    "-//Checkstyle//DTD Checkstyle Configuration 1.3//EN"
+    "https://checkstyle.org/dtds/configuration_1_3.dtd">
+<module name="Checker">
+  <property name="charset" value="UTF-8"/>
+
+  <module name="TreeWalker">
+    <module name="MatchXpath">
+      <!-- A single call argument may hold at most one method call; chains on an object and lambda bodies do not count. -->
+      <property name="query" value="//ELIST/EXPR[count(descendant::METHOD_CALL except (descendant::LAMBDA//METHOD_CALL | descendant::OBJBLOCK//METHOD_CALL)) &gt; 1]"/>
+      <message key="matchxpath.match" value="A call argument may contain at most one method call; extract the longer expression into a named variable."/>
+    </module>
+    <module name="MatchXpath">
+      <!-- A test with more than one statement must separate the action and the assertions with the given/when/then comments. -->
+      <property name="query" value="//METHOD_DEF[MODIFIERS/ANNOTATION/IDENT[@text='Test']][count(SLIST/*[not(self::RCURLY or self::SEMI or self::SINGLE_LINE_COMMENT or self::BLOCK_COMMENT_BEGIN)]) &gt; 1][not(SLIST//COMMENT_CONTENT[starts-with(@text, ' when')]) or not(SLIST//COMMENT_CONTENT[starts-with(@text, ' then')])]"/>
+      <message key="matchxpath.match" value="A test with more than one statement must mark its sections with '// when' and '// then' (and '// given' for setup)."/>
+    </module>
+  </module>
+</module>

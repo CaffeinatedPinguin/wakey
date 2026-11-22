@@ -23,8 +23,7 @@ import org.springframework.jdbc.core.simple.JdbcClient;
  *
  * <p>This is a JUnit 5 test interface: its {@link Test @Test} and {@link BeforeEach @BeforeEach}
  * default methods run for every class that implements it. Concrete suites only choose a database
- * base class, for example {@code PostgresLeaderLeaseTest extends PostgresIntegrationTest implements
- * LeaderLeaseContract}.
+ * base class.
  */
 public interface LeaderLeaseContract {
 
@@ -41,8 +40,10 @@ public interface LeaderLeaseContract {
 
     @Test
     default void firstAcquireTakesTheLeaseWithTokenOne() {
+        // when
         LeaseGrant grant = lease("holder-a", TTL).acquireOrRenew("checks").orElseThrow();
 
+        // then
         assertThat(grant.name()).isEqualTo("checks");
         assertThat(grant.holderId()).isEqualTo("holder-a");
         assertThat(grant.fencingToken()).isEqualTo(1L);
@@ -51,10 +52,14 @@ public interface LeaderLeaseContract {
 
     @Test
     default void renewingOwnLeaseKeepsTokenAndExtendsExpiry() {
+        // given
         LeaderLease lease = lease("holder-a", TTL);
         LeaseGrant first = lease.acquireOrRenew("checks").orElseThrow();
+
+        // when
         LeaseGrant renewed = lease.acquireOrRenew("checks").orElseThrow();
 
+        // then
         assertThat(renewed.holderId()).isEqualTo(first.holderId());
         assertThat(renewed.fencingToken()).isEqualTo(first.fencingToken());
         assertThat(renewed.expiresAt()).isAfterOrEqualTo(first.expiresAt());
@@ -62,64 +67,90 @@ public interface LeaderLeaseContract {
 
     @Test
     default void anotherHolderCannotTakeLiveLease() {
-        assertThat(lease("holder-a", TTL).acquireOrRenew("checks")).isPresent();
-        assertThat(lease("holder-b", TTL).acquireOrRenew("checks")).isEmpty();
+        // when
+        Optional<LeaseGrant> firstAcquire = lease("holder-a", TTL).acquireOrRenew("checks");
+        Optional<LeaseGrant> secondAcquire = lease("holder-b", TTL).acquireOrRenew("checks");
+
+        // then
+        assertThat(firstAcquire).isPresent();
+        assertThat(secondAcquire).isEmpty();
     }
 
     @Test
     default void expiredLeaseIsTakenOverWithHigherToken() throws InterruptedException {
+        // given
         LeaseGrant first = lease("holder-a", Duration.ofMillis(100))
                 .acquireOrRenew("checks")
                 .orElseThrow();
-
         Thread.sleep(300);
 
+        // when
         LeaseGrant second = lease("holder-b", TTL).acquireOrRenew("checks").orElseThrow();
+
+        // then
         assertThat(second.holderId()).isEqualTo("holder-b");
         assertThat(second.fencingToken()).isEqualTo(first.fencingToken() + 1);
     }
 
     @Test
     default void releaseByOwnerFreesTheLeaseForAnotherHolder() {
+        // given
         LeaderLease owner = lease("holder-a", TTL);
         LeaseGrant first = owner.acquireOrRenew("checks").orElseThrow();
 
+        // when
         owner.release("checks");
-
         LeaseGrant second = lease("holder-b", TTL).acquireOrRenew("checks").orElseThrow();
+
+        // then
         assertThat(second.holderId()).isEqualTo("holder-b");
         assertThat(second.fencingToken()).isEqualTo(first.fencingToken() + 1);
     }
 
     @Test
     default void releaseByAnotherHolderDoesNothing() {
+        // given
         LeaderLease owner = lease("holder-a", TTL);
         LeaseGrant first = owner.acquireOrRenew("checks").orElseThrow();
 
+        // when
         lease("holder-b", TTL).release("checks");
 
-        assertThat(lease("holder-b", TTL).acquireOrRenew("checks")).isEmpty();
-        assertThat(owner.acquireOrRenew("checks").orElseThrow().fencingToken()).isEqualTo(first.fencingToken());
+        // then
+        Optional<LeaseGrant> otherAcquire = lease("holder-b", TTL).acquireOrRenew("checks");
+        LeaseGrant ownerRenewal = owner.acquireOrRenew("checks").orElseThrow();
+        assertThat(otherAcquire).isEmpty();
+        assertThat(ownerRenewal.fencingToken()).isEqualTo(first.fencingToken());
     }
 
     @Test
     default void leasesWithDifferentNamesAreIndependent() {
-        assertThat(lease("holder-a", TTL).acquireOrRenew("checks")).isPresent();
-        assertThat(lease("holder-b", TTL).acquireOrRenew("alerts")).isPresent();
-        assertThat(lease("holder-b", TTL).acquireOrRenew("checks")).isEmpty();
+        // when
+        Optional<LeaseGrant> checksForA = lease("holder-a", TTL).acquireOrRenew("checks");
+        Optional<LeaseGrant> alertsForB = lease("holder-b", TTL).acquireOrRenew("alerts");
+        Optional<LeaseGrant> checksForB = lease("holder-b", TTL).acquireOrRenew("checks");
+
+        // then
+        assertThat(checksForA).isPresent();
+        assertThat(alertsForB).isPresent();
+        assertThat(checksForB).isEmpty();
     }
 
     @Test
     default void exactlyOneOfEightConcurrentHoldersWins() throws Exception {
+        // given
         List<Callable<Optional<LeaseGrant>>> attempts = new ArrayList<>();
         for (int index = 0; index < HOLDERS; index++) {
             LeaderLease lease = lease("holder-" + index, TTL);
             attempts.add(() -> lease.acquireOrRenew("checks"));
         }
 
+        // when
         List<Optional<LeaseGrant>> results = runConcurrently(attempts);
+        long winners = results.stream().filter(Optional::isPresent).count();
 
-        assertThat(results.stream().filter(Optional::isPresent).count()).isEqualTo(1L);
+        // then
+        assertThat(winners).isEqualTo(1L);
     }
 
     private JdbcLeaderLease lease(String holderId, Duration ttl) {
