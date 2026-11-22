@@ -21,5 +21,6 @@ while IFS= read -r file; do
   done < <(grep -oE '\]\([^)]+\)' "$file" | sed -E 's/^\]\((.*)\)$/\1/')
 done < <(git ls-files '*.md')
 
-# Stage 0 adds the Maven and pnpm build, test and lint commands here.
+# The build, test and lint commands run in the workflows called by ci.yml;
+# this script only checks documentation links.
 exit "$status"

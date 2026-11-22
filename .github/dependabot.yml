@@ -1,32 +1,70 @@
 # Low noise: once a month, minor+patch in one grouped PR per ecosystem,
-# each major separately (you read the changelog). Cooldown 7 days, 14 for majors
+# each major separately (you read the changelog). Cooldown 7 days
 # (new versions "sit" for a while - protection against freshly hijacked packages).
 # Security updates arrive immediately, regardless of schedule and groups.
 version: 2
 # Security updates are grouped into one pull request per ecosystem; each major
 # version update stays separate.
 updates:
-  # Uncomment the project ecosystem (npm | pip | uv | gomod | cargo | docker | ...):
-  # - package-ecosystem: npm
-  #   directory: /
-  #   schedule:
-  #     interval: monthly
-  #   cooldown:
-  #     default-days: 7
-  #     semver-major-days: 14
-  #   groups:
-  #     minor-patch:
-  #       applies-to: version-updates
-  #       patterns: ["*"]
-  #       update-types: [minor, patch]
-  #     security:
-  #       applies-to: security-updates
-  #       patterns: ["*"]
-  #   labels: [dependencies]
-  #   commit-message:
-  #     prefix: chore
-  #     include: scope
-  #   open-pull-requests-limit: 3
+  - package-ecosystem: maven
+    directory: /
+    schedule:
+      interval: monthly
+    cooldown:
+      default-days: 7
+    groups:
+      minor-patch:
+        applies-to: version-updates
+        patterns: ["*"]
+        update-types: [minor, patch]
+      security:
+        applies-to: security-updates
+        patterns: ["*"]
+    labels: [dependencies]
+    commit-message:
+      prefix: chore
+      include: scope
+    open-pull-requests-limit: 3
+
+  - package-ecosystem: npm
+    directory: /frontend
+    schedule:
+      interval: monthly
+    cooldown:
+      default-days: 7
+    groups:
+      minor-patch:
+        applies-to: version-updates
+        patterns: ["*"]
+        update-types: [minor, patch]
+      security:
+        applies-to: security-updates
+        patterns: ["*"]
+    labels: [dependencies]
+    commit-message:
+      prefix: chore
+      include: scope
+    open-pull-requests-limit: 3
+
+  - package-ecosystem: docker
+    directory: /
+    schedule:
+      interval: monthly
+    cooldown:
+      default-days: 7
+    groups:
+      minor-patch:
+        applies-to: version-updates
+        patterns: ["*"]
+        update-types: [minor, patch]
+      security:
+        applies-to: security-updates
+        patterns: ["*"]
+    labels: [dependencies]
+    commit-message:
+      prefix: chore
+      include: scope
+    open-pull-requests-limit: 3
 
   - package-ecosystem: github-actions
     directory: /
@@ -35,7 +73,7 @@ updates:
     cooldown:
       default-days: 7   # per-update-type day overrides are not supported by every ecosystem - here only default
     groups:
-      actions:
+      minor-patch:
         applies-to: version-updates
         patterns: ["*"]
         update-types: [minor, patch]
