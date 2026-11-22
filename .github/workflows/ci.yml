@@ -1,0 +1,57 @@
+# One job = one required check "ci-required" (the ruleset on main requires it).
+# The project commands live in scripts/ci.sh - the same thing runs locally.
+name: ci
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, edited]   # edited = PR title changed
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions: {}
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  ci-required:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    steps:
+      - name: PR title is a Conventional Commit
+        if: github.event_name == 'pull_request' && github.event.pull_request.user.login != 'dependabot[bot]'
+        env:
+          TITLE: ${{ github.event.pull_request.title }}
+        run: |
+          re='^(feat|fix|docs|refactor|perf|test|build|ci|chore|revert)(\([a-z0-9._/-]+\))?!?: [^[:space:]].*[^.[:space:]]$'
+          if [[ ! "$TITLE" =~ $re && ! "$TITLE" =~ ^Revert\ \" ]]; then
+            echo "::error::PR title = the commit on main. Format: 'type(scope): summary', no trailing period. Example: 'fix(cli): handle empty config'"
+            exit 1
+          fi
+
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Dependency review (blocks new vulnerable dependencies)
+        if: github.event_name == 'pull_request'
+        uses: actions/dependency-review-action@bbc44d14a204704ccc493733616cd1e93a0321ec # v5.0.1
+        with:
+          fail-on-severity: high
+
+      # Uncomment the project runtime (the version is pinned by bin/pin-actions.sh):
+      # - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+      #   with: { node-version-file: .nvmrc, cache: npm }
+      # - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+      #   with: { python-version-file: .python-version }
+      # - uses: actions/setup-go@d8cbb8045d7f43706b9177cceb36c1f91a6644d5 # v7.1.0
+      #   with: { go-version-file: go.mod }
+
+      - name: lint / typecheck / test / build
+        run: |
+          if [[ -x scripts/ci.sh ]]; then timeout 12m scripts/ci.sh
+          else echo "::warning::scripts/ci.sh is missing - CI tests nothing."; fi

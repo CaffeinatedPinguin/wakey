@@ -50,12 +50,12 @@ Zasady właściciela, które rozstrzygały wybory:
   - konfiguracja: `wakey.*`, w zmiennych środowiska `WAKEY_*`;
   - obraz: `ghcr.io/<owner>/wakey`;
   - tokeny: `wk_` (API), `wka_` (agent).
-- Jeśli sprawdzenie nazwy i znaku towarowego w etapie 8 (backlog pkt 11) wypadnie źle, te elementy zmienia jeden mechaniczny refaktor. Repo jest wtedy jeszcze prywatne, więc nie ma użytkowników do migracji.
+- Jeśli sprawdzenie nazwy i znaku towarowego w etapie 8 (backlog pkt 11) wypadnie źle, te elementy zmienia jeden mechaniczny refaktor. Przed pierwszym wydaniem nie ma jeszcze użytkowników do migracji.
 
 ### Dostarczanie
 - Self-host: obraz Docker + docker compose (HSQLDB w pliku domyślnie, profil PostgreSQL). Bez Kubernetesa i Helma.
 - Wydania bez podpisów w MVP.
-- Repozytorium GitHub: prywatne do publikacji open source (etap 9), potem publiczne. Zadania na tablicy GitHub Projects. CI przez nowy wspólny `maven-ci.yml` w repozytorium `templates`. Co bierzemy z `templates`: [github-ci.md](../research/github-ci.md).
+- Repozytorium GitHub: publiczne od 2026-11-22; pull requesty tylko od współpracowników (collaborators); ustawienia i pliki z baseline repozytorium `templates`. Zadania na tablicy GitHub Projects. CI przez nowy wspólny `maven-ci.yml` w repozytorium `templates`. Co bierzemy z `templates`: [github-ci.md](../research/github-ci.md).
 - Powiadomienie o nowej wersji: serwer raz na dobę sprawdza GitHub Releases; włączone domyślnie, z wyłącznikiem.
 
 ## Consequences

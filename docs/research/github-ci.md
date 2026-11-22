@@ -1,6 +1,6 @@
 # GitHub, CI/CD i walidacja workflowów: co wakey bierze z `templates`
 
-Raport (nie decyzja) przed założeniem repozytorium na GitHubie i etapem 0 ([roadmap.md](../specs/roadmap.md)). Źródło: repozytorium `github/templates` (GitHub `CaffeinatedPinguin/templates`, stan na commit `dbd8866`), skill `ai/skills/devops/github-new-repo` i działające repo `revu`. Zasady z `templates` czytamy stamtąd, a nie kopiujemy.
+Raport (nie decyzja) przed założeniem repozytorium na GitHubie i etapem 0 ([roadmap.md](../specs/roadmap.md)). Źródło: repozytorium `CaffeinatedPinguin/templates` (stan na commit `dbd8866`). Zasady z `templates` czytamy stamtąd, a nie kopiujemy.
 
 ## Co już jest
 
@@ -12,8 +12,8 @@ Raport (nie decyzja) przed założeniem repozytorium na GitHubie i etapem 0 ([ro
 | **Walidacja workflowów** | `templates/tools/check.sh` (`[dir]`), `tools/install-hooks.sh` | **actionlint i zizmor z przypiętych obrazów Dockera**, lokalnie i w CI jednakowo. Hook `pre-push` uruchamia to samo. Skrypt przyjmuje katalog, więc sprawdza też inne repo: `bash ../templates/tools/check.sh .` |
 | Przypinanie akcji | `templates/baseline/bin/pin-actions.sh` | Zamienia `@LATEST` na pełny SHA z komentarzem `# vX.Y.Z`. Dependabot potem podbija SHA. |
 | Zasady bezpieczeństwa | `templates/docs/security-principles.md` | `permissions: {}` na starcie, `persist-credentials: false`, PR bez sekretów, publikacja tylko z tagu, `timeout-minutes` w każdym jobie, bez `secrets: inherit` |
-| Procedura nowego repo | `templates/docs/new-repository.md`, skill `github-new-repo` | 13 kroków od `gh repo create` do pierwszego wydania. Właściciel zatwierdza `apply.sh` po `--dry-run`. |
-| Wzorzec wywołania | `revu/.github/workflows/ci.yml`, `templates/examples/caller.yml` | cienki `ci.yml` wołający workflowy po SHA i job `ci-required`, który zbiera wyniki |
+| Procedura nowego repo | `templates/docs/new-repository.md` | 13 kroków od `gh repo create` do pierwszego wydania. Właściciel zatwierdza `apply.sh` po `--dry-run`. |
+| Wzorzec wywołania | `templates/examples/caller.yml` | cienki `ci.yml` wołający workflowy po SHA i job `ci-required`, który zbiera wyniki |
 
 ## Czego brakuje dla wakey
 
@@ -34,7 +34,7 @@ Raport (nie decyzja) przed założeniem repozytorium na GitHubie i etapem 0 ([ro
 
 ## Ustalone (2026-11-21/22, zapisane w [0002](../decisions/0002-stack.md))
 
-- **Repo prywatne na początku, publiczne od publikacji w etapie 9.** Konsekwencja: na prywatnym repo w darmowym planie rulesety, code scanning i push protection nie działają (skill `github-new-repo`). Do czasu upublicznienia ochronę `main` zapewnia dyscyplina PR i `ci-required` w CI, a nie ruleset. Ponowne `apply.sh` po upublicznieniu włącza resztę.
+- **Repo publiczne od 2026-11-22.** PR tylko od collaborators (Settings → Pull requests). Pełny baseline nałożony przez `apply.sh` (ruleset, push protection, CodeQL, zatwierdzanie uruchomień z forków).
 - **Kanban na GitHub Projects** z polem statusu. Baseline zostawia tylko 4 etykiety (`bug`, `enhancement`, `needs-info`, `dependencies`), więc tablica nie opiera się na etykietach. Etapy roadmapy jako kamienie milowe albo pole „Etap”, do wyboru przy zakładaniu tablicy.
 - **Licencja AGPL-3.0-or-later** (ADR 0002). Krok 1 z `new-repository.md` używa `--license mit`, więc dla wakey trzeba `--license agpl-3.0`.
 - **CI: wariant (b), nowy `maven-ci.yml` w `templates`.** Workflow wielokrotnego użytku dla Mavena, z obsługą frontendu w pnpm w tym samym repo. Wymaga:
@@ -46,6 +46,4 @@ Raport (nie decyzja) przed założeniem repozytorium na GitHubie i etapem 0 ([ro
 
 ## Źródła
 
-- `github/templates`: `README.md`, `docs/new-repository.md`, `docs/workflows.md`, `docs/use-in-a-project.md`, `docs/releases.md`, `docs/dependencies.md`, `docs/security-principles.md`, `baseline/README.md`, `baseline/config.env`, `tools/check.sh`
-- `github/revu/.github/workflows/ci.yml`
-- `ai/skills/devops/github-new-repo/SKILL.md`
+- `CaffeinatedPinguin/templates`: `README.md`, `docs/new-repository.md`, `docs/workflows.md`, `docs/use-in-a-project.md`, `docs/releases.md`, `docs/dependencies.md`, `docs/security-principles.md`, `baseline/README.md`, `baseline/config.env`, `tools/check.sh`
