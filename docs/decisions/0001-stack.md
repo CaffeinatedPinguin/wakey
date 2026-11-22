@@ -1,16 +1,19 @@
-# ADR 0001: Stack backendu, baz i agenta
+# 0001 — Stack backendu, baz i agenta
 
-**Status:** superseded
-**Superseded-by:** [0002-stack.md](0002-stack.md) (2026-11-21)
-**Data:** 2026-11-19
-**Zakres:** etap 0 i dalsze
-**Dokumenty:** `docs/research/backlog.md` (v1.1), `docs/specs/product-features.md` (v0.9)
+- Status: superseded
+- Date: 2026-11-19
+- Superseded-by: 0002
 
-## Kontekst
+Zastąpiony 2026-11-21 przez [0002-stack.md](0002-stack.md).
+
+- Zakres: etap 0 i dalsze
+- Dokumenty: `docs/research/backlog.md` (v1.1), `docs/specs/product-features.md` (v0.9)
+
+## Context
 
 Produkt: open source uptime monitor (self-host i chmura w UE), jeden frontend React + Vite, backend Java, tysiące checków, agenci w sieciach prywatnych, PostgreSQL w chmurze i HSQLDB jako opcja self-host. Utrzymuje jedna osoba. Wymagania: prostota, mały VPS, brak zależności zewnętrznych w self-host, dwie bazy w CI, agent bez uprawnień administratora.
 
-## Decyzje
+## Decision
 
 ### Backend
 
@@ -72,7 +75,7 @@ Produkt: open source uptime monitor (self-host i chmura w UE), jeden frontend Re
 - Go agent: brak JRE, mały ślad, najlepsza kontrola nad DNS/ICMP/fazami HTTP; koszt drugiego toolchainu akceptowalny dla małego, izolowanego agenta.
 - CI matrix: dryf dialektów wychodzi w PR, nie na produkcji.
 
-## Konsekwencje
+## Consequences
 
 - Dwa toolchainy (Java/Maven i Go), dwa release pipeline'y; kontrakt JSON i testy parity.
 - HSQLDB: jeden proces, brak partycjonowania/HA; limit skali do zmierzenia i opisania; PostgreSQL rekomendowany powyżej.
@@ -111,7 +114,7 @@ Produkt: open source uptime monitor (self-host i chmura w UE), jeden frontend Re
 - Windows/macOS agent: później.
 - Roadmapa etapów: plan v0.16 nie istnieje w repo; do odtworzenia (`docs/research/backlog.md`, pkt 0).
 
-## Referencje
+## Links
 
 - `docs/research/backlog.md` (v1.1), pkt 1, 1.5, 2.
 - `docs/specs/product-features.md` (v0.9), sekcje 0, 2, 12.

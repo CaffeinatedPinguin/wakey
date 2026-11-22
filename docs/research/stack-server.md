@@ -1,5 +1,16 @@
 # Research: język i framework serwera wakey (v1)
 
+## Contents
+
+- [Zakres](#zakres)
+- [Opcje](#opcje)
+- [Porównanie](#porównanie)
+- [Własna implementacja](#własna-implementacja)
+- [Rekomendacja](#rekomendacja)
+- [Ryzyka](#ryzyka)
+- [Pytania do grill-me](#pytania-do-grill-me)
+- [Źródła](#źródła)
+
 ## Zakres
 
 Porównuję stack serwera wakey dla wymagań z `docs/specs/product-features.md` (sekcje 0, 1, 2, 3, 12): ~5 000 checków na VPS 1–2 vCPU i 2–4 GB RAM, praca I/O-bound, pełne API + OIDC + szyfrowanie sekretów + role w jednym procesie, self-host bez usług zewnętrznych (jeden obraz albo binarka), React osobno, agent w Go, projekt open source utrzymywany latami przez jedną osobę. Porównuję: Java 25 + Spring Boot 4 MVC na wątkach wirtualnych; Spring Boot jako „wrapper” z asynchronicznym transportem i klientem checków (WebFlux/Reactor Netty, Jetty 12, wariant mieszany); Quarkus i Micronaut (JVM i native); Kotlin + Spring Boot (korutyny); Go dla całego serwera (stdlib `net/http` + mały router); TypeScript/Node; krótko .NET i Rust. Nie badam: wyboru bibliotek frontendu, dostawców alertów, szczegółów schematu bazy ani finalnej decyzji — to należą do innych punktów backlogu i grill-me. Dane na 2026-11-20. Liczby bez źródła i warunków pomiaru oznaczam jako „niepotwierdzone”.
