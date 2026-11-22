@@ -2,7 +2,7 @@ package dev.wakey.security;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import dev.wakey.testsupport.HsqldbIntegrationTest;
+import dev.wakey.testsupport.PostgresIntegrationTest;
 import java.time.Instant;
 import java.util.Collection;
 import java.util.List;
@@ -15,7 +15,7 @@ import org.springframework.security.oauth2.core.oidc.user.OidcUserAuthority;
 import org.springframework.test.context.TestPropertySource;
 
 @TestPropertySource(properties = "wakey.security.admin-group=wakey-admins")
-class AdminAuthoritiesMapperTest extends HsqldbIntegrationTest {
+class AdminAuthoritiesMapperTest extends PostgresIntegrationTest {
 
     @Test
     void configuredAdminGroupAddsAdminRole() {

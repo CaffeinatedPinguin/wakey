@@ -27,7 +27,7 @@ Zasady właściciela, które rozstrzygały wybory:
 - Bezpieczeństwo (2026-11-22): `spring-boot-starter-security`, `spring-boot-starter-security-oauth2-client` i `spring-boot-starter-session-jdbc`, testowo `spring-boot-starter-security-test`, w wersjach z Boot 4.2.0. Zakres i konfiguracja: [0006](0006-api-contract.md).
 
 ### Bazy i dane
-- PostgreSQL (chmura, większe instalacje) albo HSQLDB w trybie pliku i jednego procesu (self-host). Wspólny podzbiór SQL i testy na obu bazach, jak w ADR 0001 (sekcja „Wspólny podzbiór SQL” obowiązuje bez zmian).
+- PostgreSQL jako jedyna baza (chmura i self-host przez `docker compose`). HSQLDB usunięty 2026-11-22. Zastąpione przez [0008](0008-postgresql-only.md) (2026-11-22): wspólny podzbiór SQL z ADR 0001 nie obowiązuje, a rejestr funkcji tylko PostgreSQL jest wiążący.
 - Dostęp: Spring Data JDBC dla konfiguracji i domeny, `JdbcClient` dla wyników, batchy i raportów. Bez JPA.
 - Migracje: Liquibase XML, forward-only. Licencja Liquibase Community to FSL-1.1-ALv2 (nie OSI); zaakceptowana świadomie.
 - Wyniki pomiarów:
@@ -55,23 +55,23 @@ Zasady właściciela, które rozstrzygały wybory:
 - Jeśli sprawdzenie nazwy i znaku towarowego w etapie 8 (backlog pkt 11) wypadnie źle, te elementy zmienia jeden mechaniczny refaktor. Przed pierwszym wydaniem nie ma jeszcze użytkowników do migracji.
 
 ### Dostarczanie
-- Self-host: obraz Docker + docker compose (HSQLDB w pliku domyślnie, profil PostgreSQL). Bez Kubernetesa i Helma.
+- Self-host: obraz Docker + docker compose z usługą PostgreSQL. Bez Kubernetesa i Helma.
 - Wydania bez podpisów w MVP.
 - Repozytorium GitHub: publiczne od 2026-11-22; pull requesty tylko od współpracowników (collaborators); ustawienia i pliki z baseline repozytorium `templates`. Zadania na tablicy GitHub Projects `wakey` z polem Status; etapy roadmapy to kamienie milowe „Etap N — nazwa”. CI przez nowy wspólny `maven-ci.yml` w repozytorium `templates`. Co bierzemy z `templates`: [github-ci.md](../research/github-ci.md).
 - Powiadomienie o nowej wersji: serwer raz na dobę sprawdza GitHub Releases; włączone domyślnie, z wyłącznikiem.
 
 ### Zgodność wersji
-- Bez spike'ów i bez osobnej bramki zgodności wersji (2026-11-22): zgodność bibliotek sprawdza bramka fali, która je dodaje, a ryzyka (pinning wątków w JDBC/DNS, executor przy 5 000 checków, przypięcie IP z SNI w Reactor Netty, lease na obu bazach) sprawdzają testy pisane razem z daną funkcją.
+- Bez spike'ów i bez osobnej bramki zgodności wersji (2026-11-22): zgodność bibliotek sprawdza bramka fali, która je dodaje, a ryzyka (pinning wątków w JDBC/DNS, executor przy 5 000 checków, przypięcie IP z SNI w Reactor Netty, lease na PostgreSQL) sprawdzają testy pisane razem z daną funkcją.
 
 ## Consequences
 
 - Dwa toolchainy (Java/Maven i Go) w dwóch repozytoriach; zmiana kontraktu agenta wymaga dwóch PR.
 - Dwa modele wykonania w jednym procesie (wątki wirtualne i pętla Netty); callbacki klienta checków nie mogą blokować.
-- HSQLDB: limit pliku `.data` 64 GB domyślnie, brak partycjonowania; retencja i kubełki muszą to uwzględnić.
+- ~~HSQLDB: limit pliku `.data` 64 GB domyślnie, brak partycjonowania; retencja i kubełki muszą to uwzględnić.~~ Zastąpione przez [0008](0008-postgresql-only.md) (2026-11-22): jedna baza PostgreSQL, bez pliku w procesie aplikacji.
 - Liquibase na FSL: przy zmianie licencji albo warunków plan B to Flyway OSS. Jako biblioteka jest zgodny z AGPL wakey; Spring, Netty i pozostałe zależności Apache-2.0 też.
 - AGPL może ograniczyć adopcję w firmach, które jej zakazują. To świadomy koszt ochrony chmury. Bez CLA nie będzie licencji komercyjnej (dual licensing), a zmiana licencji wymaga zgody autorów kontrybucji.
 - Brak podpisów wydań w MVP zmienia [product-features.md](../specs/product-features.md) (agent).
-- Do zrobienia na etapie 0: testy lease na obu bazach.
+- Do zrobienia na etapie 0: testy lease na PostgreSQL.
 - Otwarte: zawartość `maven-ci.yml` (kierunek w [github-ci.md](../research/github-ci.md)), kopie zapasowe i odtwarzanie, szczegóły agenta Go (format konfiguracji, bufor) — do ustalenia.
 
 ## Links
