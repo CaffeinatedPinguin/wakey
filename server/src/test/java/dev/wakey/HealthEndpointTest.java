@@ -35,8 +35,8 @@ class HealthEndpointTest extends HsqldbIntegrationTest {
         int shortStatus = statusOf("/env");
 
         // then
-        assertThat(actuatorStatus).isEqualTo(404);
-        assertThat(shortStatus).isEqualTo(404);
+        assertThat(actuatorStatus).isEqualTo(401);
+        assertThat(shortStatus).isEqualTo(401);
     }
 
     private int statusOf(String path) {

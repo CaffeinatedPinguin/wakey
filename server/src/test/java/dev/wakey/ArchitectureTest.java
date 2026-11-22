@@ -35,6 +35,7 @@ class ArchitectureTest {
             "config", Set.of(),
             "leadership", Set.of(),
             "messaging", Set.of(),
+            "security", Set.of(),
             "executor", Set.of("leadership", "messaging"),
             "alerts", Set.of("leadership", "messaging"));
 
@@ -43,6 +44,7 @@ class ArchitectureTest {
             "config", SHARED_ROLE,
             "leadership", SHARED_ROLE,
             "messaging", SHARED_ROLE,
+            "security", SHARED_ROLE,
             "executor", "executor",
             "alerts", "alerts");
 
