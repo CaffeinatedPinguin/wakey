@@ -6,7 +6,6 @@ import org.springframework.security.authentication.event.AbstractAuthenticationF
 import org.springframework.security.authentication.event.AuthenticationSuccessEvent;
 import org.springframework.security.authentication.event.LogoutSuccessEvent;
 import org.springframework.security.core.Authentication;
-import org.springframework.security.core.GrantedAuthority;
 import org.springframework.stereotype.Component;
 
 /** INFO on successful login and logout, WARN on a failed login; never logs tokens or secrets. */
@@ -14,12 +13,12 @@ import org.springframework.stereotype.Component;
 @Component
 final class AuthenticationLog {
 
-    private static final String ROLE_ADMIN = "ROLE_ADMIN";
-
     @EventListener
     void onAuthenticationSuccess(AuthenticationSuccessEvent event) {
         Authentication authentication = event.getAuthentication();
-        log.info("login succeeded for subject {} (admin: {})", authentication.getName(), hasAdminRole(authentication));
+        String subject = authentication.getName();
+        boolean admin = AdminAuthoritiesMapper.isAdmin(authentication);
+        log.info("login succeeded for subject {} (admin: {})", subject, admin);
     }
 
     @EventListener
@@ -32,11 +31,5 @@ final class AuthenticationLog {
     void onLogoutSuccess(LogoutSuccessEvent event) {
         String subject = event.getAuthentication().getName();
         log.info("logout succeeded for {}", subject);
-    }
-
-    private static boolean hasAdminRole(Authentication authentication) {
-        return authentication.getAuthorities().stream()
-                .map(GrantedAuthority::getAuthority)
-                .anyMatch(ROLE_ADMIN::equals);
     }
 }
