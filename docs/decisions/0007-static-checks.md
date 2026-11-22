@@ -64,13 +64,13 @@ Właściciel zatwierdził wariant A: zaostrzamy reguły bez dodawania nowych zal
 
 ### Wyjątki bez śladu (2026-11-22)
 
-Żaden wyjątek nie może zniknąć po cichu, więc blok `catch` w kodzie produkcyjnym serwera musi albo rzucić wyjątek dalej (z przyczyną), albo przekazać złapany wyjątek do wywołania, np. loggera, tak żeby w logu był stack trace. Bez nowych zależności, bez `-Werror` i bez wyłączania reguł.
+Żaden wyjątek nie może zniknąć po cichu, ale dwa świadome wyjątki są dozwolone: pusty `catch` z komentarzem (np. `// ignore`) oraz log z `e.getMessage()`. Poza tym blok `catch` w kodzie produkcyjnym serwera musi albo rzucić wyjątek dalej (z przyczyną), albo przekazać złapany wyjątek do wywołania, np. loggera (`LOG.warn("…", e)`), tak żeby w logu był stack trace. Bez nowych zależności, bez `-Werror` i bez wyłączania reguł.
 
 - **Error Prone `UnusedException` na `ERROR`** odrzuca `throw new X("komunikat")` w `catch`, które gubi złapany wyjątek zamiast przekazać go jako przyczynę (`throw new X("komunikat", e)`).
-- **Checkstyle `EmptyCatchBlock` z `commentFormat`** odrzuca pusty `catch` także wtedy, gdy w środku jest sam komentarz: wzorzec `(?!)` nie pasuje do żadnego komentarza, więc komentarz nie wycisza reguły.
-- **Checkstyle `MatchXpath`** odrzuca `catch` bez `throw` i bez wywołania metody, której bezpośrednim argumentem jest zmienna złapanego wyjątku. Łapie więc `return null` oraz `LOG.warn("…")` i `LOG.warn("…", e.getMessage())`, a przepuszcza `LOG.warn("…", e)`, `throw e` i `throw new X("…", e)`.
+- **Checkstyle `EmptyCatchBlock`** (jeden moduł, domyślne ustawienia) odrzuca pusty `catch` bez komentarza; pusty `catch` z komentarzem jest świadomie dozwolony.
+- **Checkstyle `MatchXpath`** pomija puste bloki `catch` i bloki zawierające tylko komentarze, a odrzuca niepusty `catch` bez `throw` i bez wywołania metody, w którego argumentach występuje zmienna złapanego wyjątku. Łapie więc `return null` oraz `LOG.warn("…")`, a przepuszcza `LOG.warn("…", e)`, `LOG.warn("…", e.getMessage())`, `throw e` i `throw new X("…", e)`.
 
-Czego te reguły nie łapią: `e.getMessage()` w logu jest odrzucane, ale logowanie na złym poziomie (np. `debug` zamiast `error`) już nie; reguły nie sprawdzają też, czy komunikat logu jest sensowny. Globalna obsługa nieoczekiwanych wyjątków w HTTP (`@RestControllerAdvice` z logiem) przyjdzie z pierwszymi endpointami na etapie 1.
+Czego te reguły nie łapią: logowania na złym poziomie (np. `debug` zamiast `error`), braku lub bezsensowności komunikatu logu oraz tego, że samo `e.getMessage()` bywa puste. Globalna obsługa nieoczekiwanych wyjątków w HTTP (`@RestControllerAdvice` z logiem) przyjdzie z pierwszymi endpointami na etapie 1.
 
 ## Consequences
 
