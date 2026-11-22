@@ -95,7 +95,7 @@ OIDC: rejestracja ma identyfikator `oidc` (`/oauth2/authorization/oidc`) i jest 
 
 Rola Admin: bean `GrantedAuthoritiesMapper` czyta claim `wakey.security.admin-claim` (domyślnie `groups`) i dodaje `ROLE_ADMIN` tylko wtedy, gdy lista zawiera `wakey.security.admin-group` (pusta wartość oznacza, że nikt nie jest Adminem). Bez JMESPath i bez własnego `OidcUserService`.
 
-Sesje: Spring Session JDBC z `spring.session.jdbc.initialize-schema: never`; tabele `SPRING_SESSION` i `SPRING_SESSION_ATTRIBUTES` tworzy changeset Liquibase `0003-spring-session.xml` (forward-only, bez `dbms`, wspólny dla PostgreSQL i HSQLDB). Ciasteczko `SESSION` ma `HttpOnly`, `Secure` i `SameSite=Lax` (`server.servlet.session.cookie.*`). Ochrona przed session fixation zostaje domyślna (`changeSessionId`).
+Sesje: Spring Session JDBC z `spring.session.jdbc.initialize-schema: never`; tabele `SPRING_SESSION` i `SPRING_SESSION_ATTRIBUTES` tworzy changeset Liquibase `0003-spring-session.xml` (forward-only, bez `dbms`, tylko PostgreSQL — [0008](0008-postgresql-only.md)). Ciasteczko `SESSION` ma `HttpOnly`, `Secure` i `SameSite=Lax` (`server.servlet.session.cookie.*`). Ochrona przed session fixation zostaje domyślna (`changeSessionId`).
 
 Ochrona logowania: PKCE, parametry `state` i `nonce` oraz weryfikacja podpisu i wystawcy ID tokenu pochodzą ze Spring Security. Po sukcesie serwer zawsze przekierowuje na `wakey.security.frontend-url` (domyślnie `/`); nie używa adresu z parametru żądania ani zapisanego żądania, bo request cache jest wyłączony, a handler sukcesu ma `alwaysUse=true`. Po błędzie (zły `state`, odrzucony kod, błąd dostawcy) przekierowuje na `{frontend-url}?login=failed` z jednym stałym znacznikiem, bez szczegółów błędu w adresie i odpowiedzi; sesję unieważnia, a w logu zostaje WARN z typem wyjątku bez tokenów i sekretów.
 
@@ -195,7 +195,7 @@ Pełny model zagrożeń to backlog pkt 10, w etapie 8. Te zasady są jego punkte
 
 ## Consequences
 
-- Nowe zależności serwera: springdoc-openapi, Bean Validation (`spring-boot-starter-validation`), `spring-boot-starter-security`, `spring-boot-starter-oauth2-client`, `spring-session-jdbc`. W bramce zgodności na etapie 0 trzeba sprawdzić linię springdoc dla Boot 4, schemat Spring Session JDBC dla HSQLDB i wersjonowanie API w Spring Framework 7.
+- Nowe zależności serwera: springdoc-openapi, Bean Validation (`spring-boot-starter-validation`), `spring-boot-starter-security`, `spring-boot-starter-oauth2-client`, `spring-session-jdbc`. W bramce zgodności na etapie 0 trzeba sprawdzić linię springdoc dla Boot 4 i wersjonowanie API w Spring Framework 7. Baza to wyłącznie PostgreSQL ([0008](0008-postgresql-only.md)).
 - Nowe zależności frontendu: zod, axios, dayjs, openapi-typescript (dev). Uzupełniają [0004-frontend.md](0004-frontend.md).
 - Bez oasdiff zmianę łamiącą w `v1` wychwyci tylko review diffu kontraktu. To świadome ryzyko.
 - Kursor wszędzie oznacza, że lista checków nie ma numerów stron. UI używa „wczytaj więcej” albo przewijania, a liczniki pochodzą z podsumowania.

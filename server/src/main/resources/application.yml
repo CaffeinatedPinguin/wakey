@@ -14,10 +14,8 @@ spring:
   threads:
     virtual:
       enabled: true
-  datasource:
-    url: jdbc:hsqldb:file:./data/wakey;shutdown=true
-    username: sa
-    password: ""
+  # The operator supplies the PostgreSQL connection through SPRING_DATASOURCE_URL,
+  # SPRING_DATASOURCE_USERNAME and SPRING_DATASOURCE_PASSWORD.
   liquibase:
     change-log: classpath:db/changelog/db.changelog-master.xml
   session:
@@ -26,6 +24,7 @@ spring:
       initialize-schema: never
 
 wakey:
+  # postgres-only: idle_in_transaction_session_timeout and lock_timeout are PostgreSQL server settings.
   database:
     idle-in-transaction-timeout: 60s
     lock-timeout: 5s

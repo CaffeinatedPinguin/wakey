@@ -85,7 +85,7 @@ Testy czytamy jak zdania o zachowaniu, nie jak skróty implementacji.
 - Nazwa testu to zdanie o zachowaniu, bez przedrostków `should`/`test` (np. `expiredLeaseIsTakenOverWithAHigherToken`).
 - Jeden test sprawdza jedno zachowanie; asercje mówią o wymaganiu, a nie powtarzają implementacji.
 - Test dłuższy niż jedna instrukcja dzieli się komentarzami `// given` (przygotowanie), `// when` (akcja) i `// then` (asercje); `// given` pomijamy, gdy nie ma przygotowania.
-- Kontrakt, który musi spełniać każda implementacja na obu bazach, to interfejs testowy JUnit (`LeaderLeaseContract`, `MessageQueueContract`). Wspólne bazy i dostęp do beanów mieszkają w `dev.wakey.testsupport`, a klasy konkretne tylko wybierają bazę danych.
+- Kontrakt, który musi spełniać każda implementacja na każdej bazie, to interfejs testowy JUnit (`LeaderLeaseContract`, `MessageQueueContract`). Wspólne bazy i dostęp do beanów mieszkają w `dev.wakey.testsupport`, a klasy konkretne tylko wybierają bazę danych.
 - Ekonomia (AHA, DRY, KISS): testujemy wymagania, nie implementację; wspólne pomocniki tylko dla wiedzy, która musi zmieniać się razem; jednorazowych pomocników nie wyciągamy; klasy łączące bazę z kontraktem nie dostają rozbudowanego Javadoc.
 
 Regułę pilnuje `config/checkstyle/checkstyle-test.xml`, uruchamiany drugą egzekucją `maven-checkstyle-plugin` w fazie `verify` tylko dla katalogu testów (`server/src/test/java`).

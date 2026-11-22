@@ -2,7 +2,7 @@ package dev.wakey;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import dev.wakey.testsupport.HsqldbIntegrationTest;
+import dev.wakey.testsupport.PostgresIntegrationTest;
 import java.util.Objects;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.web.server.LocalServerPort;
@@ -11,7 +11,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientResponseException;
 
-class HealthEndpointTest extends HsqldbIntegrationTest {
+class HealthEndpointTest extends PostgresIntegrationTest {
 
     @LocalServerPort
     private int port;

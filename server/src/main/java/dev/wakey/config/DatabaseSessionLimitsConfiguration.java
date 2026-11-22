@@ -21,8 +21,7 @@ import org.springframework.context.annotation.Configuration;
 @EnableConfigurationProperties(DatabaseProperties.class)
 class DatabaseSessionLimitsConfiguration {
 
-    private static final String POSTGRESQL_JDBC_URL_PREFIX = "jdbc:postgresql:";
-
+    // postgres-only: these `-c` options are PostgreSQL server settings passed through pgjdbc.
     static final String OPTIONS_TEMPLATE = "-c idle_in_transaction_session_timeout=%d -c lock_timeout=%d";
 
     @Bean
@@ -35,13 +34,8 @@ class DatabaseSessionLimitsConfiguration {
         return unusedArguments -> logSessionLimits(properties, dataSource);
     }
 
-    static boolean isPostgreSql(HikariDataSource dataSource) {
-        String jdbcUrl = dataSource.getJdbcUrl();
-        return jdbcUrl != null && jdbcUrl.startsWith(POSTGRESQL_JDBC_URL_PREFIX);
-    }
-
     private static void logSessionLimits(DatabaseProperties properties, DataSource dataSource) {
-        if (dataSource instanceof HikariDataSource hikari && isPostgreSql(hikari)) {
+        if (dataSource instanceof HikariDataSource) {
             Duration idleTimeout = properties.idleInTransactionTimeout();
             Duration lockTimeout = properties.lockTimeout();
             log.info(

@@ -45,7 +45,8 @@
       <column name="ATTRIBUTE_NAME" type="VARCHAR(200)">
         <constraints nullable="false"/>
       </column>
-      <column name="ATTRIBUTE_BYTES" type="BLOB">
+      <!-- postgres-only: Spring Session JDBC writes attribute bytes as BYTEA; Liquibase maps BLOB to oid. -->
+      <column name="ATTRIBUTE_BYTES" type="BYTEA">
         <constraints nullable="false"/>
       </column>
     </createTable>

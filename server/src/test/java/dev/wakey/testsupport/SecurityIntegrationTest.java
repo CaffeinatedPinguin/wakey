@@ -9,7 +9,7 @@ import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.context.WebApplicationContext;
 
 /** A MockMvc that runs the real filter chains and the Spring Session repository filter. */
-public abstract class SecurityIntegrationTest extends HsqldbIntegrationTest {
+public abstract class SecurityIntegrationTest extends PostgresIntegrationTest {
 
     private MockMvc mockMvc;
 
