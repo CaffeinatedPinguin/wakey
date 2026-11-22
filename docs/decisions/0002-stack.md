@@ -24,6 +24,7 @@ Zasady właściciela, które rozstrzygały wybory:
 - Build: Maven + Maven Wrapper.
 - Lombok 1.18.48 (scope `provided`, także w `annotationProcessorPaths` kompilatora): tylko adnotacje dozwolone w [0007](0007-static-checks.md) — `@Getter`, `@Setter`, `@RequiredArgsConstructor`, `@NoArgsConstructor(access = PRIVATE)`, `@Builder` i `@Slf4j`. Reszta jest zablokowana przez `lombok.config` (`@Data`, `@Value`, `@EqualsAndHashCode` itd.).
 - Obserwowalność: Spring Boot Actuator (health dla Dockera, tylko jawnie wystawione endpointy) i Micrometer jako jedyne API metryk od etapu 0. Eksport do OTLP (dodatkowa zależność i konfiguracja, bez zmian w kodzie) w etapie 8 ([roadmap.md](../specs/roadmap.md)).
+- Bezpieczeństwo (2026-11-22): `spring-boot-starter-security`, `spring-boot-starter-security-oauth2-client` i `spring-boot-starter-session-jdbc`, testowo `spring-boot-starter-security-test`, w wersjach z Boot 4.2.0. Zakres i konfiguracja: [0006](0006-api-contract.md).
 
 ### Bazy i dane
 - PostgreSQL (chmura, większe instalacje) albo HSQLDB w trybie pliku i jednego procesu (self-host). Wspólny podzbiór SQL i testy na obu bazach, jak w ADR 0001 (sekcja „Wspólny podzbiór SQL” obowiązuje bez zmian).
