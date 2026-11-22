@@ -41,13 +41,19 @@ Jak robią inni: Uptime Kuma i Checkmate dzielą kod na warstwy techniczne; Heal
 - **Rola włącza punkty wejścia** (harmonogramy, nasłuchy, kontrolery). Kod wszystkich modułów jest w każdym procesie. „Sprawdź teraz” i „Testuj” API wykonuje synchronicznie, wołając moduł executora jak bibliotekę.
 - W obrębie roli moduły wołają się bezpośrednio przez publiczny pakiet główny.
 - **Między rolami** komunikacja idzie przez **jeden ogólny port o semantyce kolejki**, od pierwszego dnia, także w MVP z jednym procesem:
-  - operacje `publish(topic, key, message)` oraz `poll(consumer, topic, limit)` → `ack(cursor)`;
+  - operacje `publish(topic, key, message)`, `poll(consumer, topic, limit)` oraz `ack(consumer, topic, cursor)`;
   - dostarczenie co najmniej raz, konsumenci idempotentni, kolejność gwarantowana tylko w obrębie klucza (np. ID checka);
   - wiadomość jest samowystarczalna: wersjonowany JSON z ID i potrzebnymi danymi. Konsument nie czyta tabel producenta jako części przekazania;
   - producent zapisuje wiadomość w tej samej transakcji co zmianę stanu (transakcyjny outbox).
 - Pierwszy adapter to tabela w bazie. Konsument odpytuje „wszystko po kursorze” mniej więcej co sekundę. Bez `LISTEN/NOTIFY`, bo HSQLDB go nie ma, i bez brokera.
 - Jeden test kontraktowy portu uruchamiamy na każdej implementacji: dziś na PostgreSQL i HSQLDB, później na Redisie albo innej kolejce. Wymiana na zewnętrzną kolejkę to nowy adapter plus przekaźnik z outboxa. Kod producentów się nie zmienia.
 - ArchUnit pilnuje, że moduł jednej roli nie woła bezpośrednio serwisu modułu innej roli.
+
+**Dlaczego publikujący czekają na siebie nawzajem.** Każda publikacja najpierw przesuwa wspólny licznik w bazie i trzyma jego wiersz zablokowany do końca transakcji, więc druga publikacja nie dostanie kursora, dopóki pierwsza się nie zatwierdzi. Dzięki temu konsument nie odczyta późniejszej wiadomości i nie przesunie kursora ponad wcześniejszą, jeszcze niezatwierdzoną. To serializuje publikację — przy obecnej skali to nie problem, a gdy stanie się wąskim gardłem, rozwiązaniem jest zewnętrzna kolejka jako nowy adapter.
+
+`publish` wołamy jako ostatni krok transakcji producenta, bo blokada licznika trwa od `publish` do zatwierdzenia — długa transakcja z `publish` na początku wstrzymuje innych publikujących.
+
+Pierwszy `ack` danego konsumenta na danym temacie wykonany jednocześnie z dwóch procesów (np. przy zmianie lidera) może w PostgreSQL skończyć się błędem duplikatu i wycofaniem tej jednej transakcji. Nic nie ginie, bo dostarczanie jest „co najmniej raz” i wiadomość wróci przy następnym `poll`.
 
 ### Model domeny
 - Domyślnie jeden model: agregaty Spring Data JDBC to rekordy z `@Id`.
