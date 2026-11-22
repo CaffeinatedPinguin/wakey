@@ -14,6 +14,8 @@ import jakarta.servlet.http.HttpSession;
 import java.util.ArrayList;
 import java.util.List;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.mock.web.MockHttpSession;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
@@ -39,19 +41,10 @@ class SecurityFilterChainTest extends SecurityIntegrationTest {
     private static final ResultMatcher PERMISSIONS_POLICY =
             header().string("Permissions-Policy", "camera=(), microphone=(), geolocation=()");
 
-    @Test
-    void agentRequestsAreRejectedWithoutAuthentication() throws Exception {
-        mockMvc().perform(get("/agent/v1/checks")).andExpect(UNAUTHORIZED);
-    }
-
-    @Test
-    void pingRequestsAreRejectedWithoutAuthentication() throws Exception {
-        mockMvc().perform(get("/ping/token")).andExpect(UNAUTHORIZED);
-    }
-
-    @Test
-    void publicRequestsAreRejectedWithoutAuthentication() throws Exception {
-        mockMvc().perform(get("/public/v1/status")).andExpect(UNAUTHORIZED);
+    @ParameterizedTest
+    @ValueSource(strings = {"/agent/v1/checks", "/ping/token", "/public/v1/status"})
+    void statelessEndpointsAreRejectedWithoutAuthentication(String path) throws Exception {
+        mockMvc().perform(get(path)).andExpect(UNAUTHORIZED);
     }
 
     @Test

@@ -5,9 +5,15 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 
 import dev.wakey.testsupport.SecurityIntegrationTest;
 import jakarta.servlet.http.Cookie;
+import java.time.Clock;
 import java.time.Instant;
+import java.time.ZoneId;
+import java.time.ZoneOffset;
 import java.util.List;
 import org.junit.jupiter.api.Test;
+import org.springframework.boot.test.context.TestConfiguration;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Primary;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
@@ -26,15 +32,13 @@ class SessionMaxAgeIntegrationTest extends SecurityIntegrationTest {
     @Test
     void sessionOlderThanMaxAgeIsRejected() throws Exception {
         // given
+        ControllableClock clock = bean(ControllableClock.class);
         JdbcIndexedSessionRepository sessions = bean(JdbcIndexedSessionRepository.class);
         Authentication authentication = UsernamePasswordAuthenticationToken.authenticated(
                 "alice", "n/a", List.of(new SimpleGrantedAuthority("ROLE_ADMIN")));
         Session session = createAuthenticatedSession(sessions, authentication);
-        long createdAt = Instant.now().minusSeconds(60).toEpochMilli();
-        jdbc().sql("UPDATE SPRING_SESSION SET CREATION_TIME = :createdAt WHERE SESSION_ID = :id")
-                .param("createdAt", createdAt)
-                .param("id", session.getId())
-                .update();
+        Instant createdAt = session.getCreationTime();
+        clock.set(createdAt.plusSeconds(60));
         Cookie cookie = new Cookie("SESSION", session.getId());
         MockHttpServletRequestBuilder request = get("/api/v1/me").cookie(cookie);
 
@@ -54,5 +58,39 @@ class SessionMaxAgeIntegrationTest extends SecurityIntegrationTest {
                 new SecurityContextImpl(authentication));
         repository.save(session);
         return session;
+    }
+
+    @TestConfiguration(proxyBeanMethods = false)
+    static class ControllableClockConfiguration {
+
+        @Bean
+        @Primary
+        ControllableClock controllableClock() {
+            return new ControllableClock();
+        }
+    }
+
+    static final class ControllableClock extends Clock {
+
+        private volatile Instant instant = Instant.now();
+
+        void set(Instant value) {
+            instant = value;
+        }
+
+        @Override
+        public ZoneId getZone() {
+            return ZoneOffset.UTC;
+        }
+
+        @Override
+        public Clock withZone(ZoneId zone) {
+            return this;
+        }
+
+        @Override
+        public Instant instant() {
+            return instant;
+        }
     }
 }

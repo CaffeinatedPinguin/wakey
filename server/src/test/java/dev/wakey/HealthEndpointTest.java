@@ -17,7 +17,7 @@ class HealthEndpointTest extends PostgresIntegrationTest {
     private int port;
 
     @Test
-    void healthEndpointIsUpOnHealthz() {
+    void contextStartsWithPostgresAndHealthIsUp() {
         // when
         ResponseEntity<String> response =
                 client().get().uri("/healthz").retrieve().toEntity(String.class);
