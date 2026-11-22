@@ -435,11 +435,11 @@ Część tego samego frontendu co panel. Dane ze snapshotu w pamięci API, z kop
 13. **Kworum:** przy 1–2 lokalizacjach „wszystkie”, przy więcej niż 2 „większość”. Konfigurowalne per check.
 14. **Bez własnego HTML, CSS i skryptów** nigdzie. Status page: logo i kolory. Zgłaszanie nadużyć i zawieszanie stron w chmurze.
 15. **Logowanie:** w MVP tylko dostawcy zewnętrzni: self-host dowolne OIDC; chmura GitHub, Google, opcjonalnie własne OIDC przestrzeni. Lokalny admin, 2FA i link w emailu później (ADR 0006).
-16. **Tylko część wspólna bazy produkcyjnej i wbudowanej**, blokada lidera jako tabela, CI na obu bazach.
+16. **Tylko PostgreSQL** (ADR 0008), blokada lidera jako tabela, CI na PostgreSQL.
 17. **Wersja schematu** w pliku konfiguracyjnym i eksporcie przestrzeni, z automatyczną migracją starszej wersji.
 18. **Klucz szyfrowania sekretów** z osobną kopią poza VPS i rotacją. Test odtworzenia sprawdza odszyfrowanie.
 19. Częstotliwość zrzutu bazy ustala operator.
-20. **Stack:** Java 25 LTS, Spring Boot 4.x MVC na wątkach wirtualnych, checki przez Reactor Netty, Maven, Spring Data JDBC + `JdbcClient`, Liquibase XML, PostgreSQL/HSQLDB (plik, jeden proces). **Agent:** Go w osobnym repozytorium, Linux + Docker w MVP, aktualizacje ręczne, bez podpisów w MVP. **Frontend:** Mantine, Chart.js, TanStack. Szczegóły: `docs/decisions/0002-stack.md`, `0003-network-checks.md`, `0004-frontend.md`.
+20. **Stack:** Java 25 LTS, Spring Boot 4.x MVC na wątkach wirtualnych, checki przez Reactor Netty, Maven, Spring Data JDBC + `JdbcClient`, Liquibase XML, PostgreSQL. **Agent:** Go w osobnym repozytorium, Linux + Docker w MVP, aktualizacje ręczne, bez podpisów w MVP. **Frontend:** Mantine, Chart.js, TanStack. Szczegóły: `docs/decisions/0002-stack.md`, `0003-network-checks.md`, `0004-frontend.md`, `0008-postgresql-only.md`.
 
 ## 14. Otwarte
 1. Kanały powiadomień spoza UE w chmurze: po konsultacji prawnej.

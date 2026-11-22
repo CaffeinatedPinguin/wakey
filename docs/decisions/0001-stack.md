@@ -6,6 +6,8 @@
 
 Zastąpiony 2026-11-21 przez [0002-stack.md](0002-stack.md).
 
+Fragmenty o HSQLDB i wspólnym podzbiorze SQL: Zastąpione przez [0008](0008-postgresql-only.md) (2026-11-22). Obowiązuje tylko PostgreSQL, a zasady wspólnego podzbioru SQL nie są już wiążące.
+
 - Zakres: etap 0 i dalsze
 - Dokumenty: `docs/research/backlog.md` (v1.1), `docs/specs/product-features.md` (v0.9)
 
@@ -23,6 +25,8 @@ Produkt: open source uptime monitor (self-host i chmura w UE), jeden frontend Re
 - Jedna aplikacja Spring Boot z rolami włączanymi konfiguracją (`app.roles`), warunkowe beany. Self-host domyślnie wszystkie role w jednym procesie; chmura może je rozdzielić.
 
 ### Baza i migracje
+
+> Zastąpione przez [0008](0008-postgresql-only.md) (2026-11-22): obowiązuje tylko PostgreSQL, a wspólny podzbiór SQL nie jest już wymagany. Poniższe zasady zostają jako historia decyzji.
 
 - Spring Data  dla agregatów; `JdbcClient`/`JdbcTemplate` dla batchy, raportów i zapytań o dużej objętości. Bez JPA/Hibernate.
 - Encje konfiguracyjne i domenowe: UUID generowane w aplikacji. Spring Data JDBC wymaga `Persistable`/`@Version` do rozpoznania nowej encji, inaczej `save()` wykona UPDATE. Do potwierdzenia testem.

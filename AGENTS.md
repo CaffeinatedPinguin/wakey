@@ -19,7 +19,7 @@ Domain: backend and frontend (the maintainer's generic rules live outside this r
 | Endpoint, auth, errors, paging or frontend API client | `docs/decisions/0006-api-contract.md` |
 | Build checks or lint rules | `docs/decisions/0007-static-checks.md` |
 | Writing or changing tests | `docs/decisions/0007-static-checks.md` (section "Struktura testów") |
-| SQL for both databases | `docs/decisions/0001-stack.md` |
+| SQL and PostgreSQL-only features | `docs/decisions/0008-postgresql-only.md` |
 | Research task | `docs/research/backlog.md` |
 
 ## Local rules
@@ -29,6 +29,7 @@ Domain: backend and frontend (the maintainer's generic rules live outside this r
 - Names: root package and `groupId` `dev.wakey`, configuration prefix `wakey.*` (`WAKEY_*`), license AGPL-3.0-or-later (ADR 0002).
 - Simple arguments: a call argument carries at most one method call; extract a longer expression into a named variable (ADR 0007).
 - A rule from an ADR that can be checked statically becomes an ArchUnit or lint rule, not a review comment.
+- PostgreSQL is the only database (ADR 0008). Every PostgreSQL-only place (SQL, Liquibase changeset, code, configuration) carries a `postgres-only: ...` comment and a row in the ADR 0008 table in the same pull request; `PostgresOnlyRegistryTest` enforces the row.
 - Docs stay in Polish until backlog item 13 (English translation); new docs may be in Polish.
 - `docs/research/` is a local doc type for research briefs and reports. A report recommends; only an ADR in `docs/decisions/` decides.
 - Stage numbers (0–9) and their scope come from `docs/specs/roadmap.md`.
