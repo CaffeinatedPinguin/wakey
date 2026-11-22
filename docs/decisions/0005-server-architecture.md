@@ -55,6 +55,12 @@ Jak robią inni: Uptime Kuma i Checkmate dzielą kod na warstwy techniczne; Heal
 
 Pierwszy `ack` danego konsumenta na danym temacie wykonany jednocześnie z dwóch procesów (np. przy zmianie lidera) może w PostgreSQL skończyć się błędem duplikatu i wycofaniem tej jednej transakcji. Nic nie ginie, bo dostarczanie jest „co najmniej raz” i wiadomość wróci przy następnym `poll`.
 
+**Co monitorować w kolejce.** Kolejkę obserwujemy jak każdą kolejkę: czy producenci nie czekają za długo i czy konsumenci nadążają. Metryki przez Micrometer ([0002](0002-stack.md)):
+- czas czekania publikującego na wiersz licznika (timer, p99). Trwale ponad ok. 100 ms albo pojedyncze czekanie ponad 0,5 s (log WARN) znaczy, że serializacja publikacji staje się wąskim gardłem;
+- opóźnienie konsumenta: ostatni kursor minus kursor konsumenta, osobno dla konsumenta i tematu (gauge). Lag, który rośnie zamiast wracać do zera, znaczy, że konsument nie nadąża albo stoi.
+
+Przy diagnozie na PostgreSQL pomaga `log_lock_waits = on` (log każdego czekania na blokadę dłuższego niż `deadlock_timeout`) i `pg_stat_activity` z `wait_event_type = 'Lock'`. Gdy oba sygnały rosną mimo krótkich transakcji producentów, czas na zewnętrzną kolejkę jako nowy adapter. Metryki wchodzą razem z pierwszym konsumentem w etapie 1; ich eksport do OTLP w etapie 8 ([roadmap.md](../specs/roadmap.md)).
+
 ### Model domeny
 - Domyślnie jeden model: agregaty Spring Data JDBC to rekordy z `@Id`.
 - Polityki (ocena stanu, kworum, flapping, okna serwisowe, różnice plik–UI) to czysta Java w pakiecie `domain` bez Springa, działająca na prostych rekordach i testowana jednostkowo.
