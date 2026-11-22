@@ -62,6 +62,16 @@ Właściciel zatwierdził wariant A: zaostrzamy reguły bez dodawania nowych zal
 - **Frontend.** `recommendedTypeChecked` zastąpiono `strictTypeChecked` i `stylisticTypeChecked` (typescript-eslint 8.73.0). Dodano `@typescript-eslint/switch-exhaustiveness-check`, `@typescript-eslint/consistent-type-imports`, `@typescript-eslint/explicit-module-boundary-types` oraz core: `eqeqeq`, `no-console`, `no-param-reassign`, `no-nested-ternary`, `no-implicit-coercion`, `max-lines` 300, `max-statements` 15, `prefer-const`, `no-else-return`. Progi z 2026-11-21 zostają.
 - Kod istniejący poprawiono bez wyłączania reguł: w testach Springa wstrzykiwanie `JdbcTemplate` przez pole zamieniono na konstruktor, a `App` ma jawny typ zwracany. `checkstyle-suppressions.xml` pozostał pusty.
 
+### Wyjątki bez śladu (2026-11-22)
+
+Żaden wyjątek nie może zniknąć po cichu, więc blok `catch` w kodzie produkcyjnym serwera musi albo rzucić wyjątek dalej (z przyczyną), albo przekazać złapany wyjątek do wywołania, np. loggera, tak żeby w logu był stack trace. Bez nowych zależności, bez `-Werror` i bez wyłączania reguł.
+
+- **Error Prone `UnusedException` na `ERROR`** odrzuca `throw new X("komunikat")` w `catch`, które gubi złapany wyjątek zamiast przekazać go jako przyczynę (`throw new X("komunikat", e)`).
+- **Checkstyle `EmptyCatchBlock` z `commentFormat`** odrzuca pusty `catch` także wtedy, gdy w środku jest sam komentarz: wzorzec `(?!)` nie pasuje do żadnego komentarza, więc komentarz nie wycisza reguły.
+- **Checkstyle `MatchXpath`** odrzuca `catch` bez `throw` i bez wywołania metody, której bezpośrednim argumentem jest zmienna złapanego wyjątku. Łapie więc `return null` oraz `LOG.warn("…")` i `LOG.warn("…", e.getMessage())`, a przepuszcza `LOG.warn("…", e)`, `throw e` i `throw new X("…", e)`.
+
+Czego te reguły nie łapią: `e.getMessage()` w logu jest odrzucane, ale logowanie na złym poziomie (np. `debug` zamiast `error`) już nie; reguły nie sprawdzają też, czy komunikat logu jest sensowny. Globalna obsługa nieoczekiwanych wyjątków w HTTP (`@RestControllerAdvice` z logiem) przyjdzie z pierwszymi endpointami na etapie 1.
+
 ## Consequences
 
 - Nowe zależności Javy (wtyczki builda i kompilatora): Spotless, palantir-java-format, Error Prone, NullAway, Checkstyle.

@@ -41,7 +41,15 @@
       <property name="max" value="3"/>
     </module>
     <module name="AvoidStarImport"/>
-    <module name="EmptyCatchBlock"/>
+    <module name="EmptyCatchBlock">
+      <!-- A plain comment must not excuse an empty catch block: this pattern never matches. -->
+      <property name="commentFormat" value="(?!)"/>
+    </module>
+    <module name="MatchXpath">
+      <!-- A catch block must rethrow, wrap with the original cause, or pass the caught exception to a call. -->
+      <property name="query" value="//LITERAL_CATCH[not(.//LITERAL_THROW)][not(.//METHOD_CALL/ELIST/EXPR/IDENT/@text = ./PARAMETER_DEF/IDENT/@text)]"/>
+      <message key="matchxpath.match" value="A catch block must rethrow the exception, wrap it with the original cause, or pass the caught exception to a call (for example a logger), otherwise the stack trace is lost."/>
+    </module>
     <module name="InnerAssignment"/>
     <module name="IllegalCatch"/>
     <module name="IllegalThrows"/>
