@@ -5,20 +5,6 @@
     xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
         https://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
 
-  <changeSet id="leader-lock" author="wakey">
-    <createTable tableName="leader_lock">
-      <column name="name" type="VARCHAR(255)">
-        <constraints primaryKey="true" primaryKeyName="pk_leader_lock" nullable="false"/>
-      </column>
-      <column name="holder_id" type="VARCHAR(255)">
-        <constraints nullable="false"/>
-      </column>
-      <column name="fencing_token" type="BIGINT">
-        <constraints nullable="false"/>
-      </column>
-      <column name="expires_at" type="TIMESTAMP WITH TIME ZONE">
-        <constraints nullable="false"/>
-      </column>
-    </createTable>
-  </changeSet>
+  <include file="changes/0001-leader-lock.xml" relativeToChangelogFile="true"/>
+  <include file="changes/0002-message-queue.xml" relativeToChangelogFile="true"/>
 </databaseChangeLog>
