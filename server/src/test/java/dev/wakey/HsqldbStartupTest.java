@@ -2,7 +2,6 @@ package dev.wakey;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import java.util.List;
 import java.util.Objects;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -25,12 +24,16 @@ class HsqldbStartupTest {
     @LocalServerPort
     private int port;
 
+    private final JdbcTemplate jdbcTemplate;
+
     @Autowired
-    private JdbcTemplate jdbcTemplate;
+    HsqldbStartupTest(JdbcTemplate jdbcTemplate) {
+        this.jdbcTemplate = jdbcTemplate;
+    }
 
     @Test
     void contextStartsWithLiquibaseOnHsqldbAndHealthIsUp() {
-        List<Integer> changelogTables = jdbcTemplate.queryForList(
+        var changelogTables = jdbcTemplate.queryForList(
                 "select count(*) from information_schema.tables" + " where upper(table_name) = 'DATABASECHANGELOG'",
                 Integer.class);
         assertThat(changelogTables).containsExactly(1);
