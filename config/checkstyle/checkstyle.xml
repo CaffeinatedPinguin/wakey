@@ -42,6 +42,11 @@
     </module>
     <module name="AvoidStarImport"/>
     <module name="EmptyCatchBlock"/>
+    <module name="MatchXpath">
+      <!-- A non-empty catch block must rethrow, wrap with the original cause, or pass the caught exception anywhere in the arguments of a call. -->
+      <property name="query" value="//LITERAL_CATCH[SLIST/*[not(self::RCURLY or self::SINGLE_LINE_COMMENT or self::BLOCK_COMMENT_BEGIN)]][not(.//LITERAL_THROW)][not(.//METHOD_CALL/ELIST//IDENT/@text = ./PARAMETER_DEF/IDENT/@text)]"/>
+      <message key="matchxpath.match" value="A catch block must rethrow the exception, wrap it with the original cause, or pass the caught exception to a call (for example a logger), otherwise the stack trace is lost."/>
+    </module>
     <module name="InnerAssignment"/>
     <module name="IllegalCatch"/>
     <module name="IllegalThrows"/>

@@ -54,7 +54,7 @@
           <compilerArgs>
             <arg>-XDcompilePolicy=simple</arg>
             <arg>--should-stop=ifError=FLOW</arg>
-            <arg>-Xplugin:ErrorProne -Xep:MissingOverride:ERROR -Xep:UnusedVariable:ERROR -Xep:UnnamedVariable:ERROR -Xep:FieldCanBeFinal:ERROR -Xep:NullAway:ERROR -XepOpt:NullAway:AnnotatedPackages=dev.wakey -XepOpt:NullAway:JSpecifyMode=true -XepOpt:NullAway:CheckOptionalEmptiness=true</arg>
+            <arg>-Xplugin:ErrorProne -Xep:MissingOverride:ERROR -Xep:UnusedVariable:ERROR -Xep:UnnamedVariable:ERROR -Xep:FieldCanBeFinal:ERROR -Xep:UnusedException:ERROR -Xep:NullAway:ERROR -XepOpt:NullAway:AnnotatedPackages=dev.wakey -XepOpt:NullAway:JSpecifyMode=true -XepOpt:NullAway:CheckOptionalEmptiness=true</arg>
           </compilerArgs>
           <annotationProcessorPaths>
             <path>
