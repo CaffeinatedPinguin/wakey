@@ -9,11 +9,21 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import dev.wakey.testsupport.SecurityIntegrationTest;
+import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpSession;
+import java.util.ArrayList;
+import java.util.List;
 import org.junit.jupiter.api.Test;
+import org.springframework.mock.web.MockHttpSession;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.Authentication;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.context.SecurityContext;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.web.context.HttpSessionSecurityContextRepository;
 import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.ResultMatcher;
+import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
 
 class SecurityFilterChainTest extends SecurityIntegrationTest {
 
@@ -55,6 +65,33 @@ class SecurityFilterChainTest extends SecurityIntegrationTest {
         // then
         HttpSession session = result.getRequest().getSession(false);
         assertThat(session).isNull();
+    }
+
+    @Test
+    void statelessSurfaceIgnoresTheSessionCookie() throws Exception {
+        // given
+        MockHttpSession session = authenticatedSession();
+        Cookie sessionCookie = new Cookie("SESSION", session.getId());
+        MockHttpServletRequestBuilder agentGet =
+                get("/agent/v1/checks").session(session).cookie(sessionCookie);
+        MockHttpServletRequestBuilder agentPost =
+                post("/agent/v1/checks").session(session).cookie(sessionCookie);
+        MockHttpServletRequestBuilder pingGet =
+                get("/ping/token").session(session).cookie(sessionCookie);
+        MockHttpServletRequestBuilder pingPost =
+                post("/ping/token").session(session).cookie(sessionCookie);
+        List<MockHttpServletRequestBuilder> requests = List.of(agentGet, agentPost, pingGet, pingPost);
+        List<Integer> statuses = new ArrayList<>();
+
+        // when
+        for (MockHttpServletRequestBuilder request : requests) {
+            MvcResult result = mockMvc().perform(request).andReturn();
+            int status = result.getResponse().getStatus();
+            statuses.add(status);
+        }
+
+        // then
+        assertThat(statuses).containsOnly(401);
     }
 
     @Test
@@ -148,5 +185,15 @@ class SecurityFilterChainTest extends SecurityIntegrationTest {
                 .andExpect(CONTENT_SECURITY_POLICY)
                 .andExpect(REFERRER_POLICY)
                 .andExpect(PERMISSIONS_POLICY);
+    }
+
+    private static MockHttpSession authenticatedSession() {
+        Authentication authentication = new UsernamePasswordAuthenticationToken(
+                "user", "n/a", List.of(new SimpleGrantedAuthority("ROLE_USER")));
+        SecurityContext context = SecurityContextHolder.createEmptyContext();
+        context.setAuthentication(authentication);
+        MockHttpSession session = new MockHttpSession();
+        session.setAttribute(HttpSessionSecurityContextRepository.SPRING_SECURITY_CONTEXT_KEY, context);
+        return session;
     }
 }
