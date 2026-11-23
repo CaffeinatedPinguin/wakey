@@ -86,6 +86,19 @@ const boundaryZones = [
 
 const testFiles = ['src/**/*.test.{ts,tsx}', 'src/test/**']
 
+const deferredWorkMessage =
+  'Do not defer work with timers or microtasks. Keep state in TanStack Query and navigate with the router.'
+
+const deferredNames = ['queueMicrotask', 'setTimeout', 'setInterval', 'requestAnimationFrame']
+
+const deferredGlobals = deferredNames.map((name) => ({ name, message: deferredWorkMessage }))
+
+const deferredObjects = ['window', 'globalThis']
+
+const deferredProperties = deferredObjects.flatMap((object) =>
+  deferredNames.map((property) => ({ object, property, message: deferredWorkMessage })),
+)
+
 export default defineConfig([
   globalIgnores(['dist']),
   {
@@ -147,6 +160,8 @@ export default defineConfig([
     rules: {
       'import-x/no-cycle': ['error', { ignoreExternal: true }],
       'import-x/no-restricted-paths': ['error', { basePath: rootDir, zones: boundaryZones }],
+      'no-restricted-globals': ['error', ...deferredGlobals],
+      'no-restricted-properties': ['error', ...deferredProperties],
     },
   },
   {

@@ -4,22 +4,16 @@ import type { QueryClient } from '@tanstack/react-query'
 import { RouterProvider } from '@tanstack/react-router'
 import type { ReactElement } from 'react'
 import './i18n'
-import { appQueryClient } from './queryClient'
-import { appRouter } from './router'
 import type { AppRouter } from './router'
-import { theme } from './theme'
 
 interface AppProps {
-  router?: AppRouter
-  queryClient?: QueryClient
+  router: AppRouter
+  queryClient: QueryClient
 }
 
-export default function App({
-  router = appRouter,
-  queryClient = appQueryClient,
-}: AppProps): ReactElement {
+export default function App({ router, queryClient }: AppProps): ReactElement {
   return (
-    <MantineProvider theme={theme}>
+    <MantineProvider defaultColorScheme="auto">
       <QueryClientProvider client={queryClient}>
         <RouterProvider router={router} />
       </QueryClientProvider>

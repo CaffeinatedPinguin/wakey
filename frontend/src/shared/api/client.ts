@@ -1,62 +1,31 @@
 import axios from 'axios'
+import type { AxiosInstance } from 'axios'
 
-const API_PREFIX = '/api/v1/'
-const SESSION_EXPIRED_EVENT = 'wakey:session-expired'
-const CSRF_COOKIE_NAME = 'XSRF-TOKEN'
-const CSRF_HEADER_NAME = 'X-XSRF-TOKEN'
+const NETWORK_RETRY_LIMIT = 2
 
-// axios 1.21 reads the XSRF cookie and sets the header itself. withXSRFToken
-// stays undefined on purpose: axios then only attaches the token to
-// same-origin requests, never to an absolute URL of another origin.
-export const apiClient = axios.create({
-  withCredentials: true,
-  xsrfCookieName: CSRF_COOKIE_NAME,
-  xsrfHeaderName: CSRF_HEADER_NAME,
-})
-
-let sessionExpiredScheduled = false
-
-function notifySessionExpired(): void {
-  if (sessionExpiredScheduled) {
-    return
-  }
-  sessionExpiredScheduled = true
-  queueMicrotask(() => {
-    sessionExpiredScheduled = false
-    window.dispatchEvent(new Event(SESSION_EXPIRED_EVENT))
-  })
+export interface ApiClientOptions {
+  baseURL: string
 }
 
-export function onSessionExpired(handler: () => void): () => void {
-  const listener = (): void => {
-    handler()
-  }
-  window.addEventListener(SESSION_EXPIRED_EVENT, listener)
-  return () => {
-    window.removeEventListener(SESSION_EXPIRED_EVENT, listener)
-  }
+// Axios 1.21 already defaults xsrfCookieName to 'XSRF-TOKEN' and
+// xsrfHeaderName to 'X-XSRF-TOKEN' — the names Spring Security's csrf.spa()
+// writes and expects (ADR 0006). Axios only adds the header to same-origin
+// requests, so no withXSRFToken option is needed either.
+export function createApiClient({ baseURL }: ApiClientOptions): AxiosInstance {
+  return axios.create({
+    baseURL,
+    withCredentials: true,
+  })
 }
 
 export function isUnauthorizedError(error: unknown): boolean {
   return axios.isAxiosError(error) && error.response?.status === 401
 }
 
-function isApiRequest(url: string | undefined): boolean {
-  return url === '/api/v1' || url?.startsWith(API_PREFIX) === true
+export function shouldRetryRequest(failureCount: number, error: unknown): boolean {
+  return isNetworkError(error) && failureCount < NETWORK_RETRY_LIMIT
 }
 
-function isUnauthorizedApiError(error: unknown): boolean {
-  return (
-    axios.isAxiosError(error) && error.response?.status === 401 && isApiRequest(error.config?.url)
-  )
+function isNetworkError(error: unknown): boolean {
+  return axios.isAxiosError(error) && error.response === undefined
 }
-
-apiClient.interceptors.response.use(
-  (response) => response,
-  (error: unknown) => {
-    if (isUnauthorizedApiError(error)) {
-      notifySessionExpired()
-    }
-    return Promise.reject(error instanceof Error ? error : new Error('Request failed'))
-  },
-)

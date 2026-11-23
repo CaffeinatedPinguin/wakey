@@ -1,13 +1,14 @@
-import { Center, Loader } from '@mantine/core'
+import { Loader } from '@mantine/core'
 import type { ReactElement } from 'react'
 import { useTranslation } from 'react-i18next'
+import { CenteredPage } from './CenteredPage'
 
 export function LoadingScreen(): ReactElement {
   const { t } = useTranslation()
 
   return (
-    <Center mih="100vh">
+    <CenteredPage width={240}>
       <Loader aria-label={t('common.loading')} />
-    </Center>
+    </CenteredPage>
   )
 }

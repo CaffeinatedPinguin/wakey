@@ -5,27 +5,23 @@ import { rootRoute } from '../routes/__root'
 import { homeRoute } from '../routes/home'
 import { loggedOutRoute } from '../routes/loggedOut'
 import { loginRoute } from '../routes/login'
-import { appQueryClient } from './queryClient'
 
 const routeTree = rootRoute.addChildren([homeRoute, loginRoute, loggedOutRoute])
 
-function buildRouter(queryClient: QueryClient, history?: RouterHistory) {
-  if (history === undefined) {
-    return createRouter({ routeTree, context: { queryClient } })
-  }
-  return createRouter({ routeTree, context: { queryClient }, history })
-}
+const createRouterForTree = createRouter<typeof routeTree>
 
-export type AppRouter = ReturnType<typeof buildRouter>
+export type AppRouter = ReturnType<typeof createRouterForTree>
 
 export function createAppRouter(queryClient: QueryClient, history?: RouterHistory): AppRouter {
-  return buildRouter(queryClient, history)
+  return createRouterForTree({
+    routeTree,
+    context: { queryClient },
+    ...(history === undefined ? {} : { history }),
+  })
 }
-
-export const appRouter = createAppRouter(appQueryClient)
 
 declare module '@tanstack/react-router' {
   interface Register {
-    router: typeof appRouter
+    router: AppRouter
   }
 }

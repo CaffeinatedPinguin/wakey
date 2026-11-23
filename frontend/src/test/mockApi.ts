@@ -7,6 +7,7 @@ export interface MockRequest {
 export interface MockReply {
   status: number
   data?: unknown
+  networkError?: boolean
 }
 
 export type MockHandler = (request: MockRequest) => MockReply
@@ -18,6 +19,7 @@ let handler: MockHandler = () => ({ status: 404 })
 class MockXMLHttpRequest {
   onloadend: (() => void) | null = null
   onreadystatechange: (() => void) | null = null
+  onerror: ((event: { message?: string }) => void) | null = null
   readyState = 0
   status = 0
   statusText = ''
@@ -50,10 +52,14 @@ class MockXMLHttpRequest {
       url: this.url,
       headers: { ...this.headers },
     })
+    this.readyState = 4
+    if (reply.networkError === true) {
+      this.onerror?.({ message: 'Network Error' })
+      return
+    }
     this.status = reply.status
     this.responseText = reply.data === undefined ? '' : JSON.stringify(reply.data)
     this.responseURL = this.url
-    this.readyState = 4
     this.onloadend?.()
   }
 }
