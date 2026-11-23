@@ -43,10 +43,10 @@ Macierz zgodności i uzasadnienia są w [theme.md](../specs/theme.md) (sekcje 3�
 | Przycisk domyślny | 36 px, nie 40–44 px (`UI_UX_RULES` 16) | Narzędzie operacyjne z tabelami po tysiące wierszy; na dotyku zawsze 44 px |
 | Body panelu | 14 px, nie 16 px (`UI_UX_RULES` 12) | Zwarty panel; pola na dotyku mają 16 px, żeby iOS nie powiększał widoku |
 | Radius | 5 / 6 / 10 px dla kontrolek, kart i okien (`UI_UX_RULES` 13) | Decyzja właściciela 2026-11-23: ciaśniejszy, bardziej techniczny wygląd |
-| Obrys pól | `border-default` (3,87:1) | WCAG 2.2 AA 1.4.11: granica pola musi być rozpoznawalna |
+| Obrys pól | `border-default` (3,41:1 w jasnym, 3,87:1 w ciemnym) | WCAG 2.2 AA 1.4.11: granica pola musi być rozpoznawalna |
 | `selection-hover` w ciemnym | 16% akcentu, nie 18% | Przy 18% tekst akcentu miał 4,50:1, dokładnie na granicy |
 | Paleta stanów | Zieleń, pomarańcz, czerwień, błękit i łupek ze spec 8.1 | Jedna paleta w całym produkcie |
-| DEGRADED solid w jasnym | `#CC6F05` | Poprawka kontrastu: 2,95:1 na tle strony |
+| DEGRADED solid w jasnym | `#CC6F05` | Poprawka kontrastu: poprzedni `#D97706` miał 2,95:1 na tle strony w jasnym |
 
 ## Consequences
 

@@ -39,7 +39,8 @@ export const uptimeExtension: ThemeExtension = {
   },
   light: {
     ...states,
-    // Instance administration: a separate accent with 6.0:1 on its background.
+    // Instance administration: a separate accent, 5.26:1 on its background in
+    // the light scheme and 6.63:1 in the dark scheme.
     '--app-color-admin-accent': '#A04A06',
     '--app-color-admin-bg': 'color-mix(in srgb, #B45309 8%, transparent)',
   },

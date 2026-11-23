@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import { contrastRatio } from './color'
 import { composeTokens } from './tokens/compose'
+import { DEFAULT_BRAND, type BrandInput } from './tokens/brand'
 import { resolveToken } from './test/resolve'
-import type { BrandInput } from './tokens/brand'
 import type { TokenMap } from './tokens/types'
 
 const BRANDS = ['#0EA5E9', '#FACC15', '#16A34A', '#111111', '#E11D48', '#FFFFFF']
@@ -56,10 +56,54 @@ function accentFailures(brand: BrandInput): string[] {
   })
 }
 
+const DARK_SURFACES = ['--app-color-page', '--app-color-surface', '--app-color-surface-raised']
+
+function darkSurfaceFailures(brand: BrandInput, button: string, background: string): string[] {
+  const tokens = composeTokens({ brand })
+  const vars: TokenMap = { ...tokens.shared, ...tokens.dark }
+  const failures: string[] = []
+  for (const surface of DARK_SURFACES) {
+    const ratio = contrastRatio(background, resolveToken(vars, surface as `--${string}`))
+    if (ratio < 3) {
+      failures.push(`${brand.accent} dark ${button} on ${surface}: ${ratio.toFixed(2)}`)
+    }
+  }
+  return failures
+}
+
+function darkButtonFailures(brand: BrandInput): string[] {
+  const tokens = composeTokens({ brand })
+  const vars: TokenMap = { ...tokens.shared, ...tokens.dark }
+  const failures: string[] = []
+  for (const button of [
+    '--app-color-primary-bg',
+    '--app-color-primary-hover',
+    '--app-color-primary-pressed',
+  ]) {
+    const background = resolveToken(vars, button as `--${string}`)
+    const text = resolveToken(vars, '--app-color-on-primary', background)
+    const ratio = contrastRatio(text, background)
+    if (ratio < 4.5) {
+      failures.push(`${brand.accent} dark text on ${button}: ${ratio.toFixed(2)}`)
+    }
+    failures.push(...darkSurfaceFailures(brand, button, background))
+  }
+  return failures
+}
+
 describe('brand colours', () => {
   it('foreign brand colours are adjusted to keep AA contrast', () => {
     const failures = BRANDS.flatMap((accent) => accentFailures({ accent }))
     expect(failures).toEqual([])
+  })
+
+  it('a dark brand keeps a visible primary button in the dark scheme', () => {
+    const failures = BRANDS.flatMap((accent) => darkButtonFailures({ accent }))
+    expect(failures).toEqual([])
+    const darkBrand = composeTokens({ brand: { accent: '#111111' } })
+    expect(darkBrand.brandWarnings.join(' ')).toMatch(/hover or pressed/i)
+    expect(darkBrand.brandAdjustments.some((item) => item.warning !== undefined)).toBe(true)
+    expect(composeTokens({ brand: DEFAULT_BRAND }).brandWarnings).toEqual([])
   })
 
   it('a brand close to the DOWN status carries a warning', () => {

@@ -5,15 +5,28 @@ const HEX = /^#[0-9a-f]{6}$/i
 const VARIABLE = /^var\((--[\w-]+)\)$/
 const COLOR_MIX = /^color-mix\(in srgb,\s*(.+?)\s+(\d+(?:\.\d+)?)%,\s*(.+)\)$/
 
-export function resolveToken(vars: TokenMap, name: `--${string}`, base = '#FFFFFF'): string {
+export function resolveToken(
+  vars: TokenMap,
+  name: `--${string}`,
+  base = '#FFFFFF',
+  depth = 0,
+): string {
+  if (depth > 20) {
+    throw new Error(`Too deep token reference: ${name}`)
+  }
   const value = vars[name]
   if (value === undefined) {
     throw new Error(`Missing token ${name}`)
   }
-  return resolveValue(vars, value, base)
+  return resolveValue(vars, value, base, depth)
 }
 
-function resolveVariable(vars: TokenMap, value: string, base: string): string | null {
+function resolveVariable(
+  vars: TokenMap,
+  value: string,
+  base: string,
+  depth: number,
+): string | null {
   const variable = VARIABLE.exec(value)
   if (!variable) {
     return null
@@ -22,7 +35,7 @@ function resolveVariable(vars: TokenMap, value: string, base: string): string | 
   if (!name) {
     throw new Error(`Invalid token reference: ${value}`)
   }
-  return resolveToken(vars, name as `--${string}`, base)
+  return resolveToken(vars, name as `--${string}`, base, depth + 1)
 }
 
 function resolveMix(vars: TokenMap, value: string, base: string, depth: number): string | null {
@@ -50,7 +63,7 @@ export function resolveValue(vars: TokenMap, raw: string, base: string, depth = 
   if (value === 'transparent') {
     return base
   }
-  const variable = resolveVariable(vars, value, base)
+  const variable = resolveVariable(vars, value, base, depth)
   if (variable !== null) {
     return variable
   }

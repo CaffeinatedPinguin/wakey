@@ -1,4 +1,6 @@
+import type { ComposedTokens } from '../tokens/compose'
 import type { SemanticMap } from './types'
+import { filledHover } from './variant'
 
 const baseBridge = {
   '--overlay-bg': 'var(--app-color-overlay-backdrop)',
@@ -29,12 +31,15 @@ const baseBridge = {
   '--mantine-primary-color-light-color': 'var(--app-color-accent-text)',
 } as const
 
-export function createBridge(semantic: SemanticMap): Record<string, string> {
+export function createBridge(
+  semantic: SemanticMap,
+  tokens: ComposedTokens,
+): Record<string, string> {
   const bridge: Record<string, string> = { ...baseBridge }
   for (const [name, prefix] of Object.entries(semantic)) {
     Object.assign(bridge, {
       [`--mantine-color-${name}-filled`]: `var(${prefix}-solid)`,
-      [`--mantine-color-${name}-filled-hover`]: `var(${prefix}-solid)`,
+      [`--mantine-color-${name}-filled-hover`]: filledHover(tokens, prefix),
       [`--mantine-color-${name}-light`]: `var(${prefix}-bg)`,
       [`--mantine-color-${name}-light-hover`]: `var(${prefix}-bg)`,
       [`--mantine-color-${name}-light-color`]: `var(${prefix}-text)`,

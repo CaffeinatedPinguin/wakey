@@ -4,6 +4,16 @@ export const transparentBorder = `${rem(1)} solid transparent`
 
 export const controlBorder = (color: string): string => `${rem(1)} solid ${color}`
 
+// Mantine resolves --input-height-* on the wrapper, so the theme must set them
+// there; the input only inherits the resolved values.
+export const inputWrapperStyles = {
+  '--input-height-xs': 'var(--app-size-control-compact)',
+  '--input-height-sm': 'var(--app-size-control-desktop)',
+  '--input-height-md': 'var(--app-size-control-desktop)',
+  '--input-height-lg': 'var(--app-size-control-large)',
+  '--input-height-xl': 'var(--app-size-control-touch)',
+} as const
+
 export const inputStyles = {
   fontSize: 'var(--app-type-body-size)',
   '--input-bg': 'var(--app-color-input-bg)',
@@ -12,11 +22,6 @@ export const inputStyles = {
   '--input-color': 'var(--app-color-text-heading)',
   '--input-placeholder-color': 'var(--app-color-input-placeholder)',
   '--input-radius': 'var(--app-radius-control)',
-  '--input-height-xs': 'var(--app-size-control-compact)',
-  '--input-height-sm': 'var(--app-size-control-desktop)',
-  '--input-height-md': 'var(--app-size-control-desktop)',
-  '--input-height-lg': 'var(--app-size-control-large)',
-  '--input-height-xl': 'var(--app-size-control-touch)',
 } as const
 
 export const inputSectionStyles = { color: 'var(--app-color-text-muted)' } as const

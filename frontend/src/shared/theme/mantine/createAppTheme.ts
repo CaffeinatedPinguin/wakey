@@ -43,9 +43,9 @@ export function createAppTheme(options: AppThemeOptions): AppTheme {
   const composeOptions = brand === undefined ? { extensions } : { brand, extensions }
   const tokens = composeTokens(composeOptions)
   const semantic = tokens.semanticColors
-  const variantColorResolver = createVariantColorResolver(semantic)
-  const controlVars = createControlVars(semantic)
-  const bridge = createBridge(semantic)
+  const variantColorResolver = createVariantColorResolver(semantic, tokens)
+  const controlVars = createControlVars(semantic, tokens)
+  const bridge = createBridge(semantic, tokens)
   const theme = buildMantineTheme({ tokens, semantic, labels, variantColorResolver, controlVars })
   const cssVariablesResolver = createCssVariablesResolver(tokens, bridge)
   const getCssVariables = (scheme: 'light' | 'dark'): TokenMap => ({

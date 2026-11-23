@@ -25,6 +25,8 @@ export interface BrandAdjustment {
   readonly from: string
   readonly to: string
   readonly reason: string
+  /** A non-blocking note for the appearance tab, e.g. hover equals the background. */
+  readonly warning?: string
 }
 
 export interface BrandResult {
@@ -164,6 +166,80 @@ function primaryTokens(accent: string, adjustments: BrandAdjustment[]): TokenMap
   }
 }
 
+const WHITE = '#FFFFFF'
+const DARK_TEXT = '#0B0F17'
+
+const SAME_AS_BACKGROUND_WARNING =
+  'In the dark scheme hover or pressed equals the button background; the cursor and focus outline still distinguish it.'
+
+/** A dark-scheme button: readable text and a shape visible against dark surfaces. */
+function reachesDarkButton(color: string, text: string): boolean {
+  const readableText = contrastRatio(color, text) >= 4.5
+  const visibleShape = brandBackgrounds.dark.text.every(
+    (background) => contrastRatio(color, background) >= 3,
+  )
+  return readableText && visibleShape
+}
+
+function firstDarkButton(accent: string, text: string): string | null {
+  for (let step = 0; step <= 100; step += 2) {
+    const candidate = mix(WHITE, accent, step)
+    if (reachesDarkButton(candidate, text)) {
+      return candidate
+    }
+  }
+  return null
+}
+
+function lighterStep(base: string, text: string, step: number): string {
+  const candidate = mix(WHITE, base, step)
+  if (candidate !== base && reachesDarkButton(candidate, text)) {
+    return candidate
+  }
+  return base
+}
+
+function darkPrimaryTokens(
+  accent: string,
+  adjustments: BrandAdjustment[],
+  warnings: string[],
+): TokenMap {
+  // White text needs a mid-dark button; a light brand gets dark text instead.
+  const onWhite = firstDarkButton(accent, WHITE)
+  const onPrimary = onWhite === null ? DARK_TEXT : WHITE
+  const background = onWhite ?? firstDarkButton(accent, DARK_TEXT) ?? accent
+  const hover = lighterStep(background, onPrimary, 8)
+  const pressed = lighterStep(background, onPrimary, 16)
+  let sameAsBackground = false
+  for (const [token, value] of [
+    ['--app-color-primary-bg', background],
+    ['--app-color-primary-hover', hover],
+    ['--app-color-primary-pressed', pressed],
+  ] as const) {
+    const flat = token !== '--app-color-primary-bg' && value === background
+    sameAsBackground = sameAsBackground || flat
+    if (value !== accent) {
+      adjustments.push({
+        token,
+        scheme: 'dark',
+        from: accent,
+        to: value,
+        reason: 'dark scheme: text contrast and a visible button against page/surface',
+        ...(flat ? { warning: SAME_AS_BACKGROUND_WARNING } : {}),
+      })
+    }
+  }
+  if (sameAsBackground) {
+    warnings.push(SAME_AS_BACKGROUND_WARNING)
+  }
+  return {
+    '--app-color-primary-bg': background,
+    '--app-color-primary-hover': hover,
+    '--app-color-primary-pressed': pressed,
+    '--app-color-on-primary': onPrimary,
+  }
+}
+
 function schemeTokens(
   scheme: 'light' | 'dark',
   accent: string,
@@ -198,10 +274,12 @@ export function createBrandTokens(input: BrandInput = DEFAULT_BRAND): BrandResul
     return DEFAULT_BRAND_TOKENS
   }
   const adjustments: BrandAdjustment[] = []
-  const primary = primaryTokens(accent, adjustments)
-  const light = schemeTokens('light', accent, primary, adjustments)
-  const dark = schemeTokens('dark', accent, primary, adjustments)
-  return { light, dark, adjustments, warnings: statusConflicts(accent) }
+  const warnings: string[] = []
+  const lightPrimary = primaryTokens(accent, adjustments)
+  const darkPrimary = darkPrimaryTokens(accent, adjustments, warnings)
+  const light = schemeTokens('light', accent, lightPrimary, adjustments)
+  const dark = schemeTokens('dark', accent, darkPrimary, adjustments)
+  return { light, dark, adjustments, warnings: [...statusConflicts(accent), ...warnings] }
 }
 
 /** Quick check for an appearance form: does the colour need adjustments? */

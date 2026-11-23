@@ -10,6 +10,7 @@ import {
   dropdownStyles,
   inputSectionStyles,
   inputStyles,
+  inputWrapperStyles,
   optionStyles,
   overlayStyles,
   overlayTransition,
@@ -69,7 +70,9 @@ const surfaceComponents = {
 }
 
 const formComponents = {
-  Input: { styles: { input: inputStyles, section: inputSectionStyles } },
+  Input: {
+    styles: { wrapper: inputWrapperStyles, input: inputStyles, section: inputSectionStyles },
+  },
   TextInput: { defaultProps: { size: 'sm' } },
   PasswordInput: { defaultProps: { size: 'sm' } },
   NumberInput: {

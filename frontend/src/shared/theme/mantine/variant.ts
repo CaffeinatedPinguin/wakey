@@ -1,24 +1,76 @@
 import { defaultVariantColorsResolver, type VariantColorsResolver } from '@mantine/core'
+import { relativeLuminance } from '../color'
+import type { ComposedTokens } from '../tokens/compose'
+import type { TokenMap } from '../tokens/types'
 import { controlBorder, transparentBorder } from './styles'
 import type { SemanticMap } from './types'
 
 type ResolverInput = Parameters<VariantColorsResolver>[0]
 type Resolved = ReturnType<VariantColorsResolver>
+type Scheme = 'light' | 'dark'
 export type ControlVars = (
   variant: string | undefined,
   color: string | undefined,
 ) => Record<string, string>
+
+const VARIABLE = /^var\((--[\w-]+)\)$/
 
 const isDanger = (color: string | undefined): boolean => color === 'danger' || color === 'red'
 
 const isAccent = (color: string | undefined): boolean =>
   color === undefined || color === 'brand' || color === 'primary'
 
-function semanticVariant(prefix: string, variant: string): Resolved {
+function schemeVars(tokens: ComposedTokens, scheme: Scheme): TokenMap {
+  return { ...tokens.shared, ...tokens[scheme] }
+}
+
+function resolveAlias(vars: TokenMap, name: `--${string}`): string {
+  const value = vars[name]
+  if (value === undefined) {
+    throw new Error(`Missing token ${name}`)
+  }
+  const alias = VARIABLE.exec(value)?.[1]
+  if (alias === undefined) {
+    return value
+  }
+  return resolveAlias(vars, alias as `--${string}`)
+}
+
+/** The text on a solid state: dark text needs a lighter fill, light text a darker one. */
+function mixKeyword(vars: TokenMap, prefix: `--${string}`): 'black' | 'white' {
+  const text = resolveAlias(vars, `${prefix}-on-solid` as `--${string}`)
+  return relativeLuminance(text) < 0.18 ? 'white' : 'black'
+}
+
+function filledMix(tokens: ComposedTokens, scheme: Scheme, prefix: `--${string}`): string {
+  const target = mixKeyword(schemeVars(tokens, scheme), prefix)
+  return `color-mix(in srgb, var(${prefix}-solid) 88%, ${target})`
+}
+
+function pressedMix(tokens: ComposedTokens, scheme: Scheme, prefix: `--${string}`): string {
+  const target = mixKeyword(schemeVars(tokens, scheme), prefix)
+  return `color-mix(in srgb, var(${prefix}-solid) 76%, ${target})`
+}
+
+// A state colour can need a different mix direction per scheme (DOWN is white text
+// in light and dark text in dark), so emit the CSS light-dark() switch.
+function perScheme(light: string, dark: string): string {
+  return light === dark ? light : `light-dark(${light}, ${dark})`
+}
+
+export function filledHover(tokens: ComposedTokens, prefix: `--${string}`): string {
+  return perScheme(filledMix(tokens, 'light', prefix), filledMix(tokens, 'dark', prefix))
+}
+
+export function statePressed(tokens: ComposedTokens, prefix: `--${string}`): string {
+  return perScheme(pressedMix(tokens, 'light', prefix), pressedMix(tokens, 'dark', prefix))
+}
+
+function semanticVariant(prefix: `--${string}`, variant: string, tokens: ComposedTokens): Resolved {
   if (variant === 'filled') {
     return {
       background: `var(${prefix}-solid)`,
-      hover: `var(${prefix}-solid)`,
+      hover: filledHover(tokens, prefix),
       color: `var(${prefix}-on-solid)`,
       border: transparentBorder,
     }
@@ -139,12 +191,15 @@ function regularVariant(input: ResolverInput): Resolved {
   }
 }
 
-export function createVariantColorResolver(semantic: SemanticMap): VariantColorsResolver {
+export function createVariantColorResolver(
+  semantic: SemanticMap,
+  tokens: ComposedTokens,
+): VariantColorsResolver {
   return (input) => {
     const { color } = input
     const prefix = color === undefined ? undefined : semantic[color]
     if (prefix) {
-      return semanticVariant(prefix, input.variant)
+      return semanticVariant(prefix, input.variant, tokens)
     }
     return regularVariant(input)
   }
@@ -182,19 +237,20 @@ function regularPressed(variant: string, color: string | undefined): string {
 }
 
 function pressedColorFor(
-  variant: string | undefined,
+  variant: string,
   color: string | undefined,
   semantic: SemanticMap,
+  tokens: ComposedTokens,
 ): string {
   const prefix = color === undefined ? undefined : semantic[color]
   if (prefix) {
-    return `var(${prefix}-bg)`
+    return variant === 'filled' ? statePressed(tokens, prefix) : `var(${prefix}-bg)`
   }
-  return regularPressed(variant ?? 'filled', color)
+  return regularPressed(variant, color)
 }
 
-export function createControlVars(semantic: SemanticMap): ControlVars {
+export function createControlVars(semantic: SemanticMap, tokens: ComposedTokens): ControlVars {
   return (variant, color) => ({
-    '--app-control-pressed': pressedColorFor(variant, color, semantic),
+    '--app-control-pressed': pressedColorFor(variant ?? 'filled', color, semantic, tokens),
   })
 }

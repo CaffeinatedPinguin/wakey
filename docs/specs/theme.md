@@ -22,6 +22,10 @@ const { theme, cssVariablesResolver, brandAdjustments } = useMemo(
 <MantineProvider theme={theme} cssVariablesResolver={cssVariablesResolver} defaultColorScheme="auto">
 ```
 
+`color-scheme` ustawia Mantine z przełącznika (`data-mantine-color-scheme`); `base.css` go nie
+nadpisuje, więc `light-dark()` i natywne kontrolki idą za wyborem w aplikacji, a nie za motywem
+systemu.
+
 - `labels` jest wymagane: motyw nie zawiera tekstów UI. Przy zmianie języka motyw tworzy się
   ponownie (`useMemo` zależne od języka).
 - Status: `<Badge color="down" leftSection={<IconOctagonX size={14} />}>Nie działa</Badge>`.
@@ -67,7 +71,8 @@ Zasady, dzięki którym motyw da się utrzymać:
    ani marki ani zdefiniować tokenu, który ma już inne rozszerzenie. `composeTokens` rzuca wtedy
    błąd.
 2. **Marka nigdy nie dotyka statusów.** `createBrandTokens` sam koryguje kontrast i zwraca listę
-   korekt oraz ostrzeżenie, gdy odcień marki jest bliski kolorowi stanu.
+   korekt oraz ostrzeżenie, gdy odcień marki jest bliski kolorowi stanu. Dla bardzo ciemnych marek
+   w ciemnym motywie hover i pressed mogą być równe tłu; rozróżnia je wtedy kursor i fokus.
 3. **Tokeny bez zależności.** `tokens/*` i `color.ts` nie importują Mantine, więc lekki shell
    status page może użyć samego `tokensToCss`.
 4. **Bez tekstów w motywie.** `labels.close` przychodzi z aplikacji (PL/EN). Motyw nie ma
@@ -87,30 +92,31 @@ Legenda: ✅ spełnione, ⚠️ świadome odstępstwo (uzasadnione), ⏳ do zrob
 | 5 stanów, pigułka + solid, reguła tekstu na wypełnieniu | ui-ux 2.1, 8.1 | ✅ | `extensions/uptime.ts` aliasuje statusy core |
 | UNKNOWN łupkowy, nie czerwony | ui-ux 1.2, 2.3 | ✅ | `neutral` = łupek |
 | Marka nie nadpisuje stanów, kontrola kontrastu marki | ui-ux 4.9 | ✅ | `createBrandTokens`: korekty + ostrzeżenie o bliskim odcieniu |
-| Administracja: odmienny akcent | ui-ux 3.2 | ✅ | `admin-accent` (jasny poprawiony z 4,37 do 6,0:1) |
-| Cel dotyku 44–48 px na telefonie, akcje kryzysowe 48 px | ui-ux 3.3, 5.4, 8.5 | ✅ | `base.css` przy `pointer: coarse` / `< 64em`; `control-critical` 48 |
-| Typografia 24–28 / 18–20 / 15–16 / 14 / 12–13, mono dla danych | ui-ux 8.3 | ✅ | bez tekstu poniżej 12 px |
-| `tabular-nums` dla czasów i liczników | ui-ux 8.3 | ✅ | Badge, Table, NumberInput, `td`, `time`, `.app-num` |
-| Elastyczne szerokości dla PL | ui-ux 8.3 | ✅ | żadna kontrolka nie ma sztywnej szerokości |
-| Skala odstępów 4–32 | ui-ux 8.4 | ✅ | + 48 / 64 / 96 z `ui-ux-rules.md` |
-| `prefers-reduced-motion`, zmiana na żywo bez reorderu | ui-ux 4 | ✅ | `[data-live-changed]` = błysk 600 ms, wyłączany |
-| Fokus widoczny ≥ 3:1 | ui-ux 8.5 | ✅ | 2 px akcentu z odstępem 2 px |
+| Administracja: odmienny akcent | ui-ux 3.2 | ✅ | `admin-accent` (5,26:1 w jasnym, 6,63:1 w ciemnym, test kontrastu) |
+| Cel dotyku 44–48 px na telefonie, akcje kryzysowe 48 px | ui-ux 3.3, 5.4, 8.5 | ✅ | `base.css` przy `pointer: coarse` / `< 64em`; `control-critical` 48; obejmuje też `SegmentedControl` (etykieta) i przyciski z samą ikoną (`ActionIcon`, `Button[aria-label]`) |
+| Typografia 24–28 / 18–20 / 15–16 / 14 / 12–13, mono dla danych | ui-ux 8.3 | ⏳ | tokeny `--app-type-*` gotowe, brak jeszcze reguły pilnującej w komponentach |
+| `tabular-nums` dla czasów i liczników | ui-ux 8.3 | ✅ | Badge, Table, NumberInput, `td`, `time`, `.app-num` (reguła w `base.css`) |
+| Elastyczne szerokości dla PL | ui-ux 8.3 | ⏳ | kontrolki nie mają sztywnych szerokości, brak jeszcze testu |
+| Skala odstępów 4–32 | ui-ux 8.4 | ⏳ | tokeny `--app-space-*` gotowe, brak jeszcze reguły pilnującej |
+| `prefers-reduced-motion`, zmiana na żywo bez reorderu | ui-ux 4 | ✅ | `[data-live-changed]` = błysk 600 ms, wyłączany (reguła w `base.css`) |
+| Fokus widoczny ≥ 3:1 | ui-ux 8.5 | ✅ | 2 px akcentu z odstępem 2 px; test kontrastu pierścienia |
 | Radius 6–8 kontrolki, 8–12 karty, 12–16 okna, pill tylko celowo | ui-ux-rules 13 | ⚠️ | **5 / 6 / 10** (decyzja właściciela 2026-11-23: ciaśniejszy, techniczny wygląd), pill tylko dla stanu |
 | Przycisk domyślny 40–44 px na desktopie | ui-ux-rules 16 | ⚠️ | **36 px.** Narzędzie operacyjne z tabelami po tysiące wierszy; 40 px to `size="md"`, na dotyku zawsze 44 |
 | Body 16 px | ui-ux-rules 12 | ⚠️ | **14 px w panelu.** 16 px dla treści do czytania i status page, a pola na dotyku 16 px |
-| Jasny motyw nie jako odwrócony ciemny | ui-ux-rules 8 | ✅ | własne neutrale, cienie dwuwarstwowe, białe powierzchnie na szarej stronie |
-| Tryb wysokiego kontrastu (Windows) | best practice | ✅ | `forced-colors`: obrys Badge i przycisków |
-| Linki nawigacji nie przemalowane | ui-ux | ✅ | `a { color: inherit }`; linki w treści przez `Anchor` / `.app-link` |
+| Jasny motyw nie jako odwrócony ciemny | ui-ux-rules 8 | ⏳ | własne neutrale gotowe, brak jeszcze testu lub reguły |
+| Tryb wysokiego kontrastu (Windows) | best practice | ✅ | `forced-colors`: obrys Badge i przycisków (reguła w `base.css`) |
+| Linki nawigacji nie przemalowane | ui-ux | ✅ | `a { color: inherit }` (reguła w `base.css`); linki w treści przez `Anchor` / `.app-link` |
 
 ## 4. Konflikty rozstrzygnięte
 
 1. **Obrys pól formularza.** WCAG 2.2 AA 1.4.11 wymaga rozpoznawalnej granicy pola, więc pole ma
-   `border-default` (3,87:1) zamiast cichego obrysu poniżej 3:1.
+   `border-default` (3,41:1 w jasnym, 3,87:1 w ciemnym) zamiast cichego obrysu poniżej 3:1.
 2. **`selection-hover` w ciemnym:** 16% akcentu zamiast 18%. Przy 18% tekst akcentu miał 4,50:1,
    dokładnie na granicy, i test kontrastu go odrzucał.
 3. **Kolory statusów:** jedna paleta ze spec 8.1 (zieleń, pomarańcz, czerwień, błękit, łupek),
    żeby w produkcie nie było dwóch zieleni.
-4. **DEGRADED solid w jasnym:** `#D97706` → `#CC6F05`; poprzednia wartość miała 2,95:1 na tle strony.
+4. **DEGRADED solid w jasnym:** `#D97706` → `#CC6F05`; poprzednia wartość miała 2,95:1 na tle
+   strony w jasnym motywie.
 5. **Radius 5 / 6 / 10 px:** świadome odstępstwo od `ui-ux-rules.md` 13 — decyzja właściciela
    2026-11-23.
 
