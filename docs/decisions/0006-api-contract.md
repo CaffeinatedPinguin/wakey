@@ -107,7 +107,7 @@ Wylogowanie: tylko `POST /logout` z tokenem CSRF. Strona logowania jest ustawion
 
 Logi: INFO przy udanym logowaniu (podmiot i informacja, czy Admin) oraz przy wylogowaniu, WARN przy nieudanym logowaniu. Źródłem są zdarzenia Spring Security (`AuthenticationSuccessEvent`, `AbstractAuthenticationFailureEvent`, `LogoutSuccessEvent`); logi nie zawierają tokenów ani sekretów.
 
-Odpowiedzi 401 i 403 są logowane: 401 na INFO z powodem `missing-authentication`, a 403 na WARN z powodem z zamkniętej listy (`csrf-token-missing`, `csrf-token-invalid`, `access-denied`). W logu jest metoda i ścieżka żądania, a obie przechodzą przez jedną funkcję czyszczącą, która zamienia znaki sterujące na widoczne escape'y i obcina tekst do 200 znaków, więc dane od klienta nie mogą wstrzyknąć linii logu. Bez nagłówków, ciasteczek, tokenów, parametrów zapytania i treści żądania.
+Odpowiedzi 401 i 403 są logowane: 401 na INFO z powodem `missing-authentication`, a 403 na WARN z powodem z zamkniętej listy (`csrf-token-missing`, `csrf-token-invalid`, `access-denied`). W logu jest metoda i ścieżka żądania; przed wstrzyknięciem linii logu chroni format logu opisany w [0005-server-architecture.md](0005-server-architecture.md) (Logback `%replace` lokalnie, JSON ECS w obrazie), a nie własny sanitizer. Bez nagłówków, ciasteczek, tokenów, parametrów zapytania i treści żądania.
 
 Na etap 1 przechodzą: limit prób logowania za portem `RateLimiter`, unieważnianie sesji po zmianie roli albo usunięciu z przestrzeni oraz „wyloguj wszędzie”.
 
@@ -151,6 +151,7 @@ Decyzja z 2026-11-22. Trzy role w dwóch poziomach:
   - **użytkownik**: `/api/v1/**`;
   - **bezstanowy**: `/agent/v1/**`, `/ping/**`, `/public/v1/**`. Ten łańcuch nigdy nie tworzy sesji i nie używa CSRF.
 - Prefiksy tokenów (`wk_`, `wka_`) nie są wymienne.
+- Prefiksy powierzchni i ścieżki logowania OIDC są w jednym miejscu (`dev.wakey.web.ApiPaths`), a każdy moduł dokłada własne ścieżki pod prefiksem. Testy kontraktu zostają przy literałach, żeby zmiana ścieżki w kodzie je wywróciła.
 - Każda powierzchnia ma test bezpieczeństwa: brak uwierzytelnienia i token złego typu dają 401.
 - SSE każda instancja zasila z portu kolejki ([0005](0005-server-architecture.md)). Wznawianie działa przez `Last-Event-ID`.
 - Transport agenta (WebSocket, SSE albo long-poll) rozstrzyga backlog pkt 8. Format publicznego JSON rozstrzyga pkt 7.

@@ -7,7 +7,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.web.AuthenticationEntryPoint;
 
-/** Logs every 401 with a fixed reason and the sanitized method and path, then returns the status alone. */
+/** Logs every 401 with a fixed reason and the request method and path, then returns the status alone. */
 @Slf4j
 final class UnauthorizedRequestLog implements AuthenticationEntryPoint {
 
@@ -16,8 +16,8 @@ final class UnauthorizedRequestLog implements AuthenticationEntryPoint {
     @Override
     public void commence(HttpServletRequest request, HttpServletResponse response, AuthenticationException exception)
             throws IOException {
-        String method = LogSafeText.sanitize(request.getMethod());
-        String path = LogSafeText.sanitize(request.getRequestURI());
+        String method = request.getMethod();
+        String path = request.getRequestURI();
         log.info("request rejected: reason={} method={} path={}", MISSING_AUTHENTICATION, method, path);
         response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
     }

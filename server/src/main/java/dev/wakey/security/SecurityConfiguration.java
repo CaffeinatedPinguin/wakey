@@ -1,5 +1,6 @@
 package dev.wakey.security;
 
+import dev.wakey.web.ApiPaths;
 import java.time.Clock;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.context.annotation.Bean;
@@ -19,19 +20,16 @@ import org.springframework.security.web.util.matcher.RequestMatcher;
 @Configuration(proxyBeanMethods = false)
 class SecurityConfiguration {
 
-    private static final RequestMatcher API_REQUESTS = PathPatternRequestMatcher.pathPattern("/api/v1/**");
+    private static final RequestMatcher API_REQUESTS = PathPatternRequestMatcher.pathPattern(ApiPaths.API_V1_ALL);
 
     private static final AuthenticationEntryPoint UNAUTHORIZED = new UnauthorizedRequestLog();
 
     private static final AccessDeniedHandler FORBIDDEN = new ForbiddenRequestLog();
 
-    /** The provider login URL; setting it also stops Spring from generating HTML login and logout pages. */
-    private static final String LOGIN_PAGE = "/oauth2/authorization/oidc";
-
     @Bean
     @Order(1)
     SecurityFilterChain statelessSecurityFilterChain(HttpSecurity http) throws Exception {
-        http.securityMatcher("/agent/v1/**", "/ping/**", "/public/v1/**")
+        http.securityMatcher(ApiPaths.AGENT_V1_ALL, ApiPaths.PING_ALL, ApiPaths.PUBLIC_V1_ALL)
                 .authorizeHttpRequests(authorize -> authorize.anyRequest().authenticated())
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 // This chain is STATELESS and never authenticates with a cookie, so CSRF has nothing to
@@ -52,9 +50,10 @@ class SecurityConfiguration {
             SecurityProperties properties,
             Clock clock)
             throws Exception {
-        http.securityMatcher("/api/v1/**", "/oauth2/**", "/login/**", LogoutConfiguration.logoutPath())
+        http.securityMatcher(
+                        ApiPaths.API_V1_ALL, ApiPaths.OAUTH2_ALL, ApiPaths.LOGIN_ALL, LogoutConfiguration.logoutPath())
                 .authorizeHttpRequests(authorize -> authorize
-                        .requestMatchers("/oauth2/**", "/login/**")
+                        .requestMatchers(ApiPaths.OAUTH2_ALL, ApiPaths.LOGIN_ALL)
                         .permitAll()
                         .anyRequest()
                         .authenticated())
@@ -77,7 +76,7 @@ class SecurityConfiguration {
     @Order(3)
     SecurityFilterChain defaultSecurityFilterChain(HttpSecurity http) throws Exception {
         http.authorizeHttpRequests(authorize -> authorize
-                        .requestMatchers("/healthz")
+                        .requestMatchers(ApiPaths.HEALTHZ)
                         .permitAll()
                         .anyRequest()
                         .denyAll())
@@ -88,7 +87,7 @@ class SecurityConfiguration {
     }
 
     private static void configureLogin(HttpSecurity http, String frontendUrl) throws Exception {
-        http.oauth2Login(oauth2 -> oauth2.loginPage(LOGIN_PAGE)
+        http.oauth2Login(oauth2 -> oauth2.loginPage(ApiPaths.OIDC_LOGIN_PAGE)
                 .defaultSuccessUrl(frontendUrl, true)
                 .failureHandler(new LoginFailureRedirect(frontendUrl)));
     }

@@ -1,5 +1,6 @@
 package dev.wakey.security;
 
+import dev.wakey.web.ApiPaths;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 import org.springframework.http.HttpMethod;
@@ -15,7 +16,7 @@ import org.springframework.security.web.servlet.util.matcher.PathPatternRequestM
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 final class LogoutConfiguration {
 
-    private static final String LOGOUT_PATH = "/logout";
+    private static final String LOGOUT_PATH = ApiPaths.LOGOUT;
 
     static String logoutPath() {
         return LOGOUT_PATH;

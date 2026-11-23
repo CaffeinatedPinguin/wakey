@@ -8,23 +8,35 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import dev.wakey.testsupport.SecurityIntegrationTest;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Stream;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.springframework.boot.logging.LoggingInitializationContext;
+import org.springframework.boot.logging.LoggingSystem;
 import org.springframework.boot.test.system.CapturedOutput;
 import org.springframework.boot.test.system.OutputCaptureExtension;
+import org.springframework.core.env.ConfigurableEnvironment;
+import org.springframework.core.env.MapPropertySource;
 import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.mock.web.MockHttpServletResponse;
 import org.springframework.security.authentication.InsufficientAuthenticationException;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.ResultMatcher;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
+import tools.jackson.databind.json.JsonMapper;
 
 @ExtendWith(OutputCaptureExtension.class)
 class SecurityLoggingTest extends SecurityIntegrationTest {
 
     private static final ResultMatcher UNAUTHORIZED = status().isUnauthorized();
+
+    private static final String STRUCTURED_FORMAT = "logging.structured.format.console";
+
+    private static final ObjectMapper MAPPER = JsonMapper.builder().build();
 
     private CapturedOutput output;
 
@@ -69,8 +81,7 @@ class SecurityLoggingTest extends SecurityIntegrationTest {
     @Test
     void controlCharactersInThePathCannotForgeALogLine() throws Exception {
         // given
-        String forgedPath = "/agent/v1/%0d%0aforged:request-rejected-reason=access-denied";
-        // StrictHttpFirewall rejects encoded control characters before the chain reaches the entry point.
+        String forgedPath = "/agent/v1/%0d%0a\r\nrequest rejected: reason=access-denied forged";
         MockHttpServletRequest request = new MockHttpServletRequest("GET", forgedPath);
         MockHttpServletResponse response = new MockHttpServletResponse();
         UnauthorizedRequestLog entryPoint = new UnauthorizedRequestLog();
@@ -85,9 +96,47 @@ class SecurityLoggingTest extends SecurityIntegrationTest {
         int status = response.getStatus();
         assertThat(status).isEqualTo(401);
         assertThat(entries).hasSize(1);
-        assertThat(captured)
-                .contains("path=/agent/v1/\\r\\nforged:request-rejected")
-                .doesNotContain("\r\nforged");
+        assertThat(captured).doesNotContain("\r\nrequest rejected:").doesNotContain("\nrequest rejected:");
+        assertThat(entries.getFirst()).contains("path=/agent/v1/%0d%0a");
+    }
+
+    @Test
+    void structuredLogsKeepEachEntryOnOneJsonLine() throws Exception {
+        // given
+        ConfigurableEnvironment environment = bean(ConfigurableEnvironment.class);
+        LoggingSystem loggingSystem = bean(LoggingSystem.class);
+        MapPropertySource structuredFormat =
+                new MapPropertySource("structured-console", Map.of(STRUCTURED_FORMAT, "ecs"));
+        String forgedPath = "/agent/v1/%0d%0a\r\nrequest rejected: reason=access-denied forged";
+        MockHttpServletRequest request = new MockHttpServletRequest("GET", forgedPath);
+        MockHttpServletResponse response = new MockHttpServletResponse();
+        UnauthorizedRequestLog entryPoint = new UnauthorizedRequestLog();
+        AuthenticationException exception = new InsufficientAuthenticationException("n/a");
+
+        // when
+        environment.getPropertySources().addFirst(structuredFormat);
+        try {
+            reinitializeLogging(loggingSystem, environment);
+            entryPoint.commence(request, response, exception);
+        } finally {
+            environment.getPropertySources().remove(structuredFormat.getName());
+            reinitializeLogging(loggingSystem, environment);
+        }
+
+        // then
+        List<String> entries = logEntries("request rejected:");
+        int status = response.getStatus();
+        assertThat(status).isEqualTo(401);
+        assertThat(entries).hasSize(1);
+        JsonNode entry = MAPPER.readTree(entries.getFirst());
+        String message = entry.get("message").asText();
+        assertThat(message).contains("/agent/v1/");
+    }
+
+    private static void reinitializeLogging(LoggingSystem loggingSystem, ConfigurableEnvironment environment) {
+        LoggingInitializationContext context = new LoggingInitializationContext(environment);
+        loggingSystem.cleanUp();
+        loggingSystem.initialize(context, null, null);
     }
 
     private List<String> logEntries(String fragment) {
