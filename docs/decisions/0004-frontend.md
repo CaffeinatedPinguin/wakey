@@ -29,7 +29,7 @@ Frontend (panel i publiczna status page) to React + Vite + TypeScript ([0002-sta
 
 ### Rozmieszczenie kodu (2026-11-22)
 
-- **`app/`:** wejście (`main.tsx`), providery (`App.tsx`), router, `QueryClient`, inicjalizacja i18n oraz szkielet panelu. To jedyne miejsce, które spina pozostałe katalogi. Motyw Mantine jest w `shared/theme`, a `MantineProvider` używa go w `app/` ([0009-theme.md](0009-theme.md)).
+- **`app/`:** wejście (`main.tsx`), providery (`App.tsx`), router, `QueryClient`, inicjalizacja i18n oraz szkielet panelu. To jedyne miejsce, które spina pozostałe katalogi. Motyw Mantine dostanie się dopiero z układem panelu; dziś `MantineProvider` działa z `defaultColorScheme="auto"`, bez własnego motywu.
 - **`routes/`:** tylko trasy TanStack Router: walidacja parametrów, ochrona i render jednego widoku z funkcji. Trasy nie zawierają logiki funkcji.
 - **`features/<nazwa>/`:** funkcja domenowa (dziś `auth`: logowanie, wylogowanie, `/api/v1/me`, sesja). Publiczne wejście to wyłącznie `index.ts` z jawnymi nazwanymi eksportami. W środku: `api/*.schemas.ts` (Zod), `api/*.api.ts` (transport i parsowanie), `api/*.queries.ts` (klucze i `queryOptions`), komponenty, testy i tłumaczenia funkcji.
 - **`shared/`:** fabryka klienta axios (baseURL podaje wywołujący), obsługa błędów HTTP bez wiedzy o domenie, neutralne komponenty UI, czyste narzędzia i wspólne tłumaczenia. Jedyny moduł czytający `import.meta.env` to `shared/config`: waliduje zmienne Zod przy starcie i eksportuje zamrożony `appConfig` (`apiBaseUrl`, `loginUrl`, `logoutUrl`). Wartości domyślne są w `frontend/.env`, a kod i funkcje nie przechowują tych adresów; proxy Vite czyta te same zmienne przez `loadEnv`.
