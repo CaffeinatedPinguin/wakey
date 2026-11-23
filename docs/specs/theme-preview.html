@@ -1,0 +1,653 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Uptime monitor — podgląd theme</title>
+<style>
+:root {
+  --app-layout-sidebar-width: 14.5rem;
+  --app-layout-topbar-height: 3.5rem;
+  --app-layout-bottom-nav-height: 4rem;
+  --app-layout-content-max: 80rem;
+  --app-layout-data-max: 100rem;
+  --app-layout-document-max: 47.5rem;
+  --app-layout-inspector-width: 22.5rem;
+  --app-layout-inspector-gap: 1.5rem;
+  --app-layout-gutter-compact: 1rem;
+  --app-layout-gutter: 1.5rem;
+  --app-layout-gutter-wide: 2rem;
+  --app-z-header: 100;
+  --app-z-navigation: 100;
+  --app-z-sticky-bar: 120;
+  --app-z-feedback: 150;
+  --app-z-sheet: 200;
+  --app-z-sheet-raised: 250;
+  --app-size-control-compact: 2rem;
+  --app-size-control-desktop: 2.25rem;
+  --app-size-control-large: 2.5rem;
+  --app-size-control-touch: 2.75rem;
+  --app-size-control-critical: 3rem;
+  --app-size-row-action: var(--app-size-control-compact);
+  --app-size-popover-action: var(--app-size-control-desktop);
+  --app-size-row: 2.5rem;
+  --app-size-row-touch: 3.25rem;
+  --app-size-collection-row: 2.75rem;
+  --app-size-collection-row-touch: 3.25rem;
+  --app-size-sidebar-row: 2.25rem;
+  --app-size-menu-item: 2.25rem;
+  --app-size-menu-item-touch: 2.75rem;
+  --app-size-badge: 1.375rem;
+  --app-size-flag: 1.25rem;
+  --app-size-icon-sm: 0.875rem;
+  --app-size-icon: 1rem;
+  --app-size-icon-lg: 1.25rem;
+  --app-size-dropdown-min: 12.5rem;
+  --app-size-overlay-available: calc(100dvw - 2 * var(--app-space-16));
+  --app-size-modal-default: 32.5rem;
+  --app-size-modal-confirm: 26.25rem;
+  --app-size-tooltip-max: 20rem;
+  --app-radius-xs: 0.125rem;
+  --app-radius-sm: 0.25rem;
+  --app-radius-control: 0.3125rem;
+  --app-radius-card: 0.375rem;
+  --app-radius-overlay: 0.625rem;
+  --app-radius-pill: 999px;
+  --app-space-4: 0.25rem;
+  --app-space-8: 0.5rem;
+  --app-space-12: 0.75rem;
+  --app-space-16: 1rem;
+  --app-space-24: 1.5rem;
+  --app-space-32: 2rem;
+  --app-space-48: 3rem;
+  --app-space-64: 4rem;
+  --app-space-96: 6rem;
+  --app-space-control-inline: 0.75rem;
+  --app-space-control-gap: 0.375rem;
+  --app-space-overlay-inset: 1rem;
+  --app-space-field-gap: 1rem;
+  --app-space-section-gap: 1.5rem;
+  --app-space-sidebar-inline: 0.625rem;
+  --app-space-sidebar-item-gap: 0.625rem;
+  --app-font-sans: "Geist", Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --app-font-mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", Consolas, monospace;
+  --app-type-page-title-size: 1.5rem;
+  --app-type-page-title-line: 2rem;
+  --app-type-section-title-size: 1.125rem;
+  --app-type-section-title-line: 1.625rem;
+  --app-type-component-title-size: 0.9375rem;
+  --app-type-component-title-line: 1.375rem;
+  --app-type-body-size: 0.875rem;
+  --app-type-body-line: 1.25rem;
+  --app-type-reading-size: 1rem;
+  --app-type-reading-line: 1.5rem;
+  --app-type-metadata-size: 0.75rem;
+  --app-type-metadata-line: 1rem;
+  --app-type-mono-size: 0.8125rem;
+  --app-type-mono-line: 1.25rem;
+  --app-type-compact-control-size: 0.8125rem;
+  --app-type-compact-metadata-size: var(--app-type-metadata-size);
+  --app-type-overlay-title-size: 1rem;
+  --app-type-overlay-title-line: 1.5rem;
+  --app-type-badge-size: 0.75rem;
+  --app-type-section-label-size: 0.75rem;
+  --app-type-section-label-line: 1rem;
+  --app-type-section-label-tracking: 0.04em;
+  --app-type-sidebar-navigation-size: 0.875rem;
+  --app-type-sidebar-navigation-line: 1.25rem;
+  --app-type-sidebar-section-size: var(--app-type-section-label-size);
+  --app-type-sidebar-section-line: var(--app-type-section-label-line);
+  --app-type-sidebar-section-tracking: var(--app-type-section-label-tracking);
+  --app-type-sidebar-counter-size: 0.75rem;
+  --app-type-control-weight: 500;
+  --app-type-heading-weight: 600;
+  --app-motion-duration-feedback: 120ms;
+  --app-motion-feedback: var(--app-motion-duration-feedback) ease-out;
+  --app-motion-overlay: 180ms ease-out;
+  --app-motion-live-flash: 600ms ease-out;
+  --app-layout-statuspage-max: 55rem;
+  --app-layout-feed-width: 20rem;
+  --app-layout-aside-width: 20rem;
+  --app-size-history-bar: 2rem;
+}
+
+:root, .light {
+  --app-surface-item: var(--app-color-surface);
+  --app-color-selection-indicator: var(--app-color-accent-text);
+  --app-color-focus-ring: var(--app-color-accent);
+  --app-color-input-bg-hover: var(--app-color-input-bg);
+  --app-color-border-control: var(--app-color-border-default);
+  --app-color-input-border: var(--app-color-border-control);
+  --app-color-input-border-hover: color-mix(in srgb, var(--app-color-input-border) 86%, var(--app-color-text-heading));
+  --app-color-input-placeholder: var(--app-color-text-muted);
+  --app-color-disabled-bg: var(--app-color-surface-subtle);
+  --app-color-nav-active-text: var(--app-color-accent-text);
+  --app-color-nav-active-icon: var(--app-color-accent-text);
+  --app-color-nav-active-indicator: var(--app-color-accent-text);
+  --app-color-on-danger: #FFFFFF;
+  --app-shadow-sm: 0 1px 2px rgb(0 0 0 / 0.06);
+  --app-color-page: #F6F6F8;
+  --app-color-surface: #FFFFFF;
+  --app-color-surface-subtle: #F1F1F4;
+  --app-color-surface-raised: #FFFFFF;
+  --app-color-surface-sidebar: #FBFBFC;
+  --app-color-surface-navbar: #FFFFFF;
+  --app-color-text-heading: #1C1C23;
+  --app-color-text-body: #3D3D48;
+  --app-color-text-muted: #62626F;
+  --app-color-border-soft: #E3E3E9;
+  --app-color-border-default: #8A8A97;
+  --app-color-border-strong: #767683;
+  --app-color-interactive-hover: #F0F0F4;
+  --app-color-interactive-pressed: #E6E6EC;
+  --app-color-input-bg: var(--app-color-surface);
+  --app-color-disabled-text: #8A8A97;
+  --app-color-selection-bg: color-mix(in srgb, var(--app-color-accent) 8%, var(--app-color-surface));
+  --app-color-selection-hover: color-mix(in srgb, var(--app-color-accent) 12%, var(--app-color-surface));
+  --app-color-nav-active-bg: color-mix(in srgb, var(--app-color-accent) 8%, var(--app-color-surface-sidebar));
+  --app-color-nav-active-hover: color-mix(in srgb, var(--app-color-accent) 12%, var(--app-color-surface-sidebar));
+  --app-color-danger-bg: #B63A3B;
+  --app-color-danger-hover: #9C2F30;
+  --app-color-danger-pressed: #842728;
+  --app-color-danger-text: #B22F31;
+  --app-color-status-success-solid: #059669;
+  --app-color-status-success-text: #166534;
+  --app-color-status-success-bg: #DCFCE7;
+  --app-color-status-success-on-solid: #0B0F17;
+  --app-color-status-warning-solid: #CC6F05;
+  --app-color-status-warning-text: #854D0E;
+  --app-color-status-warning-bg: #FEF3C7;
+  --app-color-status-warning-on-solid: #0B0F17;
+  --app-color-status-danger-solid: #E11D48;
+  --app-color-status-danger-text: #991B1B;
+  --app-color-status-danger-bg: #FEE2E2;
+  --app-color-status-danger-on-solid: #FFFFFF;
+  --app-color-status-info-solid: #2563EB;
+  --app-color-status-info-text: #1E40AF;
+  --app-color-status-info-bg: #DBEAFE;
+  --app-color-status-info-on-solid: #FFFFFF;
+  --app-color-status-neutral-solid: #64748B;
+  --app-color-status-neutral-text: #334155;
+  --app-color-status-neutral-bg: #E2E8F0;
+  --app-color-status-neutral-on-solid: #FFFFFF;
+  --app-color-overlay-backdrop: rgb(16 16 24 / 0.32);
+  --app-shadow-popover: 0 1px 2px rgb(16 16 24 / 0.06), 0 8px 24px rgb(16 16 24 / 0.10);
+  --app-shadow-overlay: 0 2px 4px rgb(16 16 24 / 0.06), 0 16px 48px rgb(16 16 24 / 0.14);
+  --app-chart-grid: #E3E3E9;
+  --app-chart-axis: #62626F;
+  --app-chart-threshold: #CC6F05;
+  --app-chart-series-1: var(--app-color-accent-text);
+  --app-chart-series-2: #2563EB;
+  --app-chart-series-3: #059669;
+  --app-chart-series-4: #CC6F05;
+  --app-color-accent: #7367F0;
+  --app-color-accent-text: #5B4FD3;
+  --app-color-primary-bg: #665AD8;
+  --app-color-primary-hover: #5A4FC0;
+  --app-color-primary-pressed: #4D449F;
+  --app-color-on-primary: #FFFFFF;
+  --app-state-up-solid: var(--app-color-status-success-solid);
+  --app-state-up-text: var(--app-color-status-success-text);
+  --app-state-up-bg: var(--app-color-status-success-bg);
+  --app-state-up-on-solid: var(--app-color-status-success-on-solid);
+  --app-state-degraded-solid: var(--app-color-status-warning-solid);
+  --app-state-degraded-text: var(--app-color-status-warning-text);
+  --app-state-degraded-bg: var(--app-color-status-warning-bg);
+  --app-state-degraded-on-solid: var(--app-color-status-warning-on-solid);
+  --app-state-down-solid: var(--app-color-status-danger-solid);
+  --app-state-down-text: var(--app-color-status-danger-text);
+  --app-state-down-bg: var(--app-color-status-danger-bg);
+  --app-state-down-on-solid: var(--app-color-status-danger-on-solid);
+  --app-state-unknown-solid: var(--app-color-status-neutral-solid);
+  --app-state-unknown-text: var(--app-color-status-neutral-text);
+  --app-state-unknown-bg: var(--app-color-status-neutral-bg);
+  --app-state-unknown-on-solid: var(--app-color-status-neutral-on-solid);
+  --app-state-maintenance-solid: var(--app-color-status-info-solid);
+  --app-state-maintenance-text: var(--app-color-status-info-text);
+  --app-state-maintenance-bg: var(--app-color-status-info-bg);
+  --app-state-maintenance-on-solid: var(--app-color-status-info-on-solid);
+  --app-state-idle-icon: var(--app-color-text-muted);
+  --app-state-nodata-fill: transparent;
+  --app-state-nodata-border: var(--app-color-border-control);
+  --app-state-marker: var(--app-color-text-heading);
+  --app-color-admin-accent: #A04A06;
+  --app-color-admin-bg: color-mix(in srgb, #B45309 8%, transparent);
+}
+
+.dark {
+  --app-surface-item: var(--app-color-surface);
+  --app-color-selection-indicator: var(--app-color-accent-text);
+  --app-color-focus-ring: var(--app-color-accent);
+  --app-color-input-bg-hover: var(--app-color-input-bg);
+  --app-color-border-control: var(--app-color-border-default);
+  --app-color-input-border: var(--app-color-border-control);
+  --app-color-input-border-hover: color-mix(in srgb, var(--app-color-input-border) 86%, var(--app-color-text-heading));
+  --app-color-input-placeholder: var(--app-color-text-muted);
+  --app-color-disabled-bg: var(--app-color-surface-subtle);
+  --app-color-nav-active-text: var(--app-color-accent-text);
+  --app-color-nav-active-icon: var(--app-color-accent-text);
+  --app-color-nav-active-indicator: var(--app-color-accent-text);
+  --app-color-on-danger: #FFFFFF;
+  --app-shadow-sm: 0 1px 2px rgb(0 0 0 / 0.06);
+  --app-color-page: #121316;
+  --app-color-surface: #1B1B1F;
+  --app-color-surface-subtle: #17171B;
+  --app-color-surface-raised: #232328;
+  --app-color-surface-sidebar: #18191D;
+  --app-color-surface-navbar: #18191D;
+  --app-color-text-heading: #EDEDF1;
+  --app-color-text-body: #C6C6CE;
+  --app-color-text-muted: #93939F;
+  --app-color-border-soft: #2D2D34;
+  --app-color-border-default: #74747F;
+  --app-color-border-strong: #74747F;
+  --app-color-interactive-hover: #26262D;
+  --app-color-interactive-pressed: #303037;
+  --app-color-input-bg: var(--app-color-surface-subtle);
+  --app-color-disabled-text: #6E6E79;
+  --app-color-selection-bg: color-mix(in srgb, var(--app-color-accent) 12%, var(--app-color-surface));
+  --app-color-selection-hover: color-mix(in srgb, var(--app-color-accent) 16%, var(--app-color-surface));
+  --app-color-nav-active-bg: color-mix(in srgb, var(--app-color-accent) 12%, transparent);
+  --app-color-nav-active-hover: color-mix(in srgb, var(--app-color-accent) 16%, transparent);
+  --app-color-danger-bg: #B63A3B;
+  --app-color-danger-hover: #9C2F30;
+  --app-color-danger-pressed: #842728;
+  --app-color-danger-text: #FF8586;
+  --app-color-status-success-solid: #10B981;
+  --app-color-status-success-text: #86EFAC;
+  --app-color-status-success-bg: color-mix(in srgb, #10B981 16%, var(--app-color-surface));
+  --app-color-status-success-on-solid: #0B0F17;
+  --app-color-status-warning-solid: #F59E0B;
+  --app-color-status-warning-text: #FCD34D;
+  --app-color-status-warning-bg: color-mix(in srgb, #F59E0B 16%, var(--app-color-surface));
+  --app-color-status-warning-on-solid: #0B0F17;
+  --app-color-status-danger-solid: #F43F5E;
+  --app-color-status-danger-text: #FCA5A5;
+  --app-color-status-danger-bg: color-mix(in srgb, #F43F5E 16%, var(--app-color-surface));
+  --app-color-status-danger-on-solid: #0B0F17;
+  --app-color-status-info-solid: #3B82F6;
+  --app-color-status-info-text: #93C5FD;
+  --app-color-status-info-bg: color-mix(in srgb, #3B82F6 16%, var(--app-color-surface));
+  --app-color-status-info-on-solid: #0B0F17;
+  --app-color-status-neutral-solid: #94A3B8;
+  --app-color-status-neutral-text: #CBD5E1;
+  --app-color-status-neutral-bg: color-mix(in srgb, #94A3B8 16%, var(--app-color-surface));
+  --app-color-status-neutral-on-solid: #0B0F17;
+  --app-color-overlay-backdrop: rgb(0 0 0 / 0.56);
+  --app-shadow-popover: 0 8px 24px rgb(0 0 0 / 0.28);
+  --app-shadow-overlay: 0 16px 48px rgb(0 0 0 / 0.32);
+  --app-chart-grid: #2D2D34;
+  --app-chart-axis: #93939F;
+  --app-chart-threshold: #F59E0B;
+  --app-chart-series-1: var(--app-color-accent-text);
+  --app-chart-series-2: #3B82F6;
+  --app-chart-series-3: #10B981;
+  --app-chart-series-4: #F59E0B;
+  --app-color-accent: #7367F0;
+  --app-color-accent-text: #8E84F5;
+  --app-color-primary-bg: #665AD8;
+  --app-color-primary-hover: #5A4FC0;
+  --app-color-primary-pressed: #4D449F;
+  --app-color-on-primary: #FFFFFF;
+  --app-state-up-solid: var(--app-color-status-success-solid);
+  --app-state-up-text: var(--app-color-status-success-text);
+  --app-state-up-bg: var(--app-color-status-success-bg);
+  --app-state-up-on-solid: var(--app-color-status-success-on-solid);
+  --app-state-degraded-solid: var(--app-color-status-warning-solid);
+  --app-state-degraded-text: var(--app-color-status-warning-text);
+  --app-state-degraded-bg: var(--app-color-status-warning-bg);
+  --app-state-degraded-on-solid: var(--app-color-status-warning-on-solid);
+  --app-state-down-solid: var(--app-color-status-danger-solid);
+  --app-state-down-text: var(--app-color-status-danger-text);
+  --app-state-down-bg: var(--app-color-status-danger-bg);
+  --app-state-down-on-solid: var(--app-color-status-danger-on-solid);
+  --app-state-unknown-solid: var(--app-color-status-neutral-solid);
+  --app-state-unknown-text: var(--app-color-status-neutral-text);
+  --app-state-unknown-bg: var(--app-color-status-neutral-bg);
+  --app-state-unknown-on-solid: var(--app-color-status-neutral-on-solid);
+  --app-state-maintenance-solid: var(--app-color-status-info-solid);
+  --app-state-maintenance-text: var(--app-color-status-info-text);
+  --app-state-maintenance-bg: var(--app-color-status-info-bg);
+  --app-state-maintenance-on-solid: var(--app-color-status-info-on-solid);
+  --app-state-idle-icon: var(--app-color-text-muted);
+  --app-state-nodata-fill: transparent;
+  --app-state-nodata-border: var(--app-color-border-control);
+  --app-state-marker: var(--app-color-text-heading);
+  --app-color-admin-accent: #F59E0B;
+  --app-color-admin-bg: color-mix(in srgb, #F59E0B 12%, transparent);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]):not([data-mantine-color-scheme]) {
+    --app-surface-item: var(--app-color-surface);
+    --app-color-selection-indicator: var(--app-color-accent-text);
+    --app-color-focus-ring: var(--app-color-accent);
+    --app-color-input-bg-hover: var(--app-color-input-bg);
+    --app-color-border-control: var(--app-color-border-default);
+    --app-color-input-border: var(--app-color-border-control);
+    --app-color-input-border-hover: color-mix(in srgb, var(--app-color-input-border) 86%, var(--app-color-text-heading));
+    --app-color-input-placeholder: var(--app-color-text-muted);
+    --app-color-disabled-bg: var(--app-color-surface-subtle);
+    --app-color-nav-active-text: var(--app-color-accent-text);
+    --app-color-nav-active-icon: var(--app-color-accent-text);
+    --app-color-nav-active-indicator: var(--app-color-accent-text);
+    --app-color-on-danger: #FFFFFF;
+    --app-shadow-sm: 0 1px 2px rgb(0 0 0 / 0.06);
+    --app-color-page: #121316;
+    --app-color-surface: #1B1B1F;
+    --app-color-surface-subtle: #17171B;
+    --app-color-surface-raised: #232328;
+    --app-color-surface-sidebar: #18191D;
+    --app-color-surface-navbar: #18191D;
+    --app-color-text-heading: #EDEDF1;
+    --app-color-text-body: #C6C6CE;
+    --app-color-text-muted: #93939F;
+    --app-color-border-soft: #2D2D34;
+    --app-color-border-default: #74747F;
+    --app-color-border-strong: #74747F;
+    --app-color-interactive-hover: #26262D;
+    --app-color-interactive-pressed: #303037;
+    --app-color-input-bg: var(--app-color-surface-subtle);
+    --app-color-disabled-text: #6E6E79;
+    --app-color-selection-bg: color-mix(in srgb, var(--app-color-accent) 12%, var(--app-color-surface));
+    --app-color-selection-hover: color-mix(in srgb, var(--app-color-accent) 16%, var(--app-color-surface));
+    --app-color-nav-active-bg: color-mix(in srgb, var(--app-color-accent) 12%, transparent);
+    --app-color-nav-active-hover: color-mix(in srgb, var(--app-color-accent) 16%, transparent);
+    --app-color-danger-bg: #B63A3B;
+    --app-color-danger-hover: #9C2F30;
+    --app-color-danger-pressed: #842728;
+    --app-color-danger-text: #FF8586;
+    --app-color-status-success-solid: #10B981;
+    --app-color-status-success-text: #86EFAC;
+    --app-color-status-success-bg: color-mix(in srgb, #10B981 16%, var(--app-color-surface));
+    --app-color-status-success-on-solid: #0B0F17;
+    --app-color-status-warning-solid: #F59E0B;
+    --app-color-status-warning-text: #FCD34D;
+    --app-color-status-warning-bg: color-mix(in srgb, #F59E0B 16%, var(--app-color-surface));
+    --app-color-status-warning-on-solid: #0B0F17;
+    --app-color-status-danger-solid: #F43F5E;
+    --app-color-status-danger-text: #FCA5A5;
+    --app-color-status-danger-bg: color-mix(in srgb, #F43F5E 16%, var(--app-color-surface));
+    --app-color-status-danger-on-solid: #0B0F17;
+    --app-color-status-info-solid: #3B82F6;
+    --app-color-status-info-text: #93C5FD;
+    --app-color-status-info-bg: color-mix(in srgb, #3B82F6 16%, var(--app-color-surface));
+    --app-color-status-info-on-solid: #0B0F17;
+    --app-color-status-neutral-solid: #94A3B8;
+    --app-color-status-neutral-text: #CBD5E1;
+    --app-color-status-neutral-bg: color-mix(in srgb, #94A3B8 16%, var(--app-color-surface));
+    --app-color-status-neutral-on-solid: #0B0F17;
+    --app-color-overlay-backdrop: rgb(0 0 0 / 0.56);
+    --app-shadow-popover: 0 8px 24px rgb(0 0 0 / 0.28);
+    --app-shadow-overlay: 0 16px 48px rgb(0 0 0 / 0.32);
+    --app-chart-grid: #2D2D34;
+    --app-chart-axis: #93939F;
+    --app-chart-threshold: #F59E0B;
+    --app-chart-series-1: var(--app-color-accent-text);
+    --app-chart-series-2: #3B82F6;
+    --app-chart-series-3: #10B981;
+    --app-chart-series-4: #F59E0B;
+    --app-color-accent: #7367F0;
+    --app-color-accent-text: #8E84F5;
+    --app-color-primary-bg: #665AD8;
+    --app-color-primary-hover: #5A4FC0;
+    --app-color-primary-pressed: #4D449F;
+    --app-color-on-primary: #FFFFFF;
+    --app-state-up-solid: var(--app-color-status-success-solid);
+    --app-state-up-text: var(--app-color-status-success-text);
+    --app-state-up-bg: var(--app-color-status-success-bg);
+    --app-state-up-on-solid: var(--app-color-status-success-on-solid);
+    --app-state-degraded-solid: var(--app-color-status-warning-solid);
+    --app-state-degraded-text: var(--app-color-status-warning-text);
+    --app-state-degraded-bg: var(--app-color-status-warning-bg);
+    --app-state-degraded-on-solid: var(--app-color-status-warning-on-solid);
+    --app-state-down-solid: var(--app-color-status-danger-solid);
+    --app-state-down-text: var(--app-color-status-danger-text);
+    --app-state-down-bg: var(--app-color-status-danger-bg);
+    --app-state-down-on-solid: var(--app-color-status-danger-on-solid);
+    --app-state-unknown-solid: var(--app-color-status-neutral-solid);
+    --app-state-unknown-text: var(--app-color-status-neutral-text);
+    --app-state-unknown-bg: var(--app-color-status-neutral-bg);
+    --app-state-unknown-on-solid: var(--app-color-status-neutral-on-solid);
+    --app-state-maintenance-solid: var(--app-color-status-info-solid);
+    --app-state-maintenance-text: var(--app-color-status-info-text);
+    --app-state-maintenance-bg: var(--app-color-status-info-bg);
+    --app-state-maintenance-on-solid: var(--app-color-status-info-on-solid);
+    --app-state-idle-icon: var(--app-color-text-muted);
+    --app-state-nodata-fill: transparent;
+    --app-state-nodata-border: var(--app-color-border-control);
+    --app-state-marker: var(--app-color-text-heading);
+    --app-color-admin-accent: #F59E0B;
+    --app-color-admin-bg: color-mix(in srgb, #F59E0B 12%, transparent);
+  }
+}
+
+*{box-sizing:border-box}
+body{margin:0;font-family:var(--app-font-sans);background:#0b0b0d;color:#ddd;font-size:14px;line-height:20px;-webkit-font-smoothing:antialiased}
+.wrap{display:grid;grid-template-columns:1fr;gap:16px;padding:16px;max-width:1280px;margin:0 auto}
+@media(max-width:1100px){.wrap{grid-template-columns:1fr}}
+.theme{background:var(--app-color-page);color:var(--app-color-text-body);border-radius:12px;overflow:hidden;border:1px solid var(--app-color-border-soft)}
+.label{font:600 12px/16px Geist,sans-serif;letter-spacing:.04em;text-transform:uppercase;color:var(--app-color-text-muted);margin:0 0 8px}
+.shell{display:grid;grid-template-columns:var(--app-layout-sidebar-width) 1fr}
+aside{background:var(--app-color-surface-sidebar);border-right:1px solid var(--app-color-border-soft);padding:12px 8px;display:flex;flex-direction:column;gap:2px}
+.brand{display:flex;align-items:center;gap:8px;padding:6px 10px 14px;color:var(--app-color-text-heading);font-weight:600;font-size:15px}
+.logo{width:22px;height:22px;border-radius:6px;background:var(--app-color-accent)}
+.nav{display:flex;align-items:center;gap:10px;height:var(--app-size-sidebar-row);padding:0 10px;border-radius:var(--app-radius-control);color:var(--app-color-text-body);font-weight:500;position:relative}
+.nav:hover{background:var(--app-color-interactive-hover)}
+.nav.active{background:var(--app-color-nav-active-bg);color:var(--app-color-nav-active-text)}
+.nav .count{margin-left:auto;min-width:20px;height:20px;padding:0 6px;border-radius:999px;background:var(--app-state-down-solid);color:var(--app-state-down-on-solid);font:600 12px/20px Geist,sans-serif;text-align:center}
+.nav.admin{margin-top:auto;color:var(--app-color-admin-accent);background:var(--app-color-admin-bg)}
+main{padding:20px 24px 28px;display:flex;flex-direction:column;gap:24px;min-width:0}
+h1{margin:0;font-size:var(--app-type-page-title-size);line-height:var(--app-type-page-title-line);font-weight:600;color:var(--app-color-text-heading)}
+h2{margin:0 0 12px;font-size:var(--app-type-section-title-size);line-height:var(--app-type-section-title-line);font-weight:600;color:var(--app-color-text-heading)}
+.row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.muted{color:var(--app-color-text-muted);font-size:12px;line-height:16px}
+.mono{font-family:"JetBrains Mono",ui-monospace,Consolas,monospace;font-size:13px}
+.num{font-variant-numeric:tabular-nums}
+/* buttons */
+.btn{display:inline-flex;align-items:center;gap:6px;height:var(--app-size-control-desktop);padding:0 12px;border-radius:var(--app-radius-control);border:1px solid transparent;font:500 14px/20px Geist,sans-serif;cursor:pointer;background:none;color:inherit}
+.btn.sm{height:var(--app-size-control-compact);padding:0 8px}
+.btn.lg{height:var(--app-size-control-large);padding:0 16px}
+.btn.xl{height:var(--app-size-control-critical);padding:0 24px}
+.primary{background:var(--app-color-primary-bg);color:var(--app-color-on-primary)}
+.primary:hover{background:var(--app-color-primary-hover)}
+.secondary{background:var(--app-color-surface);border-color:var(--app-color-border-default);color:var(--app-color-text-heading)}
+.secondary:hover{background:var(--app-color-interactive-hover)}
+.subtle{color:var(--app-color-text-body)}
+.subtle:hover{background:var(--app-color-interactive-hover)}
+.danger{background:var(--app-color-danger-bg);color:var(--app-color-on-danger)}
+.btn:focus-visible,.input:focus-visible{outline:2px solid var(--app-color-focus-ring);outline-offset:2px}
+.input{height:var(--app-size-control-desktop);padding:0 12px;border-radius:var(--app-radius-control);border:1px solid var(--app-color-input-border);background:var(--app-color-input-bg);color:var(--app-color-text-heading);font:14px Geist,sans-serif;min-width:220px}
+.input::placeholder{color:var(--app-color-input-placeholder)}
+.input:hover{border-color:var(--app-color-input-border-hover)}
+.field{display:flex;flex-direction:column;gap:4px}
+.field label{font-weight:500;color:var(--app-color-text-heading)}
+.src{font-size:12px;color:var(--app-color-text-muted)}
+.src b{font-weight:500;color:var(--app-color-accent-text)}
+/* state badge */
+.badge{display:inline-flex;align-items:center;gap:4px;height:var(--app-size-badge);padding:0 8px 0 6px;border-radius:var(--app-radius-pill);font:600 12px/1 Geist,sans-serif;white-space:nowrap}
+.badge svg{width:14px;height:14px;flex:none}
+.s-up{background:var(--app-state-up-bg);color:var(--app-state-up-text)}
+.s-degraded{background:var(--app-state-degraded-bg);color:var(--app-state-degraded-text)}
+.s-down{background:var(--app-state-down-bg);color:var(--app-state-down-text)}
+.s-unknown{background:var(--app-state-unknown-bg);color:var(--app-state-unknown-text)}
+.s-maintenance{background:var(--app-state-maintenance-bg);color:var(--app-state-maintenance-text)}
+.flag{display:inline-flex;align-items:center;gap:3px;height:var(--app-size-flag);padding:0 6px;border-radius:var(--app-radius-sm);border:1px solid var(--app-color-border-default);color:var(--app-color-text-muted);font:500 12px/1 Geist,sans-serif}
+.solidchip{display:inline-flex;align-items:center;height:24px;padding:0 10px;border-radius:var(--app-radius-control);font:600 12px Geist,sans-serif}
+/* surfaces */
+.card{background:var(--app-color-surface);border:1px solid var(--app-color-border-soft);border-radius:var(--app-radius-card)}
+.banner{display:flex;gap:12px;align-items:flex-start;padding:12px 16px;border-radius:var(--app-radius-card);background:var(--app-state-unknown-bg);color:var(--app-state-unknown-text);border:1px solid color-mix(in srgb,var(--app-state-unknown-solid) 40%,transparent)}
+.banner b{color:inherit}
+.queue .item{display:grid;grid-template-columns:auto 1fr auto;gap:12px;align-items:center;padding:10px 16px;border-top:1px solid var(--app-color-border-soft)}
+.queue .item:first-child{border-top:0}
+.name{color:var(--app-color-text-heading);font-weight:500}
+.counters{display:grid;grid-template-columns:repeat(6,1fr);gap:8px}
+.counter{padding:10px 12px;border-radius:var(--app-radius-card);background:var(--app-color-surface);border:1px solid var(--app-color-border-soft)}
+.counter .v{font:600 20px/28px Geist,sans-serif;color:var(--app-color-text-heading);font-variant-numeric:tabular-nums}
+table{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums}
+th{white-space:nowrap;font-size:12px;font-weight:600;color:var(--app-color-text-muted);text-align:left;padding:0 16px;height:36px;border-bottom:1px solid var(--app-color-border-soft)}
+td{white-space:nowrap;padding:0 16px;height:var(--app-size-row);border-bottom:1px solid var(--app-color-border-soft)}
+tr:last-child td{border-bottom:0}
+tbody tr:hover{background:var(--app-color-interactive-hover)}
+tr.sel{background:var(--app-color-selection-bg)}
+.hist{display:flex;gap:2px;height:var(--app-size-history-bar);align-items:stretch}
+.hist i{flex:1;border-radius:var(--app-radius-xs);background:var(--app-state-up-solid);position:relative}
+.hist i.p::after,.hist i.d::after{background:var(--app-state-marker)}
+.hist i.p{background:linear-gradient(to top,var(--app-state-down-solid) 35%,var(--app-state-up-solid) 35%)}
+.hist i.p::after,.hist i.d::after{content:"";position:absolute;left:50%;top:-6px;width:4px;height:4px;margin-left:-2px;border-radius:50%;background:var(--app-color-text-heading)}
+.hist i.d{background:var(--app-state-degraded-solid)}
+.hist i.n{background:var(--app-state-nodata-fill);box-shadow:inset 0 0 0 1px var(--app-state-nodata-border)}
+.spark{width:96px;height:24px}
+.spark path{fill:none;stroke:var(--app-chart-series-1);stroke-width:1.5}
+.spark line{stroke:var(--app-chart-threshold);stroke-dasharray:3 3;stroke-width:1}
+.cb{width:16px;height:16px;border:1px solid var(--app-color-border-control);border-radius:var(--app-radius-sm);display:inline-block;vertical-align:middle}
+.cb.on{background:var(--app-color-primary-bg);border-color:var(--app-color-primary-bg)}
+.radii{display:flex;gap:12px;align-items:end}
+.radii div{width:56px;height:40px;background:var(--app-color-surface);border:1px solid var(--app-color-border-strong);display:flex;align-items:flex-end;justify-content:center;font-size:11px;color:var(--app-color-text-muted);padding-bottom:2px}
+.sizes{display:flex;gap:8px;align-items:end}
+.sizes span{display:inline-flex;align-items:center;justify-content:center;border:1px dashed var(--app-color-border-strong);border-radius:var(--app-radius-control);font-size:11px;color:var(--app-color-text-muted);padding:0 8px}
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute">
+  <symbol id="i-up" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="m8.5 12 2.5 2.5 5-5"/></symbol>
+  <symbol id="i-deg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.3 3.9 2.4 17.6A2 2 0 0 0 4.1 20.6h15.8a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/><path d="M12 9v4M12 17h.01"/></symbol>
+  <symbol id="i-down" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M7.9 2.5h8.2l5.4 5.4v8.2l-5.4 5.4H7.9l-5.4-5.4V7.9z"/><path d="m15 9-6 6M9 9l6 6"/></symbol>
+  <symbol id="i-unk" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9" stroke-dasharray="3 3"/><path d="M9.5 9.5a2.5 2.5 0 1 1 3.5 2.3c-.6.3-1 .9-1 1.6v.3M12 17h.01"/></symbol>
+  <symbol id="i-mnt" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a4 4 0 0 0 5 5L21 13l-8 8-3-3 6.3-6.3a4 4 0 0 0-5-5"/><path d="M3 21l6-6"/></symbol>
+  <symbol id="i-pause" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M10 9v6M14 9v6"/></symbol>
+  <symbol id="i-clock" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></symbol>
+</svg>
+<div class="wrap">
+  
+<section class="theme dark" style="color-scheme:dark">
+ <div class="shell">
+  <aside>
+   <div class="brand"><span class="logo"></span>uptime</div>
+   <a class="nav active">Przegląd <span class="count">3</span></a>
+   <a class="nav">Checki</a><a class="nav">Incydenty</a><a class="nav">Status pages</a><a class="nav">Ustawienia</a>
+   <div style="height:120px"></div>
+   <a class="nav admin">Administracja instancji</a>
+  </aside>
+  <main>
+   <div class="row" style="justify-content:space-between"><h1>Przegląd — ciemny</h1>
+     <div class="row"><button class="btn secondary">Wycisz masowo</button><button class="btn primary">+ Dodaj check</button></div></div>
+
+   <div class="banner"><svg width="20" height="20"><use href="#i-unk"/></svg><div><b>Problem z monitoringiem — agent nas-01 nie odpowiada</b><br><span>Nie możemy potwierdzić stanu 14 checków. To usterka po stronie monitoringu, nie Twoich usług. Ostatnie wiarygodne dane: 6 min temu.</span></div></div>
+
+   <div><p class="label">Kolejka problemów</p>
+   <div class="card queue">
+     <div class="item"><span class="badge s-down"><svg><use href="#i-down"/></svg>Nie działa</span><div><span class="name">API Prod</span> <span class="muted num">· 14 min · HTTP 502 · 3/3 lok.</span></div><div class="row"><button class="btn sm primary">Potwierdź</button><button class="btn sm subtle">Wycisz</button></div></div>
+     <div class="item"><span class="badge s-degraded"><svg><use href="#i-deg"/></svg>Działa z problemami</span><div><span class="name">Panel klienta</span> <span class="flag">Niestabilny</span> <span class="muted num">· <svg width="12" height="12" style="vertical-align:-2px"><use href="#i-clock"/></svg> Wolno (640 ms &gt; 500 ms)</span></div><div class="row"><span class="muted">ACK: Jan · 02:20</span></div></div>
+     <div class="item"><span class="badge s-unknown"><svg><use href="#i-unk"/></svg>Stan nieznany</span><div><span class="name">Backup NAS</span> <span class="muted">· agent offline · ostatni potwierdzony: Działa, 6 min temu</span></div><div class="row"><button class="btn sm secondary">Szczegóły</button></div></div>
+   </div></div>
+
+   <div class="counters">
+     <div class="counter"><div class="muted">Nie działa</div><div class="v">1</div></div>
+     <div class="counter"><div class="muted">Z problemami</div><div class="v">1</div></div>
+     <div class="counter"><div class="muted">Nieznany</div><div class="v">14</div></div>
+     <div class="counter"><div class="muted">Prace</div><div class="v">2</div></div>
+     <div class="counter"><div class="muted">Działa</div><div class="v">4 812</div></div>
+     <div class="counter"><div class="muted">Spauzowane</div><div class="v">37</div></div>
+   </div>
+
+   <div><p class="label">Lista checków · wiersz 40 px</p>
+   <div class="card" style="overflow:hidden"><table>
+    <thead><tr><th style="width:36px"></th><th>Stan</th><th>Nazwa</th><th>Uptime 30 d</th><th>Odpowiedź</th><th></th></tr></thead>
+    <tbody>
+     <tr><td><span class="cb"></span></td><td><span class="badge s-up"><svg><use href="#i-up"/></svg>Działa</span></td><td><span class="name">www.example.com</span> <span class="muted">HTTP</span></td><td>99,98%</td><td><svg class="spark" viewBox="0 0 96 24"><line x1="0" x2="96" y1="6" y2="6"/><path d="M0,12.9 L4,7.2 L8,7.9 L12,12.0 L16,10.0 L20,10.4 L24,8.8 L28,7.7 L32,13.2 L36,13.8 L40,7.3 L44,10.5 L48,7.9 L52,14.0 L56,10.4 L60,8.2 L64,12.2 L68,6.4 L72,6.8 L76,13.8 L80,13.8 L84,9.7 L88,6.5 L92,11.0"/></svg></td><td style="text-align:right"><button class="btn sm subtle" aria-label="Menu">⋯</button></td></tr>
+     <tr class="sel"><td><span class="cb on"></span></td><td><span class="badge s-down"><svg><use href="#i-down"/></svg>Nie działa</span> <span class="muted">2/3 lok.</span></td><td><span class="name">api.example.com</span> <span class="muted">HTTP</span></td><td>98,41%</td><td><svg class="spark" viewBox="0 0 96 24"><line x1="0" x2="96" y1="6" y2="6"/><path d="M0,6.4 L4,6.4 L8,13.5 L12,13.3 L16,7.3 L20,8.1 L24,8.6 L28,11.5 L32,9.2 L36,9.1 L40,9.4 L44,12.7 L48,10.6 L52,10.9 L56,8.2 L60,6.0 L64,6.4 L68,9.6 L72,10.4 L76,3.9 L80,5.7 L84,5.8 L88,2.3 L92,3.5"/></svg></td><td style="text-align:right"><button class="btn sm subtle">⋯</button></td></tr>
+     <tr><td><span class="cb"></span></td><td><span class="badge s-maintenance"><svg><use href="#i-mnt"/></svg>Prace planowe</span></td><td><span class="name">db-primary</span> <span class="muted">TCP</span></td><td>100,00%</td><td><svg class="spark" viewBox="0 0 96 24"><line x1="0" x2="96" y1="6" y2="6"/><path d="M0,12.1 L4,9.6 L8,11.0 L12,9.2 L16,9.0 L20,13.5 L24,13.9 L28,7.3 L32,11.9 L36,12.1 L40,6.0 L44,10.2 L48,7.3 L52,10.2 L56,8.9 L60,12.8 L64,8.9 L68,7.1 L72,9.8 L76,8.1 L80,8.6 L84,13.5 L88,7.9 L92,9.3"/></svg></td><td style="text-align:right"><button class="btn sm subtle">⋯</button></td></tr>
+     <tr><td><span class="cb"></span></td><td><span class="row" style="gap:6px;color:var(--app-state-neutral-icon)"><svg width="16" height="16"><use href="#i-pause"/></svg><span class="muted">Spauzowany</span></span></td><td><span class="name">old-landing</span> <span class="flag">limit planu</span></td><td class="muted">—</td><td class="muted">—</td><td style="text-align:right"><button class="btn sm subtle">⋯</button></td></tr>
+    </tbody></table></div></div>
+
+   <div><p class="label">HistoryBar (status page) · segmenty z wypełnieniem, kropka = dzień z problemem</p><div class="hist" aria-label="Historia 60 dni"><i class="n"></i><i class="n"></i><i class="n"></i><i class="n"></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class="d"></i><i class=""></i><i class=""></i><i class="d"></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class="p"></i><i class=""></i><i class="p"></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class="p"></i></div></div>
+
+   <div><p class="label">Formularz · input 36 px, źródło wartości</p>
+    <div class="row" style="align-items:flex-start;gap:16px">
+     <div class="field"><label>Adres</label><input class="input mono" value="https://api.example.com/health"></div>
+     <div class="field"><label>Interwał</label><input class="input num" style="min-width:120px" value="300 s"><span class="src">Domyślne przestrzeni</span></div>
+     <div class="field"><label>Timeout</label><input class="input num" style="min-width:120px" value="5 s"><span class="src"><b>Własne</b> · nadpisuje 10 s · <a style="color:var(--app-color-accent-text)">Przywróć</a></span></div>
+    </div></div>
+
+   <div><p class="label">Przyciski · 32 / 36 / 40 / 48 (krytyczne, telefon)</p>
+    <div class="row"><button class="btn sm primary">Compact</button><button class="btn primary">Zapisz</button><button class="btn lg primary">Testuj i zapisz</button><button class="btn xl primary">Potwierdź (przejmuję)</button></div>
+    <div class="row" style="margin-top:8px"><button class="btn secondary">Anuluj</button><button class="btn subtle">Sprawdź teraz</button><button class="btn danger">Usuń check</button><button class="btn secondary" style="color:var(--app-color-danger-text)">Usuń</button></div></div>
+
+   <div><p class="label">Stany · pigułka (badge) i solid (wykresy, segmenty)</p>
+    <div class="row"><span class="badge s-up"><svg><use href="#i-up"/></svg>Działa</span><span class="badge s-degraded"><svg><use href="#i-deg"/></svg>Działa z problemami</span><span class="badge s-down"><svg><use href="#i-down"/></svg>Nie działa</span><span class="badge s-unknown"><svg><use href="#i-unk"/></svg>Stan nieznany</span><span class="badge s-maintenance"><svg><use href="#i-mnt"/></svg>Prace planowe</span></div>
+    <div class="row" style="margin-top:8px"><span class="solidchip" style="background:var(--app-state-up-solid);color:var(--app-state-up-on-solid)">UP</span><span class="solidchip" style="background:var(--app-state-degraded-solid);color:var(--app-state-degraded-on-solid)">DEGRADED</span><span class="solidchip" style="background:var(--app-state-down-solid);color:var(--app-state-down-on-solid)">DOWN</span><span class="solidchip" style="background:var(--app-state-unknown-solid);color:var(--app-state-unknown-on-solid)">UNKNOWN</span><span class="solidchip" style="background:var(--app-state-maintenance-solid);color:var(--app-state-maintenance-on-solid)">MAINTENANCE</span></div>
+    <div class="row" style="margin-top:8px"><span class="flag">Niestabilny</span><span class="flag">Weryfikacja wygasa 2 gru</span><span class="flag">Niezweryfikowany</span><span class="muted">← FlagTag: radius 4, obrys, słabszy niż stan</span></div></div>
+
+   <div><p class="label">Radius · 2 / 4 / 5 / 6 / 10 / pill</p>
+    <div class="radii"><div style="border-radius:2px">2</div><div style="border-radius:4px">4</div><div style="border-radius:5px">5 ctrl</div><div style="border-radius:6px">6 card</div><div style="border-radius:10px">10 modal</div><div style="border-radius:999px">pill</div></div></div>
+  </main>
+ </div>
+</section>
+<section class="theme light" style="color-scheme:light">
+ <div class="shell">
+  <aside>
+   <div class="brand"><span class="logo"></span>uptime</div>
+   <a class="nav active">Przegląd <span class="count">3</span></a>
+   <a class="nav">Checki</a><a class="nav">Incydenty</a><a class="nav">Status pages</a><a class="nav">Ustawienia</a>
+   <div style="height:120px"></div>
+   <a class="nav admin">Administracja instancji</a>
+  </aside>
+  <main>
+   <div class="row" style="justify-content:space-between"><h1>Przegląd — jasny</h1>
+     <div class="row"><button class="btn secondary">Wycisz masowo</button><button class="btn primary">+ Dodaj check</button></div></div>
+
+   <div class="banner"><svg width="20" height="20"><use href="#i-unk"/></svg><div><b>Problem z monitoringiem — agent nas-01 nie odpowiada</b><br><span>Nie możemy potwierdzić stanu 14 checków. To usterka po stronie monitoringu, nie Twoich usług. Ostatnie wiarygodne dane: 6 min temu.</span></div></div>
+
+   <div><p class="label">Kolejka problemów</p>
+   <div class="card queue">
+     <div class="item"><span class="badge s-down"><svg><use href="#i-down"/></svg>Nie działa</span><div><span class="name">API Prod</span> <span class="muted num">· 14 min · HTTP 502 · 3/3 lok.</span></div><div class="row"><button class="btn sm primary">Potwierdź</button><button class="btn sm subtle">Wycisz</button></div></div>
+     <div class="item"><span class="badge s-degraded"><svg><use href="#i-deg"/></svg>Działa z problemami</span><div><span class="name">Panel klienta</span> <span class="flag">Niestabilny</span> <span class="muted num">· <svg width="12" height="12" style="vertical-align:-2px"><use href="#i-clock"/></svg> Wolno (640 ms &gt; 500 ms)</span></div><div class="row"><span class="muted">ACK: Jan · 02:20</span></div></div>
+     <div class="item"><span class="badge s-unknown"><svg><use href="#i-unk"/></svg>Stan nieznany</span><div><span class="name">Backup NAS</span> <span class="muted">· agent offline · ostatni potwierdzony: Działa, 6 min temu</span></div><div class="row"><button class="btn sm secondary">Szczegóły</button></div></div>
+   </div></div>
+
+   <div class="counters">
+     <div class="counter"><div class="muted">Nie działa</div><div class="v">1</div></div>
+     <div class="counter"><div class="muted">Z problemami</div><div class="v">1</div></div>
+     <div class="counter"><div class="muted">Nieznany</div><div class="v">14</div></div>
+     <div class="counter"><div class="muted">Prace</div><div class="v">2</div></div>
+     <div class="counter"><div class="muted">Działa</div><div class="v">4 812</div></div>
+     <div class="counter"><div class="muted">Spauzowane</div><div class="v">37</div></div>
+   </div>
+
+   <div><p class="label">Lista checków · wiersz 40 px</p>
+   <div class="card" style="overflow:hidden"><table>
+    <thead><tr><th style="width:36px"></th><th>Stan</th><th>Nazwa</th><th>Uptime 30 d</th><th>Odpowiedź</th><th></th></tr></thead>
+    <tbody>
+     <tr><td><span class="cb"></span></td><td><span class="badge s-up"><svg><use href="#i-up"/></svg>Działa</span></td><td><span class="name">www.example.com</span> <span class="muted">HTTP</span></td><td>99,98%</td><td><svg class="spark" viewBox="0 0 96 24"><line x1="0" x2="96" y1="6" y2="6"/><path d="M0,12.9 L4,7.2 L8,7.9 L12,12.0 L16,10.0 L20,10.4 L24,8.8 L28,7.7 L32,13.2 L36,13.8 L40,7.3 L44,10.5 L48,7.9 L52,14.0 L56,10.4 L60,8.2 L64,12.2 L68,6.4 L72,6.8 L76,13.8 L80,13.8 L84,9.7 L88,6.5 L92,11.0"/></svg></td><td style="text-align:right"><button class="btn sm subtle" aria-label="Menu">⋯</button></td></tr>
+     <tr class="sel"><td><span class="cb on"></span></td><td><span class="badge s-down"><svg><use href="#i-down"/></svg>Nie działa</span> <span class="muted">2/3 lok.</span></td><td><span class="name">api.example.com</span> <span class="muted">HTTP</span></td><td>98,41%</td><td><svg class="spark" viewBox="0 0 96 24"><line x1="0" x2="96" y1="6" y2="6"/><path d="M0,6.4 L4,6.4 L8,13.5 L12,13.3 L16,7.3 L20,8.1 L24,8.6 L28,11.5 L32,9.2 L36,9.1 L40,9.4 L44,12.7 L48,10.6 L52,10.9 L56,8.2 L60,6.0 L64,6.4 L68,9.6 L72,10.4 L76,3.9 L80,5.7 L84,5.8 L88,2.3 L92,3.5"/></svg></td><td style="text-align:right"><button class="btn sm subtle">⋯</button></td></tr>
+     <tr><td><span class="cb"></span></td><td><span class="badge s-maintenance"><svg><use href="#i-mnt"/></svg>Prace planowe</span></td><td><span class="name">db-primary</span> <span class="muted">TCP</span></td><td>100,00%</td><td><svg class="spark" viewBox="0 0 96 24"><line x1="0" x2="96" y1="6" y2="6"/><path d="M0,12.1 L4,9.6 L8,11.0 L12,9.2 L16,9.0 L20,13.5 L24,13.9 L28,7.3 L32,11.9 L36,12.1 L40,6.0 L44,10.2 L48,7.3 L52,10.2 L56,8.9 L60,12.8 L64,8.9 L68,7.1 L72,9.8 L76,8.1 L80,8.6 L84,13.5 L88,7.9 L92,9.3"/></svg></td><td style="text-align:right"><button class="btn sm subtle">⋯</button></td></tr>
+     <tr><td><span class="cb"></span></td><td><span class="row" style="gap:6px;color:var(--app-state-neutral-icon)"><svg width="16" height="16"><use href="#i-pause"/></svg><span class="muted">Spauzowany</span></span></td><td><span class="name">old-landing</span> <span class="flag">limit planu</span></td><td class="muted">—</td><td class="muted">—</td><td style="text-align:right"><button class="btn sm subtle">⋯</button></td></tr>
+    </tbody></table></div></div>
+
+   <div><p class="label">HistoryBar (status page) · segmenty z wypełnieniem, kropka = dzień z problemem</p><div class="hist" aria-label="Historia 60 dni"><i class="n"></i><i class="n"></i><i class="n"></i><i class="n"></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class="d"></i><i class=""></i><i class=""></i><i class="d"></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class="p"></i><i class=""></i><i class="p"></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class="p"></i></div></div>
+
+   <div><p class="label">Formularz · input 36 px, źródło wartości</p>
+    <div class="row" style="align-items:flex-start;gap:16px">
+     <div class="field"><label>Adres</label><input class="input mono" value="https://api.example.com/health"></div>
+     <div class="field"><label>Interwał</label><input class="input num" style="min-width:120px" value="300 s"><span class="src">Domyślne przestrzeni</span></div>
+     <div class="field"><label>Timeout</label><input class="input num" style="min-width:120px" value="5 s"><span class="src"><b>Własne</b> · nadpisuje 10 s · <a style="color:var(--app-color-accent-text)">Przywróć</a></span></div>
+    </div></div>
+
+   <div><p class="label">Przyciski · 32 / 36 / 40 / 48 (krytyczne, telefon)</p>
+    <div class="row"><button class="btn sm primary">Compact</button><button class="btn primary">Zapisz</button><button class="btn lg primary">Testuj i zapisz</button><button class="btn xl primary">Potwierdź (przejmuję)</button></div>
+    <div class="row" style="margin-top:8px"><button class="btn secondary">Anuluj</button><button class="btn subtle">Sprawdź teraz</button><button class="btn danger">Usuń check</button><button class="btn secondary" style="color:var(--app-color-danger-text)">Usuń</button></div></div>
+
+   <div><p class="label">Stany · pigułka (badge) i solid (wykresy, segmenty)</p>
+    <div class="row"><span class="badge s-up"><svg><use href="#i-up"/></svg>Działa</span><span class="badge s-degraded"><svg><use href="#i-deg"/></svg>Działa z problemami</span><span class="badge s-down"><svg><use href="#i-down"/></svg>Nie działa</span><span class="badge s-unknown"><svg><use href="#i-unk"/></svg>Stan nieznany</span><span class="badge s-maintenance"><svg><use href="#i-mnt"/></svg>Prace planowe</span></div>
+    <div class="row" style="margin-top:8px"><span class="solidchip" style="background:var(--app-state-up-solid);color:var(--app-state-up-on-solid)">UP</span><span class="solidchip" style="background:var(--app-state-degraded-solid);color:var(--app-state-degraded-on-solid)">DEGRADED</span><span class="solidchip" style="background:var(--app-state-down-solid);color:var(--app-state-down-on-solid)">DOWN</span><span class="solidchip" style="background:var(--app-state-unknown-solid);color:var(--app-state-unknown-on-solid)">UNKNOWN</span><span class="solidchip" style="background:var(--app-state-maintenance-solid);color:var(--app-state-maintenance-on-solid)">MAINTENANCE</span></div>
+    <div class="row" style="margin-top:8px"><span class="flag">Niestabilny</span><span class="flag">Weryfikacja wygasa 2 gru</span><span class="flag">Niezweryfikowany</span><span class="muted">← FlagTag: radius 4, obrys, słabszy niż stan</span></div></div>
+
+   <div><p class="label">Radius · 2 / 4 / 5 / 6 / 10 / pill</p>
+    <div class="radii"><div style="border-radius:2px">2</div><div style="border-radius:4px">4</div><div style="border-radius:5px">5 ctrl</div><div style="border-radius:6px">6 card</div><div style="border-radius:10px">10 modal</div><div style="border-radius:999px">pill</div></div></div>
+  </main>
+ </div>
+</section>
+</div>
+</body>
+</html>
