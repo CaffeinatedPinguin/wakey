@@ -15,6 +15,9 @@ Frontend (panel i publiczna status page) to React + Vite + TypeScript ([0002-sta
 | Potrzeba | Wybór |
 |---|---|
 | Komponenty | Mantine 9 (`@mantine/core`, `@mantine/hooks`) z własnym motywem z tokenów [ui-ux.md](../specs/ui-ux.md); bez `@mantine/charts` |
+| Powiadomienia w panelu (toasty) | `@mantine/notifications` (ta sama wersja co `@mantine/core`) |
+| Ikony (stany, akcje) | `@tabler/icons-react` (MIT; import pojedynczych ikon) |
+| Fonty | `@fontsource/geist` (interfejs) i `@fontsource/jetbrains-mono` (dane), hostowane z aplikacji, bez zewnętrznego CDN |
 | Formularze | `@mantine/form`; renderer formularzy z deskryptora typów checków po naszej stronie |
 | Tekst incydentów i post-mortemów | `react-markdown` z wyłączonym surowym HTML |
 | Wykresy | Chart.js (sparkline, wykres faz, historia) |
@@ -41,6 +44,7 @@ Granice modułów pilnuje ESLint (`import-x/no-restricted-paths` i `import-x/no-
 - Wymagany React ≥ 19.2 (Mantine 9).
 - Mantine ma jednego głównego opiekuna i major mniej więcej raz w roku; motyw trzymamy w jednym miejscu, żeby migracje były tanie.
 - Testy w MVP nie obejmują automatycznych skanów dostępności (axe) ani E2E na telefonie, które wymienia backlog pkt 1.5; dostępność WCAG 2.2 AA sprawdzana ręcznie do czasu decyzji o Playwright/axe.
+- Uzupełnienie (2026-11-23): powiadomienia, ikony i fonty dodane pod motyw i szkielet panelu (etap 1).
 - Nowe zależności są tylko te z tabeli i z ADR 0006 i 0007. Każda kolejna wymaga zgody właściciela.
 
 ## Links
