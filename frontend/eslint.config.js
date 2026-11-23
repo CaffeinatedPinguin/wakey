@@ -165,6 +165,28 @@ export default defineConfig([
     },
   },
   {
+    // Colours, sizes and spacing in application code come from theme tokens.
+    // Hex colours and px values are rejected outside shared/theme.
+    files: ['src/app/**', 'src/features/**', 'src/routes/**', 'src/shared/ui/**'],
+    rules: {
+      'no-restricted-syntax': [
+        'error',
+        {
+          selector:
+            'Literal[value=/#(?:[0-9a-fA-F]{8}|[0-9a-fA-F]{6}|[0-9a-fA-F]{3,4})(?![0-9a-fA-F])|(^|[^0-9A-Za-z_])[0-9]+([.][0-9]+)?px/]',
+          message:
+            'Use theme tokens (var(--app-*)) or Mantine theme values instead of hex colours and px',
+        },
+        {
+          selector:
+            'TemplateElement[value.raw=/#(?:[0-9a-fA-F]{8}|[0-9a-fA-F]{6}|[0-9a-fA-F]{3,4})(?![0-9a-fA-F])|(^|[^A-Za-z])px([^A-Za-z]|$)/]',
+          message:
+            'Use theme tokens (var(--app-*)) or Mantine theme values instead of hex colours and px',
+        },
+      ],
+    },
+  },
+  {
     // Fast Refresh only applies to component modules.
     files: ['**/*.tsx'],
     extends: [reactRefresh.configs.vite()],
