@@ -38,6 +38,12 @@ wakey:
     session-max-age: 12h
 
 logging:
+  pattern:
+    # Local text output: the Boot default format with the message passed through Logback's
+    # %replace so control and line/paragraph separators cannot start a second log line.
+    # The exception stack trace stays multi-line on purpose.
+    console: |-
+      %clr(%d{${LOG_DATEFORMAT_PATTERN:yyyy-MM-dd'T'HH:mm:ss.SSSXXX}}){faint} %clr(${LOG_LEVEL_PATTERN:%5p}){} %clr(${PID:}){magenta} %clr(--- %esb(){APPLICATION_NAME}%esb{APPLICATION_GROUP}[%15.15t] ${LOG_CORRELATION_PATTERN:}){faint}%clr(%-40.40logger{39}){cyan} %clr(:){faint} %replace(%m){'[\p{Cntrl}\x{2028}\x{2029}\x{202A}-\x{202E}\x{2066}-\x{2069}]', '?'}%n${LOG_EXCEPTION_CONVERSION_WORD:%wEx}
   level:
     dev.wakey.security: INFO
     org.springframework.security: WARN

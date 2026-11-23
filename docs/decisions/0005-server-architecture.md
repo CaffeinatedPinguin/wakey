@@ -103,6 +103,12 @@ Logujemy dużo, żeby z logów było widać, co robi aplikacja — także na pro
 
 Zawsze SLF4J przez `@Slf4j`, placeholdery `{}`, wyjątek jako ostatni argument. Nigdy nie logujemy sekretów, tokenów ani haseł.
 
+### Format logów (2026-11-23)
+
+Konsola lokalna zostaje tekstowa. Wzorzec w `application.yml` opiera się na domyślnym wzorcu Spring Boot, a treść wiadomości przechodzi przez konwerter Logbacka `%replace`, który zamienia znaki sterujące (`\p{Cntrl}`) oraz separatory i znaki kierunkowe Unicode (U+2028, U+2029, U+202A–U+202E, U+2066–U+2069) na widoczny znak. Nie piszemy własnego sanitizera: robi to sprawdzony mechanizm Logbacka, więc dane od klienta nie mogą wstrzyknąć linii logu. Świadomy wyjątek: stos wyjątku zostaje wielolinijkowy, bo lokalna diagnoza jest ważniejsza niż jedna linia wpisu.
+
+Obraz produkcyjny ustawia `LOGGING_STRUCTURED_FORMAT_CONSOLE=ecs`, więc każdy wpis to jedna linia JSON w formacie Elastic Common Schema. JSON serializuje znaki sterujące jako escape'y, więc także tam dane od klienta nie przerwą linii. Całość pochodzi z konfiguracji Spring Boota i Logbacka, bez własnego kodu.
+
 ### Testy integracyjne (2026-11-22)
 
 Testy integracyjne korzystają z jednego współdzielonego kontenera PostgreSQL i jednego kontekstu Springa na przebieg. Wzorzec to singleton container: statyczne pole z kontenerem w abstrakcyjnej klasie bazowej (`dev.wakey.testsupport`), start w bloku statycznym i `@ServiceConnection`; bez `@Testcontainers`/`@Container`, bo ich cykl życia zatrzymuje współdzielony kontener po pierwszej klasie testowej.

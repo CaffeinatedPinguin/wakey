@@ -10,5 +10,7 @@ WORKDIR /app
 COPY --chown=wakey:wakey dist/*.jar /app/wakey-server.jar
 
 USER wakey
+# Production logs: one JSON line per entry in the Elastic Common Schema format.
+ENV LOGGING_STRUCTURED_FORMAT_CONSOLE=ecs
 EXPOSE 8080
 ENTRYPOINT ["java", "-jar", "/app/wakey-server.jar"]

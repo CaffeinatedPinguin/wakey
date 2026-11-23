@@ -9,7 +9,7 @@ import org.springframework.security.web.access.AccessDeniedHandler;
 import org.springframework.security.web.csrf.InvalidCsrfTokenException;
 import org.springframework.security.web.csrf.MissingCsrfTokenException;
 
-/** Logs every 403 with a fixed reason and the sanitized method and path, including CSRF rejections. */
+/** Logs every 403 with a fixed reason and the request method and path, including CSRF rejections. */
 @Slf4j
 final class ForbiddenRequestLog implements AccessDeniedHandler {
 
@@ -23,8 +23,8 @@ final class ForbiddenRequestLog implements AccessDeniedHandler {
     public void handle(HttpServletRequest request, HttpServletResponse response, AccessDeniedException exception)
             throws IOException {
         String reason = reasonFor(exception);
-        String method = LogSafeText.sanitize(request.getMethod());
-        String path = LogSafeText.sanitize(request.getRequestURI());
+        String method = request.getMethod();
+        String path = request.getRequestURI();
         log.warn("request rejected: reason={} method={} path={}", reason, method, path);
         if (response.isCommitted()) {
             return;
