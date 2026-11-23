@@ -1,5 +1,6 @@
 export { HomeView } from './components/HomeView'
 export { LoginView } from './components/LoginView'
 export { LoggedOutScreen } from './components/LoggedOutScreen'
-export { meQueryKey, meQueryOptions } from './api/auth.queries'
+export { meQueryKey, meQueryOptions, useLogout } from './api/auth.queries'
+export type { Me } from './api/auth.schemas'
 export { authResources } from './translations'

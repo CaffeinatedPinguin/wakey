@@ -5,8 +5,13 @@ import { rootRoute } from '../routes/__root'
 import { homeRoute } from '../routes/home'
 import { loggedOutRoute } from '../routes/loggedOut'
 import { loginRoute } from '../routes/login'
+import { panelRoute } from '../routes/panel'
+import { publicRoute } from '../routes/public'
 
-const routeTree = rootRoute.addChildren([homeRoute, loginRoute, loggedOutRoute])
+const routeTree = rootRoute.addChildren([
+  panelRoute.addChildren([homeRoute]),
+  publicRoute.addChildren([loginRoute, loggedOutRoute]),
+])
 
 const createRouterForTree = createRouter<typeof routeTree>
 

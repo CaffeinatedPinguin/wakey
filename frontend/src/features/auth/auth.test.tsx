@@ -89,7 +89,8 @@ describe('signed-in session', () => {
     document.cookie = 'XSRF-TOKEN=csrf-token-value; path=/'
     renderApp('/')
 
-    fireEvent.click(await screen.findByRole('button', { name: 'Wyloguj' }))
+    fireEvent.click(await screen.findByRole('button', { name: 'Profil' }))
+    fireEvent.click(await screen.findByText('Wyloguj'))
 
     expect(await screen.findByRole('heading', { name: 'Wylogowano' })).toBeTruthy()
     expect(logoutUrl).toBe(appConfig.logoutUrl)
