@@ -1,43 +1,90 @@
 import js from '@eslint/js'
 import { defineConfig, globalIgnores } from 'eslint/config'
+import { createTypeScriptImportResolver } from 'eslint-import-resolver-typescript'
+import { importX } from 'eslint-plugin-import-x'
 import reactHooks from 'eslint-plugin-react-hooks'
 import { reactRefresh } from 'eslint-plugin-react-refresh'
+import { readdirSync } from 'node:fs'
+import { dirname, join } from 'node:path'
+import { fileURLToPath } from 'node:url'
 import globals from 'globals'
 import tseslint from 'typescript-eslint'
+
+const rootDir = dirname(fileURLToPath(import.meta.url))
+const featuresDir = join(rootDir, 'src', 'features')
+const features = readdirSync(featuresDir, { withFileTypes: true })
+  .filter((entry) => entry.isDirectory())
+  .map((entry) => entry.name)
+  .sort()
+
+// The single matrix of allowed feature-to-feature dependencies. A feature that
+// is not listed here may not depend on any other feature.
+const allowedFeatureDependencies = {
+  auth: [],
+}
+
+function allowedDependenciesOf(feature) {
+  return allowedFeatureDependencies[feature] ?? []
+}
 
 const featureBoundaryMessage =
   'Import another feature only through its public entry point features/<name>/index.ts.'
 
-// A written import path that points into another feature's non-index module.
-const literalFeatureImport = {
-  regex: String.raw`features/[^/]+/(?!index(?:\.(?:ts|tsx))?$).+`,
-  message: featureBoundaryMessage,
-}
+const crossFeatureZones = features.flatMap((targetFeature) =>
+  features
+    .filter((sourceFeature) => sourceFeature !== targetFeature)
+    .map((sourceFeature) => {
+      const allowed = allowedDependenciesOf(targetFeature).includes(sourceFeature)
+      return {
+        target: `src/features/${targetFeature}`,
+        from: `src/features/${sourceFeature}`,
+        ...(allowed ? { except: ['./index.ts'] } : {}),
+        message: featureBoundaryMessage,
+      }
+    }),
+)
 
-// A file at src/features/<feature>/<segments...> leaves its own feature with
-// (<segments> - 1) parent steps. Only a step into another feature's non-index
-// module is forbidden; relative imports inside the same feature stay allowed.
-const featureDepthBlocks = [2, 3, 4].map((depth) => {
-  const up = String.raw`(?:\.\./)`.repeat(depth - 1)
-  const otherFeature = String.raw`(?!\.\./)[^/]+/(?!index(?:\.(?:ts|tsx))?$).+`
-  return {
-    files: [`src/features/*/${'*/'.repeat(depth - 2)}*.{ts,tsx}`],
-    rules: {
-      'no-restricted-imports': [
-        'error',
-        {
-          patterns: [
-            literalFeatureImport,
-            {
-              regex: `^${up}${otherFeature}`,
-              message: featureBoundaryMessage,
-            },
-          ],
-        },
-      ],
-    },
-  }
-})
+// import-x resolves each `except` entry with path.resolve relative to `from`
+// when `from` is not a glob, so the public entry point needs one zone per
+// feature with a concrete `from` and a relative `./index.ts` exception.
+const featureEntryPointZones = features.map((feature) => ({
+  target: ['src/app', 'src/routes'],
+  from: `src/features/${feature}`,
+  except: ['./index.ts'],
+  message: featureBoundaryMessage,
+}))
+
+const boundaryZones = [
+  ...crossFeatureZones,
+  ...featureEntryPointZones,
+  {
+    target: 'src/features',
+    from: 'src/app',
+    message: 'Features cannot import app modules.',
+  },
+  {
+    target: 'src/features',
+    from: 'src/routes',
+    message: 'Features cannot import route modules.',
+  },
+  {
+    target: 'src/shared',
+    from: 'src/app',
+    message: 'Shared modules cannot import app modules.',
+  },
+  {
+    target: 'src/shared',
+    from: 'src/routes',
+    message: 'Shared modules cannot import routes.',
+  },
+  {
+    target: 'src/shared',
+    from: 'src/features',
+    message: 'Shared modules cannot import features.',
+  },
+]
+
+const testFiles = ['src/**/*.test.{ts,tsx}', 'src/test/**']
 
 export default defineConfig([
   globalIgnores(['dist']),
@@ -72,10 +119,34 @@ export default defineConfig([
       'no-nested-ternary': 'error',
       'no-param-reassign': 'error',
       'prefer-const': 'error',
-      'no-restricted-imports': ['error', { patterns: [literalFeatureImport] }],
       '@typescript-eslint/consistent-type-imports': 'error',
       '@typescript-eslint/explicit-module-boundary-types': 'error',
       '@typescript-eslint/switch-exhaustiveness-check': 'error',
+    },
+  },
+  {
+    // Module boundaries are checked with import-x, which needs the TypeScript
+    // resolver to follow the aliases from the tsconfig files.
+    files: ['**/*.{ts,tsx}'],
+    plugins: {
+      'import-x': importX,
+    },
+    settings: {
+      'import-x/extensions': ['.ts', '.tsx'],
+      'import-x/resolver-next': [
+        createTypeScriptImportResolver({
+          alwaysTryTypes: true,
+          project: join(rootDir, 'tsconfig.app.json'),
+        }),
+      ],
+    },
+  },
+  {
+    files: ['src/**/*.{ts,tsx}'],
+    ignores: testFiles,
+    rules: {
+      'import-x/no-cycle': ['error', { ignoreExternal: true }],
+      'import-x/no-restricted-paths': ['error', { basePath: rootDir, zones: boundaryZones }],
     },
   },
   {
@@ -83,5 +154,4 @@ export default defineConfig([
     files: ['**/*.tsx'],
     extends: [reactRefresh.configs.vite()],
   },
-  ...featureDepthBlocks,
 ])

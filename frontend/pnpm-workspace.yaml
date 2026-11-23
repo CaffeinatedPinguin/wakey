@@ -1,0 +1,8 @@
+# The owner approved these exact versions on 2026-11-22, so they are exempt from
+# pnpm's minimum release age policy. Keep the list short and version-pinned.
+minimumReleaseAgeExclude:
+  - '@mantine/core@9.8.2'
+  - '@mantine/hooks@9.8.2'
+  - '@tanstack/query-core@5.108.3'
+  - '@tanstack/react-query@5.108.3'
+  - 'i18next@27.2.4'

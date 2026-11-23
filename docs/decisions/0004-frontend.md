@@ -24,6 +24,16 @@ Frontend (panel i publiczna status page) to React + Vite + TypeScript ([0002-sta
 | Aktualizacje live | natywny `EventSource` z fallbackiem na polling |
 | Testy | Vitest + Testing Library |
 
+### Rozmieszczenie kodu (2026-11-22)
+
+- **`app/`:** wejście (`main.tsx`), providery (`App.tsx`), router, `QueryClient`, motyw, inicjalizacja i18n oraz szkielet panelu. To jedyne miejsce, które spina pozostałe katalogi.
+- **`routes/`:** tylko trasy TanStack Router: walidacja parametrów, ochrona i render jednego widoku z funkcji. Trasy nie zawierają logiki funkcji.
+- **`features/<nazwa>/`:** funkcja domenowa (dziś `auth`: logowanie, wylogowanie, `/api/v1/me`, sesja). Publiczne wejście to wyłącznie `index.ts` z jawnymi nazwanymi eksportami. W środku: `api/*.schemas.ts` (Zod), `api/*.api.ts` (transport i parsowanie), `api/*.queries.ts` (klucze i `queryOptions`), komponenty, testy i tłumaczenia funkcji.
+- **`shared/`:** instancja axios i obsługa błędów HTTP bez wiedzy o domenie, neutralne komponenty UI, czyste narzędzia i wspólne tłumaczenia.
+- **`test/`:** `renderWithProviders`-owy helper `renderApp`, testowy adapter axios i dane testowe.
+
+Granice modułów pilnuje ESLint (`import-x/no-restricted-paths` i `import-x/no-cycle`) w `frontend/eslint.config.js`. `shared` nie importuje `app`, `routes` ani `features`, a `features` nie importują `app` ani `routes`. Macierz dozwolonych zależności między funkcjami żyje tylko w `frontend/eslint.config.js`; ten ADR jej nie kopiuje. Pliki testów są zwolnione z reguł granic i cykli.
+
 ## Consequences
 
 - Wymagany React ≥ 19.2 (Mantine 9).
