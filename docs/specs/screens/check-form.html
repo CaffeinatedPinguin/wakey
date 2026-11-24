@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Makieta: formularz checka (etap 1b, szkic)</title>
+<style>
+/* Tokeny z docs/specs/theme-preview.html (wartości właściciela). */
+.t-light {
+  --page:#F6F6F8; --surface:#FFFFFF; --surface-subtle:#F1F1F4; --sidebar:#FBFBFC;
+  --heading:#1C1C23; --body:#3D3D48; --muted:#62626F; --soft:#E3E3E9; --border:#8A8A97; --field:#8A8A97;
+  --selected:color-mix(in srgb,#7367F0 8%,#FFFFFF);
+  --accent:#7367F0; --accent-text:#5B4FD3; --primary:#665AD8; --on-primary:#FFFFFF;
+  --up-text:#166534; --up-bg:#DCFCE7; --up-solid:#059669;
+  --deg-text:#854D0E; --deg-bg:#FEF3C7; --deg-solid:#CC6F05;
+  --down-text:#991B1B; --down-bg:#FEE2E2; --down-solid:#E11D48;
+}
+.t-dark {
+  --page:#121316; --surface:#1B1B1F; --surface-subtle:#17171B; --sidebar:#18191D;
+  --heading:#EDEDF1; --body:#C6C6CE; --muted:#93939F; --soft:#2D2D34; --border:#74747F; --field:#74747F;
+  --selected:color-mix(in srgb,#7367F0 12%,#1B1B1F);
+  --accent:#7367F0; --accent-text:#8E84F5; --primary:#665AD8; --on-primary:#FFFFFF;
+  --up-text:#10B981; --up-bg:color-mix(in srgb,#10B981 16%,#1B1B1F); --up-solid:#10B981;
+  --deg-text:#F59E0B; --deg-bg:color-mix(in srgb,#F59E0B 16%,#1B1B1F); --deg-solid:#F59E0B;
+  --down-text:#F43F5E; --down-bg:color-mix(in srgb,#F43F5E 16%,#1B1B1F); --down-solid:#F43F5E;
+}
+* { box-sizing:border-box; }
+body { margin:0; padding:24px; background:#E9E9EE; font:14px/20px Geist, Inter, "Segoe UI", sans-serif; color:#1C1C23; }
+h1 { font-size:20px; margin:0 0 4px; }
+.note { color:#444; margin:0 0 20px; max-width:960px; }
+.frame-label { font-weight:600; margin:0 0 8px; color:#333; }
+.frame { border:1px solid #C9C9D1; border-radius:10px; overflow:hidden; background:var(--page); color:var(--body); position:relative; }
+.t-dark.frame { border-color:#000; }
+.grid { display:grid; grid-template-columns:1fr; gap:24px; align-items:start; }
+.muted { color:var(--muted); }
+.mono { font-family:"JetBrains Mono", Consolas, monospace; font-size:12px; }
+.btn { height:36px; padding:0 14px; border-radius:5px; border:1px solid var(--border); background:var(--surface); color:var(--heading); font-weight:500; display:inline-flex; align-items:center; gap:6px; white-space:nowrap; font-size:13px; }
+.btn.primary { background:var(--primary); border-color:var(--primary); color:var(--on-primary); }
+.btn.ghost { border-color:transparent; background:transparent; color:var(--accent-text); padding:0 6px; }
+
+/* Desktop: kreator w krokach, pasek kroków u góry */
+.desk { display:flex; flex-direction:column; height:600px; background:var(--surface); }
+.head { height:56px; border-bottom:1px solid var(--soft); display:flex; align-items:center; gap:10px; padding:0 20px; }
+.head .title { font-weight:600; color:var(--heading); font-size:16px; }
+.steps { display:flex; gap:0; padding:14px 20px; border-bottom:1px solid var(--soft); }
+.step { flex:1; display:flex; align-items:center; gap:8px; font-size:13px; color:var(--muted); position:relative; }
+.step .n { width:24px; height:24px; border-radius:999px; border:1.5px solid var(--border); display:flex; align-items:center; justify-content:center; font-size:12px; font-weight:600; flex-shrink:0; }
+.step.done .n { background:var(--up-bg); color:var(--up-text); border-color:transparent; }
+.step.on { color:var(--heading); font-weight:600; }
+.step.on .n { background:var(--primary); color:var(--on-primary); border-color:var(--primary); }
+.step::after { content:""; flex:1; height:1px; background:var(--soft); margin-left:8px; }
+.step:last-child::after { display:none; }
+.body { flex:1; padding:20px; display:flex; flex-direction:column; gap:14px; overflow:hidden; }
+.body h2 { margin:0; font-size:18px; color:var(--heading); font-weight:600; }
+.field { display:flex; flex-direction:column; gap:4px; }
+.field label { font-size:12px; color:var(--muted); font-weight:500; }
+.input { height:36px; border:1px solid var(--field); border-radius:5px; padding:0 10px; display:flex; align-items:center; color:var(--heading); background:var(--surface); font-size:14px; }
+.hint { font-size:12px; color:var(--muted); }
+.types { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; }
+.type { border:1px solid var(--soft); border-radius:8px; padding:10px 12px; display:flex; flex-direction:column; gap:3px; background:var(--surface); }
+.type.on { border:1.5px solid var(--accent-text); background:var(--selected); }
+.type b { color:var(--heading); font-size:14px; font-weight:600; }
+.type span { font-size:12px; color:var(--muted); }
+.fbar { margin-top:auto; border-top:1px solid var(--soft); padding-top:12px; display:flex; gap:8px; align-items:center; }
+.fbar .sp { flex:1; }
+.res { border:1px solid var(--soft); border-radius:8px; background:var(--surface-subtle); padding:12px; display:flex; flex-direction:column; gap:8px; font-size:13px; }
+.pill { display:inline-flex; align-items:center; gap:5px; height:22px; padding:0 8px; border-radius:999px; font-size:12px; font-weight:600; width:max-content; }
+.kv { display:flex; justify-content:space-between; gap:8px; color:var(--muted); }
+.kv b { color:var(--body); font-weight:500; font-variant-numeric:tabular-nums; }
+.sumbox { border:1px solid var(--soft); border-radius:8px; padding:12px; display:grid; grid-template-columns:1fr 1fr; gap:8px 16px; font-size:13px; }
+.sumbox div span { display:block; color:var(--muted); font-size:12px; }
+.sumbox div b { color:var(--heading); font-weight:500; }
+
+/* Telefon: jeden krok na ekran */
+.phone { width:375px; height:700px; margin:0 auto; display:flex; flex-direction:column; position:relative; overflow:hidden; background:var(--page); }
+.ptop { height:56px; background:var(--surface); border-bottom:1px solid var(--soft); display:flex; align-items:center; gap:10px; padding:0 14px; }
+.ptop .title { font-weight:600; color:var(--heading); font-size:17px; flex:1; }
+.pstep { padding:10px 14px; background:var(--surface); border-bottom:1px solid var(--soft); font-size:13px; color:var(--muted); display:flex; align-items:center; gap:8px; }
+.pstep b { color:var(--heading); font-weight:600; }
+.pbody { flex:1; padding:14px; display:flex; flex-direction:column; gap:12px; background:var(--surface); }
+.pfoot { background:var(--surface); border-top:1px solid var(--border); padding:10px 12px; display:flex; gap:8px; }
+.pfoot .btn { flex:1; height:44px; justify-content:center; }
+.pbar { height:4px; background:var(--soft); border-radius:2px; overflow:hidden; }
+.pbar i { display:block; height:100%; width:50%; background:var(--primary); }
+
+.legend { margin-top:16px; font-size:13px; color:#333; max-width:960px; padding-left:18px; }
+.legend li { margin-bottom:4px; }
+</style>
+</head>
+<body>
+
+<h1>Formularz checka (etap 1b)</h1>
+<p class="note">Szkic do akceptacji właściciela. Kreator w czterech krokach: cel, sprawdzanie, powiadomienia, test i podsumowanie. Każdy krok ma jedno zadanie. Dane przykładowe. Ikony są placeholderami.</p>
+
+<div class="grid">
+
+  <!-- 1. Desktop, jasny: krok 1, wybór typu i celu -->
+  <div>
+    <p class="frame-label">1. Desktop, jasny: krok 1, cel i typ</p>
+    <div class="frame t-light" style="height:600px">
+      <div class="desk">
+        <div class="head"><span class="title">Nowy check</span><span class="btn ghost" style="margin-left:auto">Anuluj</span></div>
+        <div class="steps">
+          <div class="step on"><span class="n">1</span>Cel</div>
+          <div class="step"><span class="n">2</span>Sprawdzanie</div>
+          <div class="step"><span class="n">3</span>Powiadomienia</div>
+          <div class="step"><span class="n">4</span>Test i zapis</div>
+        </div>
+        <div class="body">
+          <h2>Co sprawdzamy?</h2>
+          <div class="field"><label>Adres lub cel</label><div class="input mono">https://api.przyklad.pl/zdrowie</div><div class="hint">Typ wykryto z adresu. Możesz go zmienić poniżej.</div></div>
+          <div class="types">
+            <div class="type on"><b>HTTP(S)</b><span>Odpowiedź, kod, słowo kluczowe</span></div>
+            <div class="type"><b>TCP</b><span>Otwarty port</span></div>
+            <div class="type"><b>Ping</b><span>Osiągalność IP</span></div>
+            <div class="type"><b>DNS</b><span>Rekordy nazw</span></div>
+            <div class="type"><b>Certyfikat</b><span>Ważność certyfikatu</span></div>
+            <div class="type"><b>Heartbeat</b><span>Zadanie wysyła sygnał</span></div>
+          </div>
+          <div class="field" style="max-width:320px"><label>Nazwa</label><div class="input">API płatności</div><div class="hint">Podpowiedziana z adresu</div></div>
+        </div>
+        <div style="padding:12px 20px;border-top:1px solid var(--soft);display:flex;gap:8px;align-items:center;background:var(--surface)">
+          <span class="btn ghost">Wstecz</span><span style="flex:1"></span><span class="btn primary">Dalej</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 2. Desktop, ciemny: krok 4, test i podsumowanie -->
+  <div>
+    <p class="frame-label">2. Desktop, ciemny: krok 4, test i podsumowanie przed zapisem</p>
+    <div class="frame t-dark" style="height:600px">
+      <div class="desk">
+        <div class="head"><span class="title">Nowy check</span><span class="btn ghost" style="margin-left:auto">Anuluj</span></div>
+        <div class="steps">
+          <div class="step done"><span class="n">✓</span>Cel</div>
+          <div class="step done"><span class="n">✓</span>Sprawdzanie</div>
+          <div class="step done"><span class="n">✓</span>Powiadomienia</div>
+          <div class="step on"><span class="n">4</span>Test i zapis</div>
+        </div>
+        <div class="body">
+          <h2>Test i zapis</h2>
+          <div class="res">
+            <div><span class="pill" style="background:var(--down-bg);color:var(--down-text)">Nie działa</span></div>
+            <div class="kv"><span>Kategoria</span><b>cel nie odpowiada</b></div>
+            <div class="kv"><span>Czas</span><b>10 012 ms · Warszawa</b></div>
+            <div class="kv"><span>Fazy</span><b>DNS 12 · TCP 38 · TLS — · TTFB —</b></div>
+          </div>
+          <div class="sumbox">
+            <div><span>Cel</span><b class="mono">api.przyklad.pl</b></div>
+            <div><span>Interwał</span><b>300 s (domyślne przestrzeni)</b></div>
+            <div><span>Timeout</span><b>10 s (własne)</b></div>
+            <div><span>Powiadomienia</span><b>Brak aktywnego kanału</b></div>
+          </div>
+          <div class="hint">Test nie zapisuje checka. Zapis dodaje check z ustawieniami powyżej.</div>
+        </div>
+        <div style="padding:12px 20px;border-top:1px solid var(--soft);display:flex;gap:8px;align-items:center;background:var(--surface)">
+          <span class="btn ghost">Wstecz</span><span class="btn">Testuj ponownie</span><span style="flex:1"></span><span class="btn primary">Zapisz check</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 3. Telefon, jasny: krok 2, jeden krok na ekran -->
+  <div>
+    <p class="frame-label">3. Telefon, jasny: krok 2, sprawdzanie</p>
+    <div class="frame t-light phone">
+      <div class="ptop"><span class="title">Nowy check</span><span class="btn ghost" style="height:44px">Anuluj</span></div>
+      <div class="pstep"><b>Krok 2 z 4</b> · Sprawdzanie<div class="pbar" style="flex:1"><i></i></div></div>
+      <div class="pbody">
+        <div class="field"><label>Interwał</label><div class="input">300 s <span class="muted" style="margin-left:auto;font-size:12px">domyślne przestrzeni</span></div></div>
+        <div class="field"><label>Timeout</label><div class="input">10 s <span style="margin-left:auto;font-size:12px;color:var(--accent-text)">własne · Przywróć</span></div></div>
+        <div class="field"><label>Potwierdzenia przed DOWN</label><div class="input">2 <span class="muted" style="margin-left:auto;font-size:12px">domyślne przestrzeni</span></div></div>
+        <div class="hint">Lokalizacje i asercje są w kroku 2 po rozwinięciu. Zmiana typu nie kasuje danych bez ostrzeżenia.</div>
+      </div>
+      <div class="pfoot"><span class="btn">Wstecz</span><span class="btn primary">Dalej</span></div>
+    </div>
+  </div>
+
+</div>
+
+<ul class="legend">
+  <li>Krok 1: cel i typ. Krok 2: sprawdzanie (interwał, timeout, lokalizacje, asercje). Krok 3: powiadomienia. Krok 4: test i zapis.</li>
+  <li>Test jest tylko w kroku 4, więc przed zapisem użytkownik widzi wynik i podsumowanie razem.</li>
+  <li>Na telefonie każdy krok zajmuje cały ekran, z przyciskami „Wstecz” i „Dalej” na dole.</li>
+  <li>Przy edycji wariant B wymaga przejścia przez kroki albo skoku do kroku z podsumowaniem. Nie ma osobnego widoku edycji.</li>
+  <li>Stan weryfikacji własności celu (4.4) i stan błędu nie są w tej makiecie.</li>
+</ul>
+
+</body>
+</html>
