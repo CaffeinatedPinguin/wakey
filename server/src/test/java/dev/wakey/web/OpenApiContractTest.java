@@ -1,0 +1,170 @@
+package dev.wakey.web;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.request;
+
+import dev.wakey.testsupport.SecurityIntegrationTest;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Locale;
+import java.util.Objects;
+import java.util.Set;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpMethod;
+import org.springframework.http.MediaType;
+import org.springframework.test.context.TestPropertySource;
+import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.MvcResult;
+import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
+import org.springframework.test.web.servlet.setup.MockMvcBuilders;
+import org.springframework.web.context.WebApplicationContext;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
+import tools.jackson.databind.SerializationFeature;
+import tools.jackson.databind.json.JsonMapper;
+
+@TestPropertySource(properties = "springdoc.api-docs.enabled=true")
+class OpenApiContractTest extends SecurityIntegrationTest {
+
+    private static final String CONTRACT_FILE = "public.json";
+
+    private static final String DOCS_PATH = "/v3/api-docs/public";
+
+    private static final List<String> HTTP_METHODS =
+            List.of("get", "put", "post", "delete", "patch", "head", "options", "trace");
+
+    // Every entry needs a justification in ADR 0006 before it is added.
+    private static final Set<String> PUBLIC_OPERATIONS = Set.of();
+
+    private static final ObjectMapper MAPPER = JsonMapper.builder()
+            .enable(SerializationFeature.ORDER_MAP_ENTRIES_BY_KEYS)
+            .build();
+
+    private WebApplicationContext webApplicationContext;
+
+    private MockMvc docsMockMvc;
+
+    @Autowired
+    void setWebApplicationContext(WebApplicationContext webApplicationContext) {
+        this.webApplicationContext = webApplicationContext;
+    }
+
+    @BeforeEach
+    void createDocsMockMvc() {
+        docsMockMvc = MockMvcBuilders.webAppContextSetup(webApplicationContext).build();
+    }
+
+    @Test
+    void generatedContractMatchesTheCommittedFile() throws Exception {
+        // when
+        String generated = generatedContract();
+        Path contract = contractPath();
+
+        // then
+        if (Boolean.getBoolean("wakey.openapi.update")) {
+            Path directory = Objects.requireNonNull(contract.getParent());
+            Files.createDirectories(directory);
+            Files.writeString(contract, generated);
+            return;
+        }
+        String committed = Files.readString(contract);
+        assertThat(generated).isEqualTo(committed);
+    }
+
+    @Test
+    void everyOperationHasAUniqueOperationId() throws Exception {
+        // given
+        String generated = generatedContract();
+        JsonNode document = MAPPER.readTree(generated);
+        JsonNode paths = document.path("paths");
+        Set<String> operationIds = new LinkedHashSet<>();
+        int operationCount = 0;
+
+        // when
+        for (String path : paths.propertyNames()) {
+            JsonNode pathItem = paths.path(path);
+            for (String method : HTTP_METHODS) {
+                JsonNode operation = pathItem.path(method);
+                if (!operation.isMissingNode()) {
+                    String operationId = operation.path("operationId").asString();
+                    operationCount++;
+                    assertThat(operationId).isNotBlank();
+                    operationIds.add(operationId);
+                }
+            }
+        }
+
+        // then
+        assertThat(paths.isObject()).isTrue();
+        assertThat(operationCount).isPositive();
+        assertThat(operationIds).hasSize(operationCount);
+    }
+
+    @Test
+    void everyEndpointInTheContractRejectsMissingAuthentication() throws Exception {
+        // given
+        String contract = Files.readString(contractPath());
+        JsonNode document = MAPPER.readTree(contract);
+        JsonNode paths = document.path("paths");
+        int checked = 0;
+
+        // when
+        for (String path : paths.propertyNames()) {
+            JsonNode pathItem = paths.path(path);
+            for (String method : HTTP_METHODS) {
+                JsonNode operation = pathItem.path(method);
+                if (!operation.isMissingNode()) {
+                    assertRejected(path, method);
+                    checked++;
+                }
+            }
+        }
+
+        // then
+        assertThat(checked).isPositive();
+    }
+
+    private void assertRejected(String path, String method) throws Exception {
+        String upperMethod = method.toUpperCase(Locale.ROOT);
+        String operation = upperMethod + " " + path;
+        if (PUBLIC_OPERATIONS.contains(operation)) {
+            return;
+        }
+        String concretePath = path.replaceAll("\\{[^}]+\\}", "1");
+        HttpMethod httpMethod = HttpMethod.valueOf(upperMethod);
+        MockHttpServletRequestBuilder request = request(httpMethod, concretePath);
+        MvcResult result = mockMvc().perform(request).andReturn();
+        int status = result.getResponse().getStatus();
+        String rawContentType = result.getResponse().getContentType();
+        String contentType = Objects.requireNonNull(rawContentType);
+        String responseBody = result.getResponse().getContentAsString();
+        JsonNode body = MAPPER.readTree(responseBody);
+        String code = body.path("code").asString();
+        assertThat(status).isEqualTo(401);
+        assertThat(contentType).isEqualTo(MediaType.APPLICATION_PROBLEM_JSON_VALUE);
+        assertThat(code).isEqualTo("unauthenticated");
+    }
+
+    private String generatedContract() throws Exception {
+        MvcResult result = docsMockMvc.perform(get(DOCS_PATH)).andReturn();
+        int status = result.getResponse().getStatus();
+        assertThat(status).isEqualTo(200);
+        String body = result.getResponse().getContentAsString();
+        Object document = MAPPER.readValue(body, Object.class);
+        String formatted = MAPPER.writerWithDefaultPrettyPrinter().writeValueAsString(document);
+        return formatted.replace("\r\n", "\n") + "\n";
+    }
+
+    private static Path contractPath() {
+        Path moduleRelative = Path.of("..", "api", "openapi", CONTRACT_FILE);
+        if (Files.exists(moduleRelative)) {
+            return moduleRelative;
+        }
+        return Path.of("api", "openapi", CONTRACT_FILE);
+    }
+}

@@ -1,0 +1,93 @@
+{
+  "components" : {
+    "schemas" : {
+      "MeResponse" : {
+        "properties" : {
+          "admin" : {
+            "description" : "Whether the user is an instance administrator",
+            "type" : "boolean"
+          },
+          "subject" : {
+            "description" : "The OIDC subject of the authenticated user",
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "ProblemDetail" : {
+        "properties" : {
+          "code" : {
+            "type" : "string"
+          },
+          "detail" : {
+            "type" : "string"
+          },
+          "errors" : {
+            "items" : {
+              "properties" : {
+                "code" : {
+                  "type" : "string"
+                },
+                "params" : {
+                  "additionalProperties" : true,
+                  "type" : "object"
+                },
+                "pointer" : {
+                  "type" : "string"
+                }
+              },
+              "type" : "object"
+            },
+            "type" : "array"
+          },
+          "instance" : {
+            "format" : "uri",
+            "type" : "string"
+          },
+          "status" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "title" : {
+            "type" : "string"
+          },
+          "type" : {
+            "format" : "uri",
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      }
+    }
+  },
+  "info" : {
+    "title" : "wakey API",
+    "version" : "v1"
+  },
+  "openapi" : "3.1.0",
+  "paths" : {
+    "/api/v1/me" : {
+      "get" : {
+        "operationId" : "getMe",
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/MeResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "summary" : "Return the authenticated user",
+        "tags" : [ "me-controller" ]
+      }
+    }
+  },
+  "servers" : [ {
+    "description" : "Generated server url",
+    "url" : "http://localhost"
+  } ]
+}
