@@ -1,0 +1,182 @@
+@import '@mantine/core/styles.css';
+@import '@mantine/notifications/styles.css';
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  font-family: var(--app-font-sans);
+  font-size: var(--app-type-body-size);
+  line-height: var(--app-type-body-line);
+  background: var(--mantine-color-body);
+  color: var(--mantine-color-text);
+  -webkit-font-smoothing: antialiased;
+}
+
+button {
+  font: inherit;
+}
+
+/* Navigation links and cards are also <a>: they inherit the colour by default.
+   Links in content: <Anchor> or the .app-link class. */
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+.app-link {
+  color: var(--app-color-accent-text);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+button,
+a,
+[role='button'],
+summary,
+input,
+select,
+textarea {
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Focus: 2 px of accent with offset, ≥ 3:1 on all backgrounds in both schemes. */
+:focus-visible {
+  outline: 2px solid var(--app-color-focus-ring);
+  outline-offset: 2px;
+}
+
+.mantine-focus-auto:focus-visible,
+.mantine-focus-always:focus {
+  outline-color: var(--app-color-focus-ring);
+}
+
+::selection {
+  background: color-mix(in srgb, var(--app-color-accent) 28%, transparent);
+}
+
+/* Numbers: times, percentages and counters do not jump on live updates. */
+.app-num,
+time,
+td,
+.mantine-Badge-root {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Technical data: URLs, DNS records, payloads, snippets. */
+.app-mono,
+code,
+kbd,
+pre {
+  font-family: var(--app-font-mono);
+  font-size: var(--app-type-mono-size);
+  line-height: var(--app-type-mono-line);
+}
+
+.mantine-Button-root:active:not([data-loading], :disabled, [data-disabled]),
+.mantine-ActionIcon-root:active:not([data-loading], :disabled, [data-disabled]) {
+  background-color: var(--app-control-pressed, var(--app-color-interactive-pressed));
+}
+
+@media (hover: hover) and (pointer: fine) {
+  :is(.mantine-Input-input, .mantine-Select-input, .mantine-MultiSelect-input):hover:not(
+      :focus,
+      :focus-within,
+      :disabled,
+      [data-disabled],
+      [aria-invalid='true'],
+      :has(:disabled)
+    ) {
+    border-color: var(--input-bd-hover, var(--app-color-input-border-hover));
+  }
+}
+
+i {
+  font-style: normal;
+}
+
+.tabler-icon {
+  stroke-width: 2;
+}
+
+/* Live state change: a short flash of the row, without reordering (spec 4). */
+@keyframes app-live-flash {
+  from {
+    background-color: var(--app-color-selection-hover);
+  }
+  to {
+    background-color: transparent;
+  }
+}
+
+[data-live-changed] {
+  animation: app-live-flash var(--app-motion-live-flash);
+}
+
+/* Mobile and touch: every control ≥ 44 px (spec 3.3, WCAG 2.5.8 with margin). */
+@media (max-width: 63.99em), (pointer: coarse) {
+  html[data-mantine-color-scheme] {
+    --app-size-control-compact: var(--app-size-control-touch);
+    --app-size-control-desktop: var(--app-size-control-touch);
+    --app-size-control-large: var(--app-size-control-touch);
+    --app-size-menu-item: var(--app-size-menu-item-touch);
+    --app-size-row: var(--app-size-row-touch);
+  }
+
+  /* 16 px in form fields: iOS does not zoom in on focus. */
+  .mantine-Input-input,
+  .mantine-Select-input,
+  .mantine-Textarea-input {
+    font-size: 16px;
+  }
+
+  .mantine-Drawer-close,
+  .mantine-Modal-close {
+    min-height: var(--app-size-control-touch);
+    min-width: var(--app-size-control-touch);
+  }
+
+  /* SegmentedControl sizes its height with its own --sc-* variables, not the
+     --app-size-control-* tokens, so the label is raised instead. */
+  .mantine-SegmentedControl-label {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: var(--app-size-control-touch);
+    min-width: var(--app-size-control-touch);
+  }
+
+  /* Icon-only buttons expose an accessible name through aria-label; buttons
+     with visible text do not, so their width stays content-driven. */
+  .mantine-ActionIcon-root,
+  .mantine-Button-root[aria-label] {
+    min-width: var(--app-size-control-touch);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* Windows high-contrast mode: backgrounds disappear, so a state needs an outline. */
+@media (forced-colors: active) {
+  .mantine-Badge-root,
+  .mantine-Button-root,
+  .mantine-ActionIcon-root {
+    border: 1px solid CanvasText;
+  }
+}
