@@ -16,6 +16,12 @@ public interface SpaceService {
     Space get(SpacePrincipal actor, String slug);
 
     /**
+     * Reads one space together with the caller's role in it. Admins see every space, members see
+     * their own, others get 404.
+     */
+    SpaceView view(SpacePrincipal actor, String slug);
+
+    /**
      * Lists the spaces the caller can see, ordered by slug and resuming after the given slug.
      * Admins see every space; members see only the spaces they belong to.
      */

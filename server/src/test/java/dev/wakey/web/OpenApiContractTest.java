@@ -1,6 +1,7 @@
 package dev.wakey.web;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.request;
 
@@ -138,6 +139,9 @@ class OpenApiContractTest extends SecurityIntegrationTest {
         String concretePath = path.replaceAll("\\{[^}]+\\}", "1");
         HttpMethod httpMethod = HttpMethod.valueOf(upperMethod);
         MockHttpServletRequestBuilder request = request(httpMethod, concretePath);
+        if (!isSafe(httpMethod)) {
+            request = request.with(csrf());
+        }
         MvcResult result = mockMvc().perform(request).andReturn();
         int status = result.getResponse().getStatus();
         String rawContentType = result.getResponse().getContentType();
@@ -148,6 +152,10 @@ class OpenApiContractTest extends SecurityIntegrationTest {
         assertThat(status).isEqualTo(401);
         assertThat(contentType).isEqualTo(MediaType.APPLICATION_PROBLEM_JSON_VALUE);
         assertThat(code).isEqualTo("unauthenticated");
+    }
+
+    private static boolean isSafe(HttpMethod method) {
+        return method == HttpMethod.GET || method == HttpMethod.HEAD || method == HttpMethod.OPTIONS;
     }
 
     private String generatedContract() throws Exception {

@@ -1,6 +1,20 @@
 {
   "components" : {
     "schemas" : {
+      "CursorPageSpaceResponse" : {
+        "properties" : {
+          "items" : {
+            "items" : {
+              "$ref" : "#/components/schemas/SpaceResponse"
+            },
+            "type" : "array"
+          },
+          "nextCursor" : {
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
       "MeResponse" : {
         "properties" : {
           "admin" : {
@@ -57,6 +71,51 @@
           }
         },
         "type" : "object"
+      },
+      "PutSpaceRequest" : {
+        "description" : "The desired state of a space",
+        "properties" : {
+          "name" : {
+            "description" : "The display name, 1-100 characters after trimming",
+            "example" : "Acme",
+            "maxLength" : 100,
+            "minLength" : 0,
+            "type" : "string"
+          }
+        },
+        "required" : [ "name" ],
+        "type" : "object"
+      },
+      "SpaceResponse" : {
+        "description" : "A space as seen by the caller",
+        "properties" : {
+          "admin" : {
+            "description" : "Whether the caller is an application administrator",
+            "type" : "boolean"
+          },
+          "name" : {
+            "description" : "The display name",
+            "example" : "Acme",
+            "type" : "string"
+          },
+          "role" : {
+            "description" : "The caller's membership role, or null for an Admin who is not a member",
+            "enum" : [ "EDITOR", "VIEWER" ],
+            "type" : "string"
+          },
+          "slug" : {
+            "description" : "The stable space slug",
+            "example" : "acme",
+            "type" : "string"
+          },
+          "version" : {
+            "description" : "The version growing whenever the name changes",
+            "example" : 1,
+            "format" : "int64",
+            "type" : "integer"
+          }
+        },
+        "type" : "object"
       }
     }
   },
@@ -83,6 +142,204 @@
         },
         "summary" : "Return the authenticated user",
         "tags" : [ "me-controller" ]
+      }
+    },
+    "/api/v1/spaces" : {
+      "get" : {
+        "operationId" : "listSpaces",
+        "parameters" : [ {
+          "in" : "query",
+          "name" : "limit",
+          "required" : false,
+          "schema" : {
+            "default" : 20,
+            "format" : "int32",
+            "type" : "integer"
+          }
+        }, {
+          "in" : "query",
+          "name" : "cursor",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CursorPageSpaceResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          },
+          "400" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description" : "The request is invalid."
+          },
+          "403" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description" : "The caller is not allowed to perform this action."
+          },
+          "404" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description" : "The requested space was not found."
+          }
+        },
+        "summary" : "List the spaces visible to the caller",
+        "tags" : [ "spaces-controller" ]
+      }
+    },
+    "/api/v1/spaces/{slug}" : {
+      "get" : {
+        "operationId" : "getSpace",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "slug",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/SpaceResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          },
+          "400" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description" : "The request is invalid."
+          },
+          "403" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description" : "The caller is not allowed to perform this action."
+          },
+          "404" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description" : "The requested space was not found."
+          }
+        },
+        "summary" : "Read one space visible to the caller",
+        "tags" : [ "spaces-controller" ]
+      },
+      "put" : {
+        "operationId" : "putSpace",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "slug",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/PutSpaceRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/SpaceResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          },
+          "201" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/SpaceResponse"
+                }
+              }
+            },
+            "description" : "The space was created."
+          },
+          "400" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description" : "The request is invalid."
+          },
+          "403" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description" : "The caller is not allowed to perform this action."
+          },
+          "404" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description" : "The requested space was not found."
+          }
+        },
+        "summary" : "Create or rename a space idempotently",
+        "tags" : [ "spaces-controller" ]
       }
     }
   },

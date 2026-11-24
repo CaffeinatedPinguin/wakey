@@ -36,6 +36,13 @@ final class JdbcSpaceService implements SpaceService {
             WHERE slug = :slug
             """;
 
+    private static final String VIEW_SPACE_SQL = """
+            SELECT s.id, s.slug, s.name, s.version, m.role
+            FROM space s
+            LEFT JOIN space_member m ON m.space_id = s.id AND m.subject = :subject
+            WHERE s.slug = :slug
+            """;
+
     private static final String INSERT_SPACE_SQL = """
             INSERT INTO space (id, slug, name, version, created_at, updated_at)
             VALUES (:id, :slug, :name, 1, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
@@ -110,6 +117,22 @@ final class JdbcSpaceService implements SpaceService {
             throw new SpaceNotFoundException(checkedSlug);
         }
         return space;
+    }
+
+    @Override
+    public SpaceView view(SpacePrincipal actor, String slug) {
+        String checkedSlug = SpaceSlug.parse(slug).value();
+        RowMapper<SpaceView> mapper = viewMapper(actor.admin());
+        Optional<SpaceView> found = jdbc.sql(VIEW_SPACE_SQL)
+                .param("subject", actor.subject())
+                .param("slug", checkedSlug)
+                .query(mapper)
+                .optional();
+        SpaceView view = found.orElseThrow(() -> new SpaceNotFoundException(checkedSlug));
+        if (!actor.admin() && view.role() == null) {
+            throw new SpaceNotFoundException(checkedSlug);
+        }
+        return view;
     }
 
     @Override

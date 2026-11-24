@@ -213,6 +213,37 @@ class SpaceServiceIntegrationTest extends PostgresIntegrationTest {
     }
 
     @Test
+    void viewReturnsOneSpaceWithTheCallersRole() {
+        // given
+        SpaceService service = service();
+        Space space = seedSpace("view-one");
+        Space foreignSpace =
+                service.put(ADMIN, uniqueSlug("view-hidden"), "Hidden view").space();
+        String slug = space.slug();
+        String foreignSlug = foreignSpace.slug();
+
+        // when
+        SpaceView adminView = service.view(ADMIN, slug);
+        SpaceView adminForeignView = service.view(ADMIN, foreignSlug);
+        SpaceView editorView = service.view(EDITOR, slug);
+        SpaceView viewerView = service.view(VIEWER, slug);
+        Throwable editorForeign = catchThrowable(() -> service.view(EDITOR, foreignSlug));
+        Throwable strangerView = catchThrowable(() -> service.view(STRANGER, slug));
+
+        // then
+        assertThat(adminView.id()).isEqualTo(space.id());
+        assertThat(adminView.admin()).isTrue();
+        assertThat(adminView.role()).isNull();
+        assertThat(adminForeignView.slug()).isEqualTo(foreignSlug);
+        assertThat(adminForeignView.admin()).isTrue();
+        assertThat(editorView.admin()).isFalse();
+        assertThat(editorView.role()).isEqualTo(SpaceRole.EDITOR);
+        assertThat(viewerView.role()).isEqualTo(SpaceRole.VIEWER);
+        assertThat(editorForeign).isInstanceOf(SpaceNotFoundException.class);
+        assertThat(strangerView).isInstanceOf(SpaceNotFoundException.class);
+    }
+
+    @Test
     void slugRulesAreEnforced() {
         // given
         SpaceService service = service();

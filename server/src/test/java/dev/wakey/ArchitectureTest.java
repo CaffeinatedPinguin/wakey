@@ -32,6 +32,7 @@ class ArchitectureTest {
 
     /** Every module lists the modules it may depend on; a new module or edge is a deliberate change. */
     private static final Map<String, Set<String>> MODULE_DEPENDENCIES = Map.of(
+            "api", Set.of("spaces", "web", "security"),
             "config", Set.of(),
             "leadership", Set.of(),
             "messaging", Set.of(),
@@ -43,6 +44,7 @@ class ArchitectureTest {
 
     /** Every module belongs to a role; modules of one role may depend only on that role and shared modules. */
     private static final Map<String, String> MODULE_ROLES = Map.of(
+            "api", SHARED_ROLE,
             "config", SHARED_ROLE,
             "leadership", SHARED_ROLE,
             "messaging", SHARED_ROLE,
