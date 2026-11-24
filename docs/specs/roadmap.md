@@ -16,8 +16,8 @@ Ten dokument mówi, **w jakiej kolejności** powstają funkcje z [product-featur
 | Etap | Zakres | Po etapie | Research przed etapem |
 |---|---|---|---|
 | **0. Fundament techniczny** | Szkielet repo (Maven + wrapper, Vite), moduły i reguły ArchUnit, Spotless, Error Prone + NullAway, Checkstyle, ESLint, minimalne CI na PostgreSQL. Liquibase, lease z fencing tokenem, port kolejki z outboxem. Logowanie OIDC, sesje w bazie, rola Admin z claimu grup. Actuator (health dla Dockera) i Micrometer jako jedyna instrumentacja metryk. Testy lease na PostgreSQL. | Szkielet się buduje, loguje użytkownika i przechodzi wszystkie sprawdzenia statyczne. | — (ADR 0002–0008) |
-| **1. Fundament domenowy i checki z serwera** | Przestrzenie (`space_id`, izolacja z 404), role (Admin aplikacji, Edytor i Podgląd w przestrzeni, zakres tokenów nie większy niż rola), dziennik audytu (każda zmiana ze źródłem oraz zdarzenia logowania i bezpieczeństwa: logowanie, wylogowanie, tokeny, odmowy dostępu) i historia zmian, trzy poziomy konfiguracji z wartością efektywną, szyfrowanie sekretów, wspólna polityka ponowień. Checki HTTP, TCP i certyfikat z serwera, z polityką ruchu wychodzącego i przypięciem IP. Wyniki z `location_id` (na start „serwer”), stan `UNKNOWN`, kategoria błędu. Przedziały stanu, kubełki faz, retencja surowych wyników. Panel: najpierw szkielet i motyw (motyw z tokenów [ui-ux.md](ui-ux.md), jasny i ciemny według systemu; `AppShell` z górnym paskiem: PL/EN, przełącznik motywu, profil, wylogowanie; wspólny szkielet widoku: banery, nagłówek, strefa robocza; ekrany logowania w tym szkielecie), potem lista, dodanie, „Testuj”, „Sprawdź teraz”, szczegóły bez wykresów; odświeżanie przez odpytywanie. API `/api/v1` z tokenami. | Widać stan własnych checków w panelu i przez API. | 1.5 frontend, 2 sieć, 3 UI/UX |
-| **2. Alerty, powiadomienia i własna instancja** | Kanały: email, webhook, Pushover. Polityki alertów, flapping, alert zbiorczy, limit powiadomień, martwy kanał, meta-alert. Zaproszenia. Obraz Dockera i compose. **Instancja na VPS w UE**: zrzuty bazy, kopia klucza sekretów poza VPS, test odtworzenia, zewnętrzny watchdog, podstawowy „stan systemu”. Powiadomienie o nowej wersji. | **Pierwszy alert na telefonie.** Właściciel używa wakey na co dzień. | 4 dostawcy w UE, 5 kanały push |
+| **1. Fundament domenowy i checki z serwera** | Przestrzenie (`space_id`, izolacja z 404), role (Admin aplikacji, Edytor i Podgląd w przestrzeni, zakres tokenów nie większy niż rola), dziennik audytu (każda zmiana ze źródłem oraz zdarzenia logowania i bezpieczeństwa: logowanie, wylogowanie, tokeny, odmowy dostępu) i historia zmian, trzy poziomy konfiguracji z wartością efektywną, plany przestrzeni z konfiguracji instancji, wspólna polityka ponowień. Checki HTTP, TCP i certyfikat z serwera, z polityką ruchu wychodzącego i przypięciem IP. Wyniki z `location_id` (na start „serwer”), stan `UNKNOWN`, kategoria błędu. Przedziały stanu, kubełki faz, retencja surowych wyników. Panel: najpierw szkielet i motyw (motyw z tokenów [ui-ux.md](ui-ux.md), jasny i ciemny według systemu; `AppShell` z górnym paskiem: PL/EN, przełącznik motywu, profil, wylogowanie; wspólny szkielet widoku: banery, nagłówek, strefa robocza; ekrany logowania w tym szkielecie), potem lista, dodanie, „Testuj”, „Sprawdź teraz”, szczegóły bez wykresów; odświeżanie przez odpytywanie. API `/api/v1` z tokenami. | Widać stan własnych checków w panelu i przez API. | 1.5 frontend, 2 sieć, 3 UI/UX |
+| **2. Alerty, powiadomienia i własna instancja** | Kanały: email, webhook, Pushover; szyfrowanie sekretów. Polityki alertów, flapping, alert zbiorczy, limit powiadomień, martwy kanał, meta-alert. Zaproszenia. Obraz Dockera i compose. **Instancja na VPS w UE**: zrzuty bazy, kopia klucza sekretów poza VPS, test odtworzenia, zewnętrzny watchdog, podstawowy „stan systemu”. Powiadomienie o nowej wersji. | **Pierwszy alert na telefonie.** Właściciel używa wakey na co dzień. | 4 dostawcy w UE, 5 kanały push |
 | **3. Heartbeaty i crony** | Wejście `/ping/<token>`, okres i cron z grace, strefa czasowa, kontrola wejścia, okres rozruchu, limit pingów (429), bufor pingów. Gotowe snippety. | **M1: połowa produktu** (odpowiednik Uptime Kuma + Healthchecks w self-hoście). | 6 semantyka heartbeatów |
 | **4. Incydenty i planned work** | Incydenty automatyczne i ręczne, szkice, okna serwisowe, masowe wyciszenie, post-mortemy w Markdown. | Zdarzenia mają opis i komunikację. | — |
 | **5. Status page, wykresy i raporty** | Publiczna status page (`/public/v1`, snapshot), SSE w panelu i na stronie. Wykresy faz per lokalizacja i historia (Chart.js), przegląd (dashboard), raporty. Przeglądarka dziennika audytu z filtrami i eksportem. | Status page dla klientów. | 7 format publicznego JSON |
@@ -30,9 +30,36 @@ Ten dokument mówi, **w jakiej kolejności** powstają funkcje z [product-featur
 
 - Funkcja z oznaczeniem MVP w spec, której nie ma w tabeli, trafia do etapu swojej sekcji spec: checki do 1, alerty do 2, incydenty do 4, status page do 5, agent do 6, plik do 7, administracja chmury do 9.
 - Element fundamentu z etapów 0–1 może mieć ekran później. Zapis do audytu działa od etapu 1, a przeglądarka dziennika może przyjść później.
-- Zasady bezpieczeństwa z [0006-api-contract.md](../decisions/0006-api-contract.md) (sekcja „Zasady bezpieczeństwa z incydentów konkurencji”) wchodzą w etapie podanym w ich tabeli: testy endpointów i ciasteczka w 0, sekrety tylko do zapisu, schematy celu i wspólna brama ruchu wychodzącego w 1, szablony powiadomień w 2.
+- Zasady bezpieczeństwa z [0006-api-contract.md](../decisions/0006-api-contract.md) (sekcja „Zasady bezpieczeństwa z incydentów konkurencji”) wchodzą w etapie podanym w ich tabeli: testy endpointów i ciasteczka w 0, schematy celu i wspólna brama ruchu wychodzącego w 1, sekrety tylko do zapisu i szablony powiadomień w 2 (sekrety przesunięte z 1, bo w etapie 1 nic ich nie przechowuje).
 - Etap jest skończony, gdy jego zakres działa na PostgreSQL i przechodzi wszystkie sprawdzenia statyczne.
 - v1 i „później” w spec zaczynają się po etapie 9.
+- Etap dzielimy na fale (sub-issues etapu na GitHubie). Fale są pionowe: każda dowozi API razem z ekranem. Fala bez ekranu to wyjątek dla fundamentu (np. dziennik audytu).
+- Makiety są osobnym zadaniem etapu (fala „M”): makiety wszystkich ekranów etapu w `docs/specs/screens/`, desktop i telefon, wszystkie stany. Fala z ekranem startuje po akceptacji makiet przez właściciela.
+
+## Fale etapów 1 i 2
+
+Ustalone 2026-11-24. Kolejność wynika z zależności.
+
+| Fala | Zakres | Issue |
+|---|---|---|
+| 1a | Szkielet panelu i motyw | #34 |
+| 1M | Makiety ekranów etapu 1 | #42 |
+| 1b | Kontrakt API (OpenAPI, Problem Details, klient frontendu) i przestrzenie | #43 |
+| 1c | Tokeny API, limity i sesje | #44 |
+| 1d | Dziennik audytu i historia zmian (bez ekranu) | #45 |
+| 1e | Konfiguracja, plany i polityka ponowień | #46 |
+| 1f | Chodzący szkielet: check HTTP od harmonogramu do listy w panelu | #47 |
+| 1g | Pełne HTTP, „Testuj” i „Sprawdź teraz” | #48 |
+| 1h | Checki TCP i certyfikat | #49 |
+| 1i | Szczegóły checka i operacje na liście | #50 |
+| 2a | Research: dostawcy w UE i kanały push (backlog 4 i 5) | #51 |
+| 2M | Makiety ekranów etapu 2 | #52 |
+| 2b | Kanały powiadomień i sekrety | #53 |
+| 2c | Polityki alertów | #54 |
+| 2d | Panel alertów | #55 |
+| 2e | Zaproszenia | #56 |
+| 2f | Obraz, compose i wydania | #57 |
+| 2g | Własna instancja na VPS w UE | #58 |
 
 ## Linki
 
