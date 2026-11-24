@@ -2,14 +2,18 @@ import { createRouter } from '@tanstack/react-router'
 import type { RouterHistory } from '@tanstack/react-router'
 import type { QueryClient } from '@tanstack/react-query'
 import { rootRoute } from '../routes/__root'
+import { checksRoute } from '../routes/checks'
 import { homeRoute } from '../routes/home'
+import { incidentsRoute } from '../routes/incidents'
 import { loggedOutRoute } from '../routes/loggedOut'
 import { loginRoute } from '../routes/login'
 import { panelRoute } from '../routes/panel'
 import { publicRoute } from '../routes/public'
+import { settingsRoute } from '../routes/settings'
+import { statusPagesRoute } from '../routes/statusPages'
 
 const routeTree = rootRoute.addChildren([
-  panelRoute.addChildren([homeRoute]),
+  panelRoute.addChildren([homeRoute, checksRoute, incidentsRoute, statusPagesRoute, settingsRoute]),
   publicRoute.addChildren([loginRoute, loggedOutRoute]),
 ])
 

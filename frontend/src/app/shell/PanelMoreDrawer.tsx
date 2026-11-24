@@ -1,13 +1,19 @@
 import { Box, Button, Drawer, Stack, Text } from '@mantine/core'
 import { IconLogout } from '@tabler/icons-react'
-import type { ReactElement } from 'react'
+import { Link } from '@tanstack/react-router'
+import type { CSSProperties, ReactElement } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useLogout } from '../../features/auth'
 import { ColorSchemeToggle } from '../../shared/ui/ColorSchemeToggle'
 import { LanguageSwitch } from '../../shared/ui/LanguageSwitch'
+import { moreNavigation, navigationActiveOptions, navigationActiveStyle } from './panelNavigation'
 
 interface PanelMoreDrawerProps {
   opened: boolean
+  onClose: () => void
+}
+
+interface MoreSheetLinksProps {
   onClose: () => void
 }
 
@@ -21,6 +27,62 @@ const sheetStyles = {
     maxHeight: '80dvh',
     borderRadius: 'var(--app-radius-overlay) var(--app-radius-overlay) 0 0',
   },
+}
+
+const sheetLinkStyle: CSSProperties = {
+  display: 'flex',
+  alignItems: 'center',
+  gap: 'var(--app-space-sidebar-item-gap)',
+  minHeight: 'var(--app-size-control-touch)',
+  paddingInline: 'var(--app-space-sidebar-inline)',
+  borderRadius: 'var(--app-radius-control)',
+  color: 'var(--app-color-text-body)',
+  textDecoration: 'none',
+}
+
+export function MoreSheetLinks({ onClose }: MoreSheetLinksProps): ReactElement {
+  const { t } = useTranslation()
+
+  return (
+    <Stack gap={0}>
+      {moreNavigation.map(({ to, labelKey, Icon }) => (
+        <Link
+          key={to}
+          to={to}
+          style={sheetLinkStyle}
+          activeProps={{ style: navigationActiveStyle }}
+          activeOptions={navigationActiveOptions(to)}
+          onClick={onClose}
+        >
+          <Icon size={18} />
+          <Text size="sm" fw={500}>
+            {t(labelKey)}
+          </Text>
+        </Link>
+      ))}
+    </Stack>
+  )
+}
+
+function MoreSheetPreferences(): ReactElement {
+  const { t } = useTranslation()
+
+  return (
+    <>
+      <Box>
+        <Text size="sm" fw={500} mb={4}>
+          {t('common.language')}
+        </Text>
+        <LanguageSwitch />
+      </Box>
+      <Box>
+        <Text size="sm" fw={500} mb={4}>
+          {t('common.theme')}
+        </Text>
+        <ColorSchemeToggle />
+      </Box>
+    </>
+  )
 }
 
 export function PanelMoreDrawer({ opened, onClose }: PanelMoreDrawerProps): ReactElement {
@@ -37,18 +99,8 @@ export function PanelMoreDrawer({ opened, onClose }: PanelMoreDrawerProps): Reac
       styles={sheetStyles}
     >
       <Stack gap="md">
-        <Box>
-          <Text size="sm" fw={500} mb={4}>
-            {t('common.language')}
-          </Text>
-          <LanguageSwitch />
-        </Box>
-        <Box>
-          <Text size="sm" fw={500} mb={4}>
-            {t('common.theme')}
-          </Text>
-          <ColorSchemeToggle />
-        </Box>
+        <MoreSheetLinks onClose={onClose} />
+        <MoreSheetPreferences />
         <Button
           variant="light"
           leftSection={<IconLogout size={16} />}
