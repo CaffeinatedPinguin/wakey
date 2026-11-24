@@ -5,7 +5,7 @@ Oznaczenia: **MVP**, **v1**, **później**.
 
 **Zmiany względem v0.9 (2026-11-21):**
 - **Logowanie w MVP tylko przez dostawców zewnętrznych:** self-host dowolne OIDC; chmura GitHub, Google i własne OIDC przestrzeni. Lokalny admin, 2FA i link w emailu przechodzą na później. Self-host wymaga więc dostawcy OIDC: to jedyny wyjątek od zasady „bez usług zewnętrznych do startu”. Szczegóły w `docs/decisions/0006-api-contract.md`.
-- **Trzy role:** Admin (cała aplikacja, z grupy dostawcy OIDC), Edytor (wszystko w swojej przestrzeni, czyli u klienta) i Podgląd (odczyt w przestrzeni). Bez osobnego Admina przestrzeni. Role w przestrzeniach tylko z zaproszeń.
+- **Trzy role:** Admin (cała aplikacja, z grupy dostawcy OIDC), Edytor (wszystko w swojej przestrzeni, czyli u klienta) i Podgląd (odczyt w przestrzeni). Bez osobnego Admina przestrzeni. Role w przestrzeniach z zaproszeń albo przez API (ADR 0006).
 
 **Zmiany względem v0.8:**
 - **Agent:** Go, Linux + Docker w MVP, bez automatycznych aktualizacji; podpisane wydania i powiadomienie o nowej wersji zostają.
@@ -342,7 +342,7 @@ Część tego samego frontendu co panel. Dane ze snapshotu w pamięci API, z kop
 |---|---|
 | Pełne API z dokumentacją generowaną z kodu, stronicowaniem i filtrowaniem | MVP |
 | Odpowiedzi 429 z czasem ponowienia, opisane w dokumentacji | MVP |
-| Plik deklaratywny: checki, kanały, polityki, komponenty, status pages | MVP |
+| Plik deklaratywny: checki, kanały, polityki, komponenty, status pages, przestrzenie i ich plan; bez użytkowników i członkostwa (ADR 0006) | MVP |
 | **Wersja schematu w każdym pliku.** Plik ze starszej wersji jest migrowany automatycznie, z podglądem zmian. Plik z nowszej, nieznanej wersji jest odrzucany z jasnym komunikatem | MVP |
 | **Edycja w UI wszystkiego**, także obiektów, które przyszły z pliku | MVP |
 | **Eksport bieżącej konfiguracji do pliku** (całość albo wybrane obiekty), np. żeby zatwierdzić zmiany z UI w repozytorium | MVP |

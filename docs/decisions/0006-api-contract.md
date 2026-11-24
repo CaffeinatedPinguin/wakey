@@ -130,7 +130,7 @@ Decyzja z 2026-11-22. Trzy role w dwóch poziomach:
   - bez JMESPath i bez nowej biblioteki; w kodzie jeden `GrantedAuthoritiesMapper` albo własny `OidcUserService`;
   - rola liczy się przy każdym logowaniu, a IdP jest źródłem prawdy. Adminów może być kilku, co chroni przed utratą dostępu;
   - wymaga IdP, który wysyła grupy (Authelia, Keycloak, Authentik, Pocket ID, Entra). GitHub i Google ich nie wysyłają, więc w chmurze Admin loguje się przez własnego dostawcę OIDC.
-- **Role w przestrzeniach tylko z zaproszeń.** Mapowanie grup SSO na role w przestrzeniach to v1.
+- **Role w przestrzeniach z zaproszeń albo przez API** (członek dodany po emailu działa jak zaproszenie przyjęte z góry). Mapowanie grup SSO na role w przestrzeniach to v1.
 - Użytkownik, który nie jest Adminem i nie ma zaproszenia, nie ma dostępu do żadnej przestrzeni (domyślnie odmowa, jak `role_attribute_strict` w Grafanie).
 - **Zakres tokenu API nie przekracza roli właściciela** (wzorem Healthchecks). Podgląd tworzy tylko tokeny do odczytu, a obniżenie roli ogranicza też tokeny tego użytkownika.
 - Odrzucone:
@@ -138,6 +138,13 @@ Decyzja z 2026-11-22. Trzy role w dwóch poziomach:
   - lista emaili Adminów w konfiguracji (drugi mechanizm obok IdP);
   - „pierwszy zalogowany zostaje adminem” jak w Uptime Kuma (wyścig o przejęcie wystawionej instancji);
   - plan per konto z wieloma przestrzeniami jak w Healthchecks (do ewentualnego rozważenia przy chmurze w etapie 9).
+
+### Plany, stałe klucze i GitOps (2026-11-24)
+
+- **Plan to pakiet limitów przypisany do przestrzeni**, nie do użytkownika ani roli. Rola mówi, co ktoś może zrobić, a plan, ile tego może być. Plany definiuje konfiguracja instancji (`wakey.plans.<nazwa>.*`), jeden jest domyślny dla nowych przestrzeni; Admin przypisuje plan przez API. Ekran planów i zużycie limitów przychodzą w etapie 9.
+- **API-first:** każdą zmianę da się zrobić przez API. Obiekty, do których odwołuje się skrypt albo plik, mają stały, czytelny klucz (slug przestrzeni, nazwa planu), a `PUT` po tym kluczu jest idempotentny.
+- **Plik z etapu 7 to cienka warstwa:** `apply` liczy różnicę i woła te same serwisy co API, więc walidacja, limity planu i audyt są w jednym miejscu. Plik obejmuje przestrzenie i ich plan.
+- **Użytkowników i członkostwa nie ma w pliku:** żadnych kont, loginów ani haseł w Gicie, bo to zbyt ruchoma część. Z dostępu plik może zawierać tylko mapowanie grup OIDC na role w przestrzeni, gdy ta funkcja powstanie (v1).
 
 ### Powierzchnie HTTP
 | Prefiks | Klient | Uwierzytelnianie |
@@ -188,7 +195,7 @@ Decyzja z 2026-11-22. Każda zasada odpowiada na znany incydent w podobnym narz�
 | **Test wszystkich endpointów:** test wylicza endpointy z kontraktów OpenAPI i sprawdza, że bez uwierzytelnienia każdy zwraca 401. Wyjątek to jawna lista publicznych (`/ping`, `/public/v1`). Nowy endpoint bez reguły dostępu wywala build. | 0 | Uptime Kuma: endpoint z danymi o pingach bez sprawdzenia uprawnień ujawniał prywatne monitory ([CVE-2026-32230](https://advisories.gitlab.com/npm/uptime-kuma/CVE-2026-32230/)) |
 | **Test flag ciasteczka sesji:** `HttpOnly`, `Secure` i `SameSite=Lax` są sprawdzane testem, nie tylko konfiguracją. | 0 | Gatus: ciasteczko sesji OIDC bez `Secure` ([GHSA-wwqf-6p54-3cfq](https://cve.circl.lu/vuln/ghsa-wwqf-6p54-3cfq)) |
 | **Sesja nie przeżywa zmiany uprawnień:** <br>– maksymalny czas życia sesji, konfigurowalny, domyślnie 12 h, po którym następuje ponowne logowanie i ponowne sprawdzenie grupy w IdP; <br>– zmiana roli albo usunięcie z przestrzeni unieważnia sesje tego użytkownika (Spring Session JDBC, wyszukiwanie po użytkowniku). | 0–1 | Uptime Kuma: zmiana hasła nie unieważniała sesji ([CVE-2023-49804](https://advisories.gitlab.com/npm/uptime-kuma/CVE-2023-49804/)). U nas usunięcie z grupy w IdP zadziała dopiero przy kolejnym logowaniu. |
-| **Sekrety w API tylko do zapisu:** odpowiedź pokazuje „ustawione” albo maskę, nigdy wartość (hasła i tokeny kanałów, klucze). Ustawienia instancji widzi tylko Admin. | 1 | Checkmate: zwykły użytkownik czytał sekrety aplikacji przez `/api/v1/settings` ([CVE-2025-48024](https://nvd.nist.gov/vuln/detail/CVE-2025-48024)) |
+| **Sekrety w API tylko do zapisu:** odpowiedź pokazuje „ustawione” albo maskę, nigdy wartość (hasła i tokeny kanałów, klucze). Ustawienia instancji widzi tylko Admin. | 2 | Checkmate: zwykły użytkownik czytał sekrety aplikacji przez `/api/v1/settings` ([CVE-2025-48024](https://nvd.nist.gov/vuln/detail/CVE-2025-48024)) |
 | **Zamknięty zestaw schematów celu:** <br>– checki przyjmują tylko `http`/`https` oraz jawne cele TCP i DNS; <br>– inne schematy (np. `file:`) są odrzucane przy zapisie z błędem walidacji. | 1 | Uptime Kuma: `file://` w monitorze „real browser” czytał lokalne pliki ([CVE-2024-56331](https://advisories.gitlab.com/npm/uptime-kuma/CVE-2024-56331/)) |
 | **Jedna brama ruchu wychodzącego:** checki, webhooki, Pushover, email przez API i wywołania weryfikacji celów przechodzą przez tę samą politykę i przypięcie IP ([0003](0003-network-checks.md)). Webhook nie jest obejściem ochrony przed SSRF. | 1–2 | SSRF przez webhooki, np. [Grafana OnCall CVE-2024-5526](https://grafana.com/security/security-advisories/cve-2024-5526/) |
 | **Szablony powiadomień bez logiki:** <br>– tylko podstawianie nazwanych pól (`{{check.name}}`) z escapowaniem zależnym od formatu (JSON, tekst); <br>– bez pętli, filtrów, include'ów i silnika szablonów z dostępem do plików lub kodu; <br>– trywialny, własny kod z testami złośliwych wejść. | 2 | Uptime Kuma: wstrzyknięcie kodu w szablonach powiadomień, które pozwalało czytać pliki ([GHSA-vffh-c9pq-4crh](https://advisories.gitlab.com/npm/uptime-kuma/GHSA-vffh-c9pq-4crh/)), z niepełną pierwszą poprawką ([CVE-2026-33130](https://www.tenable.com/cve/CVE-2026-33130)) |
