@@ -13,6 +13,14 @@ export const commonResources = {
       nav: {
         label: 'Nawigacja główna',
         overview: 'Przegląd',
+        checks: 'Checki',
+        incidents: 'Incydenty',
+        statusPages: 'Status pages',
+        settings: 'Ustawienia',
+      },
+      section: {
+        comingSoon: 'Ta sekcja pojawi się w kolejnych etapach.',
+        backToOverview: 'Wróć do Przeglądu',
       },
       state: {
         up: 'Działa',
@@ -37,6 +45,14 @@ export const commonResources = {
       nav: {
         label: 'Main navigation',
         overview: 'Overview',
+        checks: 'Checks',
+        incidents: 'Incidents',
+        statusPages: 'Status pages',
+        settings: 'Settings',
+      },
+      section: {
+        comingSoon: 'This section will arrive in a later stage.',
+        backToOverview: 'Back to the overview',
       },
       state: {
         up: 'Operational',

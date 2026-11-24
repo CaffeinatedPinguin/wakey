@@ -3,7 +3,7 @@ import { IconDots } from '@tabler/icons-react'
 import { Link } from '@tanstack/react-router'
 import type { CSSProperties, ReactElement } from 'react'
 import { useTranslation } from 'react-i18next'
-import { navigationActiveOptions, navigationActiveStyle, panelNavigation } from './panelNavigation'
+import { barNavigation, navigationActiveOptions, navigationActiveStyle } from './panelNavigation'
 
 interface PanelBottomBarProps {
   onMore: () => void
@@ -31,7 +31,7 @@ export function PanelBottomBar({ onMore }: PanelBottomBarProps): ReactElement {
       align="stretch"
       justify="space-around"
     >
-      {panelNavigation.map(({ to, labelKey, Icon }) => (
+      {barNavigation.map(({ to, labelKey, Icon }) => (
         <Link
           key={to}
           to={to}
