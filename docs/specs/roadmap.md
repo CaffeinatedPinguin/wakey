@@ -34,7 +34,7 @@ Ten dokument mówi, **w jakiej kolejności** powstają funkcje z [product-featur
 - Etap jest skończony, gdy jego zakres działa na PostgreSQL i przechodzi wszystkie sprawdzenia statyczne.
 - v1 i „później” w spec zaczynają się po etapie 9.
 - Etap dzielimy na fale (sub-issues etapu na GitHubie). Fale są pionowe: każda dowozi API razem z ekranem. Fala bez ekranu to wyjątek dla fundamentu (np. dziennik audytu).
-- Makiety są osobnym zadaniem etapu (fala „M”): makiety wszystkich ekranów etapu w `docs/specs/screens/`, desktop i telefon, wszystkie stany. Fala z ekranem startuje po akceptacji makiet przez właściciela.
+- Makiety są osobną falą etapu, zaraz po fundamencie albo researchu, który je warunkuje (1b, 2b): makiety wszystkich ekranów etapu w `docs/specs/screens/`, desktop i telefon, wszystkie stany. Fala z ekranem startuje po akceptacji makiet przez właściciela.
 
 ## Fale etapów 1 i 2
 
@@ -43,23 +43,23 @@ Ustalone 2026-11-24. Kolejność wynika z zależności.
 | Fala | Zakres | Issue |
 |---|---|---|
 | 1a | Szkielet panelu i motyw | #34 |
-| 1M | Makiety ekranów etapu 1 | #42 |
-| 1b | Kontrakt API (OpenAPI, Problem Details, klient frontendu) i przestrzenie | #43 |
-| 1c | Tokeny API, limity i sesje | #44 |
-| 1d | Dziennik audytu i historia zmian (bez ekranu) | #45 |
-| 1e | Konfiguracja, plany i polityka ponowień | #46 |
-| 1f | Chodzący szkielet: check HTTP od harmonogramu do listy w panelu | #47 |
-| 1g | Pełne HTTP, „Testuj” i „Sprawdź teraz” | #48 |
-| 1h | Checki TCP i certyfikat | #49 |
-| 1i | Szczegóły checka i operacje na liście | #50 |
+| 1b | Makiety ekranów etapu 1 | #42 |
+| 1c | Kontrakt API (OpenAPI, Problem Details, klient frontendu) i przestrzenie | #43 |
+| 1d | Tokeny API, limity i sesje | #44 |
+| 1e | Dziennik audytu i historia zmian (bez ekranu) | #45 |
+| 1f | Konfiguracja, plany i polityka ponowień | #46 |
+| 1g | Chodzący szkielet: check HTTP od harmonogramu do listy w panelu | #47 |
+| 1h | Pełne HTTP, „Testuj” i „Sprawdź teraz” | #48 |
+| 1i | Checki TCP i certyfikat | #49 |
+| 1j | Szczegóły checka i operacje na liście | #50 |
 | 2a | Research: dostawcy w UE i kanały push (backlog 4 i 5) | #51 |
-| 2M | Makiety ekranów etapu 2 | #52 |
-| 2b | Kanały powiadomień i sekrety | #53 |
-| 2c | Polityki alertów | #54 |
-| 2d | Panel alertów | #55 |
-| 2e | Zaproszenia | #56 |
-| 2f | Obraz, compose i wydania | #57 |
-| 2g | Własna instancja na VPS w UE | #58 |
+| 2b | Makiety ekranów etapu 2 | #52 |
+| 2c | Kanały powiadomień i sekrety | #53 |
+| 2d | Polityki alertów | #54 |
+| 2e | Panel alertów | #55 |
+| 2f | Zaproszenia | #56 |
+| 2g | Obraz, compose i wydania | #57 |
+| 2h | Własna instancja na VPS w UE | #58 |
 
 ## Linki
 
