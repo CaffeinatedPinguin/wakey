@@ -93,7 +93,7 @@ Legenda: ✅ spełnione, ⚠️ świadome odstępstwo (uzasadnione), ⏳ do zrob
 | UNKNOWN łupkowy, nie czerwony | ui-ux 1.2, 2.3 | ✅ | `neutral` = łupek |
 | Marka nie nadpisuje stanów, kontrola kontrastu marki | ui-ux 4.9 | ✅ | `createBrandTokens`: korekty + ostrzeżenie o bliskim odcieniu |
 | Administracja: odmienny akcent | ui-ux 3.2 | ✅ | `admin-accent` (5,26:1 w jasnym, 6,63:1 w ciemnym, test kontrastu) |
-| Cel dotyku 44–48 px na telefonie, akcje kryzysowe 48 px | ui-ux 3.3, 5.4, 8.5 | ✅ | `base.css` przy `pointer: coarse` / `< 64em`; `control-critical` 48; obejmuje też `SegmentedControl` (etykieta) i przyciski z samą ikoną (`ActionIcon`, `Button[aria-label]`) |
+| Cel dotyku 44–48 px na mobile, akcje kryzysowe 48 px | ui-ux 3.3, 5.4, 8.5 | ✅ | `base.css` przy `pointer: coarse` / `< 64em`; `control-critical` 48; obejmuje też `SegmentedControl` (etykieta) i przyciski z samą ikoną (`ActionIcon`, `Button[aria-label]`) |
 | Typografia 24–28 / 18–20 / 15–16 / 14 / 12–13, mono dla danych | ui-ux 8.3 | ⏳ | tokeny `--app-type-*` gotowe, brak jeszcze reguły pilnującej w komponentach |
 | `tabular-nums` dla czasów i liczników | ui-ux 8.3 | ✅ | Badge, Table, NumberInput, `td`, `time`, `.app-num` (reguła w `base.css`) |
 | Elastyczne szerokości dla PL | ui-ux 8.3 | ⏳ | kontrolki nie mają sztywnych szerokości, brak jeszcze testu |

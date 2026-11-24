@@ -11,6 +11,7 @@ export const commonResources = {
       profile: 'Profil',
       more: 'Więcej',
       nav: {
+        label: 'Nawigacja główna',
         overview: 'Przegląd',
       },
       state: {
@@ -34,6 +35,7 @@ export const commonResources = {
       profile: 'Profile',
       more: 'More',
       nav: {
+        label: 'Main navigation',
         overview: 'Overview',
       },
       state: {

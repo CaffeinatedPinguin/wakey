@@ -8,16 +8,16 @@ import { ProfileMenu } from './ProfileMenu'
 
 interface PanelHeaderProps {
   me: Me
-  isPhone: boolean
+  isMobile: boolean
 }
 
-export function PanelHeader({ me, isPhone }: PanelHeaderProps): ReactElement {
+export function PanelHeader({ me, isMobile }: PanelHeaderProps): ReactElement {
   return (
     <Group h="100%" px="md" justify="space-between" wrap="nowrap">
       <Brand />
       <Group gap="sm" wrap="nowrap">
-        {isPhone ? null : <LanguageSwitch />}
-        {isPhone ? null : <ColorSchemeToggle />}
+        {isMobile ? null : <LanguageSwitch />}
+        {isMobile ? null : <ColorSchemeToggle />}
         <ProfileMenu me={me} />
       </Group>
     </Group>

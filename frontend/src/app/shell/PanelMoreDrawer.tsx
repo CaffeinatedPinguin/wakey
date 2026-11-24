@@ -2,9 +2,9 @@ import { Box, Button, Drawer, Stack, Text } from '@mantine/core'
 import { IconLogout } from '@tabler/icons-react'
 import type { ReactElement } from 'react'
 import { useTranslation } from 'react-i18next'
+import { useLogout } from '../../features/auth'
 import { ColorSchemeToggle } from '../../shared/ui/ColorSchemeToggle'
 import { LanguageSwitch } from '../../shared/ui/LanguageSwitch'
-import { usePanelLogout } from './usePanelLogout'
 
 interface PanelMoreDrawerProps {
   opened: boolean
@@ -25,7 +25,7 @@ const sheetStyles = {
 
 export function PanelMoreDrawer({ opened, onClose }: PanelMoreDrawerProps): ReactElement {
   const { t } = useTranslation()
-  const { requestLogout, isPending } = usePanelLogout()
+  const logout = useLogout()
 
   return (
     <Drawer
@@ -52,8 +52,10 @@ export function PanelMoreDrawer({ opened, onClose }: PanelMoreDrawerProps): Reac
         <Button
           variant="light"
           leftSection={<IconLogout size={16} />}
-          loading={isPending}
-          onClick={requestLogout}
+          loading={logout.isPending}
+          onClick={() => {
+            logout.mutate()
+          }}
         >
           {t('auth.home.logout')}
         </Button>

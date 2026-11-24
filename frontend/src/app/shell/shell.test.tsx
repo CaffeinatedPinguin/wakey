@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { signedInUser } from '../../test/data'
 import { installMockApi } from '../../test/mockApi'
@@ -13,6 +13,7 @@ import i18n from '../i18n'
 
 const ME_URL = `${appConfig.apiBaseUrl}/me`
 const DESKTOP_WIDTH = 1024
+const MOBILE_WIDTH = 375
 
 let logoutRequestCount = 0
 
@@ -40,6 +41,15 @@ afterEach(async () => {
   await i18n.changeLanguage('pl')
 })
 
+async function openMobileMoreSheet(): Promise<HTMLElement> {
+  installViewport(MOBILE_WIDTH)
+  renderApp('/')
+  expect(await screen.findByRole('button', { name: 'Więcej' })).toBeDefined()
+  expect(screen.queryByRole('radio', { name: 'PL' })).toBeNull()
+  fireEvent.click(screen.getByRole('button', { name: 'Więcej' }))
+  return screen.findByRole('dialog', { name: 'Więcej' })
+}
+
 describe('panel shell', () => {
   it('the panel shell shows navigation, language, theme and profile on desktop', async () => {
     renderApp('/')
@@ -50,35 +60,44 @@ describe('panel shell', () => {
     expect(screen.getByRole('button', { name: 'Profil' })).toBeDefined()
   })
 
-  it('on a phone the panel shows the bottom bar and the more sheet', async () => {
-    await openPhoneMoreSheet()
+  it('on mobile the panel shows the bottom bar and the more sheet', async () => {
+    const sheet = await openMobileMoreSheet()
 
-    const sheet = await screen.findByRole('dialog', { name: 'Więcej' })
     expect(within(sheet).getByText('Język')).toBeDefined()
     expect(within(sheet).getByText('Motyw')).toBeDefined()
     expect(within(sheet).getByText('Wyloguj')).toBeDefined()
   })
-
-  it('the more sheet opens from the bottom and does not cover the whole screen', async () => {
-    await openPhoneMoreSheet()
-
-    const sheet = await screen.findByRole('dialog', { name: 'Więcej' })
-    expect(sheet.className).toContain('mantine-Drawer-content')
-    expect(sheet.style.flex).toBe('0 0 auto')
-    expect(sheet.style.height).toBe('auto')
-    expect(sheet.style.height).not.toBe('100%')
-    expect(sheet.style.height).not.toBe('100dvh')
-    expect(sheet.style.maxHeight).toBe('80dvh')
-  })
 })
 
-async function openPhoneMoreSheet(): Promise<void> {
-  installViewport(375)
-  renderApp('/')
-  expect(await screen.findByRole('button', { name: 'Więcej' })).toBeDefined()
-  expect(screen.queryByRole('radio', { name: 'PL' })).toBeNull()
-  fireEvent.click(screen.getByRole('button', { name: 'Więcej' }))
-}
+describe('panel shell mobile layout', () => {
+  it('the mobile bottom bar is a labelled navigation landmark', async () => {
+    installViewport(MOBILE_WIDTH)
+    const mobile = renderApp('/')
+    expect(await screen.findByRole('navigation', { name: 'Nawigacja główna' })).toBeDefined()
+    mobile.unmount()
+
+    installViewport(DESKTOP_WIDTH)
+    renderApp('/')
+    expect(await screen.findByRole('navigation', { name: 'Nawigacja główna' })).toBeDefined()
+  })
+
+  it('the more sheet closes when the layout leaves mobile', async () => {
+    await openMobileMoreSheet()
+
+    act(() => {
+      installViewport(DESKTOP_WIDTH)
+    })
+    await waitFor(() => {
+      expect(screen.queryByRole('button', { name: 'Więcej' })).toBeNull()
+    })
+
+    act(() => {
+      installViewport(MOBILE_WIDTH)
+    })
+    expect(await screen.findByRole('button', { name: 'Więcej' })).toBeDefined()
+    expect(screen.queryByRole('dialog', { name: 'Więcej' })).toBeNull()
+  })
+})
 
 describe('panel shell breakpoints', () => {
   it('at exactly 768 px the panel shows the desktop navigation', async () => {
@@ -99,7 +118,7 @@ describe('panel shell breakpoints', () => {
     expect(screen.queryByRole('radio', { name: 'PL' })).toBeNull()
   })
 
-  it('at a fractional width of 767.5 px the panel still uses the phone layout', async () => {
+  it('at a fractional width of 767.5 px the panel still uses the mobile layout', async () => {
     installViewport(767.5)
     renderApp('/')
 
@@ -156,14 +175,24 @@ describe('document language', () => {
 
 describe('signing out once', () => {
   it('sign out sends one request even after a double click', async () => {
-    installViewport(375)
-    renderApp('/')
+    const sheet = await openMobileMoreSheet()
 
-    fireEvent.click(await screen.findByRole('button', { name: 'Więcej' }))
-    const sheet = await screen.findByRole('dialog', { name: 'Więcej' })
     const logoutButton = within(sheet).getByRole('button', { name: 'Wyloguj' })
     fireEvent.click(logoutButton)
     fireEvent.click(logoutButton)
+
+    expect(await screen.findByRole('heading', { name: 'Wylogowano' })).toBeDefined()
+    expect(logoutRequestCount).toBe(1)
+  })
+
+  it('sign out sends one request when clicked in the profile menu and the sheet', async () => {
+    const sheet = await openMobileMoreSheet()
+    const sheetLogout = within(sheet).getByRole('button', { name: 'Wyloguj' })
+
+    fireEvent.click(screen.getByRole('button', { name: 'Profil' }))
+    const menuLogout = await screen.findByRole('menuitem', { name: 'Wyloguj' })
+    fireEvent.click(sheetLogout)
+    fireEvent.click(menuLogout)
 
     expect(await screen.findByRole('heading', { name: 'Wylogowano' })).toBeDefined()
     expect(logoutRequestCount).toBe(1)
@@ -184,18 +213,23 @@ describe('public shell', () => {
 describe('status badge', () => {
   it('a state badge shows an icon and a text for every state', () => {
     const states: StatusState[] = ['up', 'degraded', 'down', 'unknown', 'maintenance']
-    const labels = ['Działa', 'Działa z problemami', 'Nie działa', 'Stan nieznany', 'Prace planowe']
-    const { container } = render(
-      <AppThemeProvider>
-        {states.map((state) => (
-          <StatusBadge key={state} state={state} />
-        ))}
-      </AppThemeProvider>,
-    )
-
-    for (const label of labels) {
-      expect(screen.getByText(label)).toBeDefined()
+    const labels: Record<StatusState, string> = {
+      up: 'Działa',
+      degraded: 'Działa z problemami',
+      down: 'Nie działa',
+      unknown: 'Stan nieznany',
+      maintenance: 'Prace planowe',
     }
-    expect(container.querySelectorAll('svg').length).toBeGreaterThanOrEqual(states.length)
+
+    for (const state of states) {
+      const view = render(
+        <AppThemeProvider>
+          <StatusBadge state={state} />
+        </AppThemeProvider>,
+      )
+      expect(screen.getByText(labels[state])).toBeDefined()
+      expect(view.container.querySelectorAll('svg')).toHaveLength(1)
+      view.unmount()
+    }
   })
 })

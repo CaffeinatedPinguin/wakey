@@ -3,8 +3,8 @@ import {
   IconAlertTriangle,
   IconCircleCheck,
   IconHelpCircle,
-  IconKey,
   IconOctagon,
+  IconTool,
 } from '@tabler/icons-react'
 import type { ComponentType, ReactElement } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -20,7 +20,7 @@ const stateIcons: Record<StatusState, ComponentType<StatusIconProps>> = {
   degraded: IconAlertTriangle,
   down: IconOctagon,
   unknown: IconHelpCircle,
-  maintenance: IconKey,
+  maintenance: IconTool,
 }
 
 interface StatusBadgeProps {
