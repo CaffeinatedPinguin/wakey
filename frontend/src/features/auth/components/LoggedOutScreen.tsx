@@ -8,7 +8,7 @@ export function LoggedOutScreen(): ReactElement {
   const { t } = useTranslation()
 
   return (
-    <CenteredPage width={360}>
+    <CenteredPage>
       <Title order={1}>{t('auth.loggedOut.heading')}</Title>
       <Text>{t('auth.loggedOut.message')}</Text>
       <LoginButton label={t('auth.loggedOut.submit')} />

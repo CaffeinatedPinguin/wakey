@@ -6,9 +6,10 @@ declare const process: { cwd(): string }
 
 const backend = 'http://localhost:8080'
 
-// Spring's OAuth2 callback is served under /login, a prefix that is not part
-// of the configured authorization URL, so the dev proxy keeps that one prefix.
-const LOGIN_CALLBACK_PREFIX = '/login'
+// Spring's OIDC callback is served under /login/oauth2/code/{registrationId},
+// a prefix outside the configured authorization URL. The proxy keeps only that
+// prefix so the SPA route /login stays served by the dev server.
+const LOGIN_CALLBACK_PREFIX = '/login/oauth2'
 
 function proxyPrefix(url: string): string {
   const segment = url.split('/').find((part) => part !== '') ?? ''

@@ -1,9 +1,9 @@
 import { createRoute } from '@tanstack/react-router'
 import { LoggedOutScreen } from '../features/auth'
-import { rootRoute } from './__root'
+import { publicRoute } from './public'
 
 export const loggedOutRoute = createRoute({
-  getParentRoute: () => rootRoute,
+  getParentRoute: () => publicRoute,
   path: '/logged-out',
   component: LoggedOutScreen,
 })

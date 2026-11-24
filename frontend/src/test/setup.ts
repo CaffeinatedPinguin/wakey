@@ -1,3 +1,17 @@
+class ResizeObserverStub {
+  observe(): void {
+    return undefined
+  }
+
+  unobserve(): void {
+    return undefined
+  }
+
+  disconnect(): void {
+    return undefined
+  }
+}
+
 window.matchMedia = (query: string): MediaQueryList => {
   const mediaQueryList = {
     matches: false,
@@ -9,3 +23,5 @@ window.matchMedia = (query: string): MediaQueryList => {
   }
   return mediaQueryList as unknown as MediaQueryList
 }
+
+globalThis.ResizeObserver = ResizeObserverStub

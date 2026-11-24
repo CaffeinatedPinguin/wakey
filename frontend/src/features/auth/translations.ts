@@ -7,7 +7,7 @@ export const authResources = {
         failed: 'Logowanie nie powiodło się. Spróbuj ponownie.',
       },
       home: {
-        title: 'Jesteś zalogowany',
+        signedInAs: 'Zalogowany jako',
         admin: 'Admin',
         logout: 'Wyloguj',
       },
@@ -26,7 +26,7 @@ export const authResources = {
         failed: 'Sign-in failed. Please try again.',
       },
       home: {
-        title: 'You are signed in',
+        signedInAs: 'Signed in as',
         admin: 'Admin',
         logout: 'Sign out',
       },

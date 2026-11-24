@@ -1,6 +1,6 @@
 import { createRoute } from '@tanstack/react-router'
 import { LoginView } from '../features/auth'
-import { rootRoute } from './__root'
+import { publicRoute } from './public'
 
 interface LoginSearch {
   login?: 'failed'
@@ -11,7 +11,7 @@ function validateLoginSearch(search: Record<string, unknown>): LoginSearch {
 }
 
 export const loginRoute = createRoute({
-  getParentRoute: () => rootRoute,
+  getParentRoute: () => publicRoute,
   path: '/login',
   validateSearch: validateLoginSearch,
   component: LoginView,

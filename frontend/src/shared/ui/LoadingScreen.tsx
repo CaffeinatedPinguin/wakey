@@ -7,7 +7,7 @@ export function LoadingScreen(): ReactElement {
   const { t } = useTranslation()
 
   return (
-    <CenteredPage width={240}>
+    <CenteredPage fullScreen>
       <Loader aria-label={t('common.loading')} />
     </CenteredPage>
   )
