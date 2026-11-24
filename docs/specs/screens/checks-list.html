@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Makieta: lista checków (etap 1b, szkic)</title>
+<style>
+/* Tokeny z docs/specs/theme-preview.html (wartości właściciela). */
+.t-light {
+  --page:#F6F6F8; --surface:#FFFFFF; --surface-subtle:#F1F1F4; --sidebar:#FBFBFC;
+  --heading:#1C1C23; --body:#3D3D48; --muted:#62626F; --soft:#E3E3E9; --border:#8A8A97;
+  --selected:color-mix(in srgb,#7367F0 8%,#FFFFFF);
+  --accent:#7367F0; --accent-text:#5B4FD3; --primary:#665AD8; --on-primary:#FFFFFF;
+  --up-text:#166534; --up-bg:#DCFCE7; --up-solid:#059669;
+  --deg-text:#854D0E; --deg-bg:#FEF3C7; --deg-solid:#CC6F05;
+  --down-text:#991B1B; --down-bg:#FEE2E2; --down-solid:#E11D48;
+  --unk-text:#334155; --unk-bg:#E2E8F0; --unk-solid:#64748B;
+  --flag-bg:#EEF0F4; --flag-text:#3D3D48;
+}
+.t-dark {
+  --page:#121316; --surface:#1B1B1F; --surface-subtle:#17171B; --sidebar:#18191D;
+  --heading:#EDEDF1; --body:#C6C6CE; --muted:#93939F; --soft:#2D2D34; --border:#74747F;
+  --selected:color-mix(in srgb,#7367F0 12%,#1B1B1F);
+  --accent:#7367F0; --accent-text:#8E84F5; --primary:#665AD8; --on-primary:#FFFFFF;
+  --up-text:#10B981; --up-bg:color-mix(in srgb,#10B981 16%,#1B1B1F); --up-solid:#10B981;
+  --deg-text:#F59E0B; --deg-bg:color-mix(in srgb,#F59E0B 16%,#1B1B1F); --deg-solid:#F59E0B;
+  --down-text:#F43F5E; --down-bg:color-mix(in srgb,#F43F5E 16%,#1B1B1F); --down-solid:#F43F5E;
+  --unk-text:#94A3B8; --unk-bg:color-mix(in srgb,#94A3B8 16%,#1B1B1F); --unk-solid:#94A3B8;
+  --flag-bg:#26262D; --flag-text:#C6C6CE;
+}
+* { box-sizing:border-box; }
+body { margin:0; padding:24px; background:#E9E9EE; font:14px/20px Geist, Inter, "Segoe UI", sans-serif; color:#1C1C23; }
+h1 { font-size:20px; margin:0 0 4px; }
+.note { color:#444; margin:0 0 20px; max-width:960px; }
+.frame-label { font-weight:600; margin:0 0 8px; color:#333; }
+.frame { border:1px solid #C9C9D1; border-radius:10px; overflow:hidden; background:var(--page); color:var(--body); position:relative; }
+.t-dark.frame { border-color:#000; }
+.grid { display:grid; grid-template-columns:1fr 1fr; gap:24px; align-items:start; }
+.mono { font-family:"JetBrains Mono", Consolas, monospace; font-size:12px; }
+.muted { color:var(--muted); }
+
+/* Desktop: filtry jako panel boczny z liczbami, akcje masowe zastępują pasek nagłówka */
+.desk { display:grid; grid-template-columns:200px 1fr; height:560px; }
+.facets { background:var(--sidebar); border-right:1px solid var(--soft); padding:14px 12px; display:flex; flex-direction:column; gap:14px; overflow:hidden; }
+.facets h4 { margin:0 0 6px; font-size:12px; letter-spacing:.04em; text-transform:uppercase; color:var(--muted); font-weight:600; }
+.fx { display:flex; align-items:center; gap:8px; height:26px; color:var(--body); font-size:13px; }
+.fx .cb { width:14px; height:14px; border:1.5px solid var(--border); border-radius:3px; background:var(--surface); }
+.fx .cb.on { background:var(--accent-text); border-color:var(--accent-text); }
+.fx .n { margin-left:auto; color:var(--muted); font-variant-numeric:tabular-nums; font-size:12px; }
+.fx.on { color:var(--heading); font-weight:500; }
+.main { display:flex; flex-direction:column; min-width:0; }
+.head { height:52px; background:var(--surface); border-bottom:1px solid var(--soft); display:flex; align-items:center; gap:10px; padding:0 16px; }
+.head .title { font-weight:600; color:var(--heading); font-size:16px; }
+.btn { height:32px; padding:0 12px; border-radius:5px; border:1px solid var(--border); background:var(--surface); color:var(--heading); font-weight:500; display:inline-flex; align-items:center; gap:6px; white-space:nowrap; font-size:13px; }
+.btn.primary { background:var(--primary); border-color:var(--primary); color:var(--on-primary); }
+.btn.ghost { border-color:transparent; background:transparent; color:var(--accent-text); }
+.btn.danger { color:var(--down-text); }
+.bar { background:var(--selected); border-bottom:1px solid var(--accent-text); padding:8px 16px; display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+.bar .count { font-weight:600; color:var(--heading); }
+.bar .all { color:var(--accent-text); font-weight:600; font-size:13px; }
+.bar .spacer { flex:1; }
+.bar .btn { height:30px; }
+.sub { padding:8px 16px; border-bottom:1px solid var(--soft); background:var(--surface); display:flex; align-items:center; gap:8px; font-size:12px; color:var(--muted); }
+.sub b { color:var(--body); font-weight:500; }
+.tablewrap { flex:1; overflow:hidden; background:var(--surface); }
+table { width:100%; border-collapse:collapse; font-size:13px; }
+th { text-align:left; font-weight:600; color:var(--muted); font-size:12px; height:32px; padding:0 8px; border-bottom:1px solid var(--soft); background:var(--surface-subtle); white-space:nowrap; }
+td { height:42px; padding:0 8px; border-bottom:1px solid var(--soft); color:var(--body); white-space:nowrap; }
+td.num, th.num { text-align:right; font-variant-numeric:tabular-nums; }
+tr.sel td { background:var(--selected); }
+.cb { width:14px; height:14px; border:1.5px solid var(--border); border-radius:3px; display:inline-block; vertical-align:middle; background:var(--surface); }
+.cb.on { background:var(--accent-text); border-color:var(--accent-text); }
+.pill { display:inline-flex; align-items:center; gap:5px; height:22px; padding:0 8px; border-radius:999px; font-size:12px; font-weight:600; }
+.pill .ic { width:10px; height:10px; border-radius:2px; }
+.reason { font-size:12px; color:var(--muted); display:block; }
+.name { font-weight:600; color:var(--heading); }
+.kind { font-size:11px; color:var(--muted); border:1px solid var(--soft); border-radius:4px; padding:0 4px; margin-left:6px; font-weight:500; }
+.diff { color:var(--deg-text); font-weight:700; margin-left:4px; }
+.tag { font-size:11px; color:var(--body); border:1px solid var(--soft); border-radius:4px; padding:0 5px; margin-right:4px; }
+.more { color:var(--muted); font-size:18px; letter-spacing:1px; }
+.pager { height:44px; border-top:1px solid var(--soft); background:var(--surface); display:flex; align-items:center; gap:8px; padding:0 16px; font-size:13px; color:var(--muted); }
+.pager .btn { height:28px; }
+.pager .spacer { flex:1; }
+
+/* Telefon: filtry w arkuszu, karty */
+.phone { width:375px; height:700px; margin:0 auto; display:flex; flex-direction:column; position:relative; overflow:hidden; background:var(--page); }
+.ptop { height:56px; background:var(--surface); border-bottom:1px solid var(--soft); display:flex; align-items:center; gap:10px; padding:0 14px; }
+.ptop .title { font-weight:600; color:var(--heading); font-size:17px; flex:1; }
+.pfbar { background:var(--surface); padding:8px 12px; border-bottom:1px solid var(--soft); display:flex; align-items:center; gap:8px; font-size:13px; }
+.pfbar .btn { height:40px; }
+.pbody { flex:1; padding:10px 12px; display:flex; flex-direction:column; gap:8px; overflow:hidden; }
+.card { background:var(--surface); border:1px solid var(--soft); border-radius:8px; padding:10px 12px; display:flex; flex-direction:column; gap:6px; }
+.card.sel { border-color:var(--accent-text); background:var(--selected); }
+.card .row1 { display:flex; align-items:center; gap:8px; }
+.card .meta { font-size:12px; color:var(--muted); font-variant-numeric:tabular-nums; }
+.pbottom { height:64px; background:var(--surface); border-top:1px solid var(--soft); display:grid; grid-template-columns:repeat(4,1fr); }
+.pbottom .tab { display:flex; flex-direction:column; align-items:center; justify-content:center; gap:3px; min-height:44px; color:var(--muted); font-size:12px; font-weight:500; position:relative; }
+.pbottom .tab .glyph { width:20px; height:20px; border:1.5px solid currentColor; border-radius:4px; }
+.pbottom .tab.active { color:var(--accent-text); }
+.pbottom .tab.active::before { content:""; position:absolute; top:0; left:25%; right:25%; height:2px; background:var(--accent-text); border-radius:0 0 2px 2px; }
+.scrim { position:absolute; inset:0; background:rgb(16 16 24 / .32); }
+.sheet { position:absolute; left:0; right:0; bottom:0; background:var(--surface); border-radius:12px 12px 0 0; padding:8px 0 12px; box-shadow:0 -8px 24px rgb(16 16 24 / .14); }
+.sheet .grab { width:40px; height:4px; border-radius:2px; background:var(--soft); margin:4px auto 10px; }
+.sheet .hdr { display:flex; align-items:center; padding:4px 16px 10px; font-weight:600; color:var(--heading); font-size:15px; }
+.sheet .hdr .btn { margin-left:auto; height:36px; }
+.sheet .grp { padding:8px 16px 4px; font-size:12px; color:var(--muted); text-transform:uppercase; letter-spacing:.04em; font-weight:600; }
+.sheet .opt { min-height:44px; display:flex; align-items:center; gap:10px; padding:0 16px; color:var(--heading); }
+.sheet .opt .cb { width:18px; height:18px; border:1.5px solid var(--border); border-radius:4px; }
+.sheet .opt .cb.on { background:var(--accent-text); border-color:var(--accent-text); }
+.sheet .opt .n { margin-left:auto; color:var(--muted); font-size:13px; font-variant-numeric:tabular-nums; }
+.sheet .apply { margin:10px 16px 0; height:48px; border-radius:8px; background:var(--primary); color:var(--on-primary); display:flex; align-items:center; justify-content:center; font-weight:600; }
+.legend { margin-top:16px; font-size:13px; color:#333; max-width:960px; padding-left:18px; }
+.legend li { margin-bottom:4px; }
+</style>
+</head>
+<body>
+
+<h1>Lista checków (etap 1b)</h1>
+<p class="note">Szkic do akceptacji właściciela. Filtry są w panelu bocznym z liczbami, a akcje masowe zastępują pasek nad tabelą. Na telefonie filtry są w arkuszu. Dane przykładowe. Ikony są placeholderami.</p>
+
+<div class="grid">
+
+  <!-- 1. Desktop, jasny: zaznaczenie i pasek akcji w nagłówku -->
+  <div>
+    <p class="frame-label">1. Desktop, jasny: zaznaczone 2 widoczne, akcje w pasku nad tabelą</p>
+    <div class="frame t-light" style="height:560px">
+      <div class="desk">
+        <aside class="facets">
+          <div>
+            <h4>Stan</h4>
+            <div class="fx on"><span class="cb on"></span>Nie działa<span class="n">7</span></div>
+            <div class="fx"><span class="cb"></span>Z problemami<span class="n">12</span></div>
+            <div class="fx"><span class="cb"></span>Działa<span class="n">219</span></div>
+            <div class="fx"><span class="cb"></span>Stan nieznany<span class="n">4</span></div>
+            <div class="fx"><span class="cb"></span>Prace planowe<span class="n">6</span></div>
+          </div>
+          <div>
+            <h4>Typ</h4>
+            <div class="fx on"><span class="cb on"></span>HTTP<span class="n">180</span></div>
+            <div class="fx"><span class="cb"></span>TCP<span class="n">41</span></div>
+            <div class="fx"><span class="cb"></span>Heartbeat<span class="n">27</span></div>
+          </div>
+          <div>
+            <h4>Lokalizacja</h4>
+            <div class="fx on"><span class="cb on"></span>Warszawa<span class="n">248</span></div>
+            <div class="fx"><span class="cb"></span>Frankfurt<span class="n">248</span></div>
+          </div>
+          <div>
+            <h4>Inne</h4>
+            <div class="fx"><span class="cb"></span>Różni się od pliku<span class="n">3</span></div>
+            <div class="fx"><span class="cb"></span>Zweryfikowane<span class="n">52</span></div>
+            <div class="fx"><span class="cb"></span>Pauza: ręczna<span class="n">9</span></div>
+          </div>
+        </aside>
+        <div class="main">
+          <div class="bar">
+            <span class="count">Zaznaczono 2 widoczne</span>
+            <span class="all">Zaznacz wszystkie 7 wyników?</span>
+            <span class="spacer"></span>
+            <span class="btn">Pauza</span>
+            <span class="btn">Wznów</span>
+            <span class="btn">Wycisz…</span>
+            <span class="btn">Tagi</span>
+            <span class="btn">Polityka</span>
+            <span class="btn danger">Usuń…</span>
+            <span class="btn ghost">Anuluj</span>
+          </div>
+          <div class="sub">Sortuj: <b>uptime 24 h ↑</b><span style="margin-left:auto">248 wyników · URL zaktualizowany</span></div>
+          <div class="tablewrap">
+            <table>
+              <thead><tr>
+                <th style="width:30px"><span class="cb on"></span></th>
+                <th>Stan</th><th>Nazwa</th><th>Weryfikacja</th><th class="num">Uptime</th><th>Odpowiedź</th><th>Tagi</th><th></th>
+              </tr></thead>
+              <tbody>
+                <tr class="sel"><td><span class="cb on"></span></td>
+                  <td><span class="pill" style="background:var(--down-bg);color:var(--down-text)"><span class="ic" style="background:var(--down-solid)"></span>Nie działa</span><span class="reason">timeout · 2/3 lok.</span></td>
+                  <td><span class="name">API płatności</span><span class="kind">HTTP</span></td>
+                  <td class="muted">—</td><td class="num">97,2%</td>
+                  <td><svg width="90" height="20" viewBox="0 0 90 20"><polyline fill="none" stroke="var(--down-solid)" stroke-width="1.5" points="0,6 4,7 8,6 12,8 16,7 20,9 24,8 28,17 32,18 36,17 40,19 44,18 48,19 52,17 56,18 60,19 64,18 68,19 72,18 76,19 80,18 84,19 90,18"/></svg></td>
+                  <td><span class="tag">produkcja</span></td><td class="more">⋯</td></tr>
+                <tr class="sel"><td><span class="cb on"></span></td>
+                  <td><span class="pill" style="background:var(--down-bg);color:var(--down-text)"><span class="ic" style="background:var(--down-solid)"></span>Nie działa</span><span class="reason">HTTP 503</span></td>
+                  <td><span class="name">Panel klienta</span><span class="kind">HTTP</span><span class="diff">≠</span></td>
+                  <td class="muted">—</td><td class="num">98,9%</td>
+                  <td><svg width="90" height="20" viewBox="0 0 90 20"><polyline fill="none" stroke="var(--down-solid)" stroke-width="1.5" points="0,8 6,8 12,7 18,8 24,8 30,7 36,8 42,9 48,8 54,8 60,7 66,8 72,8 78,9 84,8 90,18"/></svg></td>
+                  <td><span class="tag">produkcja</span></td><td class="more">⋯</td></tr>
+                <tr><td><span class="cb"></span></td>
+                  <td><span class="pill" style="background:var(--deg-bg);color:var(--deg-text)"><span class="ic" style="background:var(--deg-solid)"></span>Z problemami</span><span class="reason">wolno · 1/3 lok.</span></td>
+                  <td><span class="name">Serwer SMTP</span><span class="kind">TCP</span></td>
+                  <td class="muted">—</td><td class="num">99,8%</td>
+                  <td><svg width="90" height="20" viewBox="0 0 90 20"><polyline fill="none" stroke="var(--deg-solid)" stroke-width="1.5" points="0,10 8,9 16,10 24,11 32,9 40,10 48,8 56,9 64,6 72,10 80,9 90,8"/></svg></td>
+                  <td><span class="tag">poczta</span></td><td class="more">⋯</td></tr>
+                <tr><td><span class="cb"></span></td>
+                  <td><span class="pill" style="background:var(--up-bg);color:var(--up-text)"><span class="ic" style="background:var(--up-solid)"></span>Działa</span><span class="reason">3/3 lok.</span></td>
+                  <td><span class="name">Strona główna</span><span class="kind">HTTP</span></td>
+                  <td><span class="tag">zweryfikowano</span></td><td class="num">100%</td>
+                  <td><svg width="90" height="20" viewBox="0 0 90 20"><polyline fill="none" stroke="var(--up-solid)" stroke-width="1.5" points="0,10 8,11 16,10 24,11 32,11 40,10 48,11 56,11 64,10 72,11 80,11 90,10"/></svg></td>
+                  <td><span class="tag">publiczne</span></td><td class="more">⋯</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="pager"><span>Wiersze 1–50 z 248</span><span class="spacer"></span><span class="btn">‹ Poprzednia</span><span class="btn">Następna ›</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 2. Desktop, ciemny: stan ładowania -->
+  <div>
+    <p class="frame-label">2. Desktop, ciemny: ładowanie (filtry zachowane, szkielet tabeli)</p>
+    <div class="frame t-dark" style="height:560px">
+      <div class="desk">
+        <aside class="facets">
+          <div>
+            <h4>Stan</h4>
+            <div class="fx"><span class="cb"></span>Nie działa</div>
+            <div class="fx"><span class="cb"></span>Z problemami</div>
+            <div class="fx"><span class="cb"></span>Działa</div>
+          </div>
+          <div>
+            <h4>Typ</h4>
+            <div class="fx"><span class="cb"></span>HTTP</div>
+            <div class="fx"><span class="cb"></span>TCP</div>
+          </div>
+        </aside>
+        <div class="main">
+          <div class="head"><span class="title">Checki</span><span class="btn primary" style="margin-left:auto">+ Dodaj check</span></div>
+          <div class="sub">Sortuj: <b>uptime 24 h ↑</b><span style="margin-left:auto">Ładowanie…</span></div>
+          <div class="tablewrap">
+            <table>
+              <thead><tr><th style="width:30px"></th><th>Stan</th><th>Nazwa</th><th>Weryfikacja</th><th class="num">Uptime</th><th>Odpowiedź</th><th>Tagi</th><th></th></tr></thead>
+              <tbody id="skel"></tbody>
+            </table>
+          </div>
+          <div class="pager"><span>Wiersze</span><span class="spacer"></span><span class="btn">‹ Poprzednia</span><span class="btn">Następna ›</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 3. Telefon, jasny: arkusz filtrów -->
+  <div>
+    <p class="frame-label">3. Telefon, jasny: arkusz filtrów (karty pod spodem)</p>
+    <div class="frame t-light phone">
+      <div class="ptop"><span class="title">Checki</span><span class="btn primary" style="height:44px">+ Dodaj</span></div>
+      <div class="pfbar"><span class="btn" style="flex:1">Filtry · 2</span><span class="muted">248 wyników</span></div>
+      <div class="pbody">
+        <div class="card sel"><div class="row1"><span class="cb on"></span><span class="pill" style="background:var(--down-bg);color:var(--down-text)"><span class="ic" style="background:var(--down-solid)"></span>Nie działa</span><span class="reason" style="margin:0">2/3 lok.</span></div><div><span class="name">API płatności</span><span class="kind">HTTP</span></div><div class="meta">uptime 24 h 97,2%</div></div>
+      </div>
+      <div class="scrim"></div>
+      <div class="sheet" style="top:auto;height:520px">
+        <div class="grab"></div>
+        <div class="hdr">Filtry<span class="btn ghost" style="margin-left:auto;height:36px">Wyczyść</span></div>
+        <div class="grp">Stan</div>
+        <div class="opt"><span class="cb on"></span>Nie działa<span class="n">7</span></div>
+        <div class="opt"><span class="cb"></span>Z problemami<span class="n">12</span></div>
+        <div class="opt"><span class="cb"></span>Działa<span class="n">219</span></div>
+        <div class="grp">Typ</div>
+        <div class="opt"><span class="cb on"></span>HTTP<span class="n">180</span></div>
+        <div class="opt"><span class="cb"></span>TCP<span class="n">41</span></div>
+        <div class="apply">Pokaż 7 wyników</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 4. Telefon, ciemny: karty z zaznaczeniem na dole -->
+  <div>
+    <p class="frame-label">4. Telefon, ciemny: zaznaczenie 2 widoczne, akcje nad menu</p>
+    <div class="frame t-dark phone">
+      <div class="ptop"><span class="title">Checki</span><span class="btn primary" style="height:44px">+ Dodaj</span></div>
+      <div class="pfbar"><span class="btn" style="flex:1">Filtry · 2</span><span class="muted">248 wyników</span></div>
+      <div class="pbody">
+        <div class="card sel"><div class="row1"><span class="cb on"></span><span class="pill" style="background:var(--down-bg);color:var(--down-text)"><span class="ic" style="background:var(--down-solid)"></span>Nie działa</span><span class="reason" style="margin:0">2/3 lok.</span></div><div><span class="name">API płatności</span><span class="kind">HTTP</span></div><div class="meta">uptime 24 h 97,2%</div></div>
+        <div class="card sel"><div class="row1"><span class="cb on"></span><span class="pill" style="background:var(--down-bg);color:var(--down-text)"><span class="ic" style="background:var(--down-solid)"></span>Nie działa</span><span class="reason" style="margin:0">3/3 lok.</span></div><div><span class="name">Panel klienta</span><span class="kind">HTTP</span><span class="diff">≠</span></div><div class="meta">uptime 24 h 98,9%</div></div>
+        <div class="card"><div class="row1"><span class="cb"></span><span class="pill" style="background:var(--deg-bg);color:var(--deg-text)"><span class="ic" style="background:var(--deg-solid)"></span>Z problemami</span><span class="reason" style="margin:0">1/3 lok.</span></div><div><span class="name">Serwer SMTP</span><span class="kind">TCP</span></div><div class="meta">uptime 24 h 99,8%</div></div>
+      </div>
+      <div style="background:var(--surface);border-top:1px solid var(--border);padding:8px 12px;display:flex;flex-direction:column;gap:6px">
+        <div style="display:flex;align-items:center;gap:8px"><span style="font-weight:600;color:var(--heading);font-size:13px">Zaznaczono 2 widoczne</span><span class="btn ghost" style="margin-left:auto;height:36px">Anuluj</span></div>
+        <div style="display:flex;gap:6px"><span class="btn" style="flex:1;height:44px">Pauza</span><span class="btn" style="flex:1;height:44px">Wycisz…</span><span class="btn" style="flex:1;height:44px">Więcej</span></div>
+      </div>
+      <div class="pbottom">
+        <div class="tab"><span class="glyph"></span>Przegląd</div>
+        <div class="tab active"><span class="glyph"></span>Checki</div>
+        <div class="tab"><span class="glyph"></span>Incydenty</div>
+        <div class="tab"><span class="glyph"></span>Więcej</div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<ul class="legend">
+  <li>Desktop: filtry są w panelu bocznym z liczbami wyników. Liczby pokazują, ile wyników daje dany wybór, zanim użytkownik go zastosuje.</li>
+  <li>Zaznaczenie: pasek akcji zastępuje pasek nad tabelą, więc tabela nie jest przesłonięta. „Zaznacz wszystkie 7 wyników?” pojawia się tylko przy zaznaczeniu strony.</li>
+  <li>Telefon: filtry w arkuszu z przyciskiem „Pokaż N wyników” (liczba przed zatwierdzeniem). Akcje masowe są nad menu. Zakres „wszystko” na telefonie nadal otwarty (ui-ux 12.3).</li>
+  <li>Stan błędu i pusty stan nie są w tej makiecie.</li>
+</ul>
+
+<script>
+const skel = document.getElementById('skel');
+for (let i = 0; i < 10; i++) {
+  const tr = document.createElement('tr');
+  tr.innerHTML = '<td></td>' + [70, 110, 90, 40, 80, 60, 40].map(w => '<td><span style="display:block;height:10px;border-radius:4px;background:var(--soft);width:' + w + '%"></span></td>').join('');
+  skel.appendChild(tr);
+}
+</script>
+
+</body>
+</html>

@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Makieta: ustawienia ogólne i domyślne (etap 1b, szkic)</title>
+<style>
+/* Tokeny z docs/specs/theme-preview.html (wartości właściciela). */
+.t-light {
+  --page:#F6F6F8; --surface:#FFFFFF; --surface-subtle:#F1F1F4; --sidebar:#FBFBFC;
+  --heading:#1C1C23; --body:#3D3D48; --muted:#62626F; --soft:#E3E3E9; --border:#8A8A97; --field:#8A8A97;
+  --selected:color-mix(in srgb,#7367F0 8%,#FFFFFF);
+  --accent:#7367F0; --accent-text:#5B4FD3; --primary:#665AD8; --on-primary:#FFFFFF;
+  --deg-text:#854D0E; --deg-bg:#FEF3C7; --deg-solid:#CC6F05;
+}
+.t-light .in { --field:#8A8A97; }
+.t-dark {
+  --page:#121316; --surface:#1B1B1F; --surface-subtle:#17171B; --sidebar:#18191D;
+  --heading:#EDEDF1; --body:#C6C6CE; --muted:#93939F; --soft:#2D2D34; --border:#74747F; --field:#74747F;
+  --selected:color-mix(in srgb,#7367F0 12%,#1B1B1F);
+  --accent:#7367F0; --accent-text:#8E84F5; --primary:#665AD8; --on-primary:#FFFFFF;
+  --deg-text:#F59E0B; --deg-bg:color-mix(in srgb,#F59E0B 16%,#1B1B1F); --deg-solid:#F59E0B;
+}
+* { box-sizing:border-box; }
+body { margin:0; padding:24px; background:#E9E9EE; font:14px/20px Geist, Inter, "Segoe UI", sans-serif; color:#1C1C23; }
+h1 { font-size:20px; margin:0 0 4px; }
+.note { color:#444; margin:0 0 20px; max-width:960px; }
+.frame-label { font-weight:600; margin:0 0 8px; color:#333; }
+.frame { border:1px solid #C9C9D1; border-radius:10px; overflow:hidden; background:var(--page); color:var(--body); position:relative; }
+.t-dark.frame { border-color:#000; }
+.grid { display:grid; grid-template-columns:1fr; gap:24px; align-items:start; }
+.muted { color:var(--muted); }
+.btn { height:32px; padding:0 12px; border-radius:5px; border:1px solid var(--border); background:var(--surface); color:var(--heading); font-weight:500; display:inline-flex; align-items:center; gap:6px; white-space:nowrap; font-size:13px; }
+.btn.primary { background:var(--primary); border-color:var(--primary); color:var(--on-primary); }
+.btn.ghost { border-color:transparent; background:transparent; color:var(--accent-text); padding:0 6px; }
+
+/* Desktop: lewa nawigacja ustawień, prawa część: tabela wartość / źródło / akcja */
+.desk { display:grid; grid-template-columns:200px 1fr; height:640px; background:var(--surface); }
+.nav { background:var(--sidebar); border-right:1px solid var(--soft); padding:14px 10px; display:flex; flex-direction:column; gap:2px; font-size:13px; }
+.nav h4 { margin:0 0 6px 8px; font-size:12px; color:var(--muted); font-weight:600; letter-spacing:.04em; text-transform:uppercase; }
+.nav span { height:30px; display:flex; align-items:center; padding:0 8px; border-radius:5px; color:var(--body); }
+.nav span.on { background:var(--selected); color:var(--accent-text); font-weight:600; box-shadow:inset 3px 0 0 var(--accent-text); }
+.main { display:flex; flex-direction:column; min-width:0; }
+.head { padding:14px 22px 12px; border-bottom:1px solid var(--soft); display:flex; align-items:center; gap:10px; }
+.head .crumb { font-size:12px; color:var(--muted); }
+.head h2 { margin:0; font-size:18px; color:var(--heading); font-weight:600; }
+.head .btn { margin-left:auto; }
+.body { flex:1; padding:14px 22px; overflow:hidden; display:flex; flex-direction:column; gap:14px; }
+.body h3 { margin:0; font-size:14px; color:var(--heading); font-weight:600; }
+table { width:100%; border-collapse:collapse; font-size:13px; }
+th { text-align:left; font-weight:600; color:var(--muted); font-size:12px; height:28px; border-bottom:1px solid var(--soft); }
+td { height:40px; border-bottom:1px solid var(--soft); color:var(--body); vertical-align:middle; }
+td.v { color:var(--heading); font-weight:500; font-variant-numeric:tabular-nums; }
+.src { font-size:12px; color:var(--muted); }
+.src.own { color:var(--accent-text); font-weight:500; }
+.src .chip { display:inline-block; border:1px solid var(--soft); border-radius:4px; padding:0 5px; margin-right:4px; }
+.restore { color:var(--accent-text); font-weight:600; font-size:12px; }
+.in { display:inline-flex; align-items:center; height:28px; min-width:120px; padding:0 8px; border:1px solid var(--field); border-radius:5px; background:var(--surface); color:var(--heading); font-weight:500; font-variant-numeric:tabular-nums; }
+.dot { display:inline-block; width:6px; height:6px; border-radius:999px; background:var(--accent-text); margin-right:6px; vertical-align:middle; }
+.foot { border-top:1px solid var(--soft); padding:10px 22px; display:flex; gap:8px; align-items:center; background:var(--surface); }
+.foot .sp { flex:1; }
+.foot .note2 { font-size:12px; color:var(--muted); }
+
+/* Telefon */
+.phone { width:375px; height:700px; margin:0 auto; display:flex; flex-direction:column; position:relative; overflow:hidden; background:var(--page); }
+.ptop { height:56px; background:var(--surface); border-bottom:1px solid var(--soft); display:flex; align-items:center; gap:10px; padding:0 14px; }
+.ptop .title { font-weight:600; color:var(--heading); font-size:17px; flex:1; }
+.pbody { flex:1; overflow:hidden; background:var(--surface); padding:6px 14px; }
+.prow { display:flex; align-items:center; gap:10px; min-height:56px; border-bottom:1px solid var(--soft); padding:8px 0; }
+.prow .txt { flex:1; display:flex; flex-direction:column; gap:2px; min-width:0; }
+.prow .l { font-size:13px; color:var(--heading); font-weight:500; }
+.prow .v { font-size:14px; color:var(--heading); font-variant-numeric:tabular-nums; }
+.prow .s { font-size:12px; color:var(--muted); }
+.prow .s.own { color:var(--accent-text); }
+.prow .chev { color:var(--muted); font-size:18px; }
+.pfoot { background:var(--surface); border-top:1px solid var(--border); padding:10px 12px; display:flex; gap:8px; }
+.pfoot .btn { flex:1; height:44px; justify-content:center; }
+
+.legend { margin-top:16px; font-size:13px; color:#333; max-width:960px; padding-left:18px; }
+.legend li { margin-bottom:4px; }
+</style>
+</head>
+<body>
+
+<h1>Ustawienia ogólne i domyślne (etap 1b)</h1>
+<p class="note">Wariant B: tabela z trzema kolumnami: wartość, źródło i akcja. Pole każdego wiersza ma wartość efektywną i jej źródło. Dane przykładowe. Ikony są placeholderami.</p>
+
+<div class="grid">
+
+  <!-- 1. Desktop, ciemny -->
+  <div>
+    <p class="frame-label">1. Desktop, ciemny: tabela wartości z źródłem i „Przywróć”</p>
+    <div class="frame t-dark" style="width:100%;max-width:900px">
+      <div class="desk">
+        <aside class="nav">
+          <h4>Przestrzeń</h4>
+          <span class="on">Ogólne i domyślne</span>
+          <span>Zweryfikowane cele</span>
+          <span>Automatyzacja</span>
+          <span>Powiadomienia</span>
+          <span>Lokalizacje i agenci</span>
+          <span>Zespół i logowanie</span>
+          <span>Tokeny API i sekrety</span>
+          <span>Plan i limity</span>
+          <span>Konfiguracja</span>
+          <span>Audyt</span>
+        </aside>
+        <div class="main">
+          <div class="head">
+            <div><span class="crumb">Ustawienia przestrzeni</span><h2>Ogólne i domyślne</h2></div>
+            <span class="btn">Przywróć wszystkie</span>
+          </div>
+          <div class="body">
+            <h3>Ogólne</h3>
+            <table>
+              <thead><tr><th style="width:30%">Ustawienie</th><th style="width:22%">Wartość</th><th>Źródło</th><th style="width:90px"></th></tr></thead>
+              <tbody>
+                <tr><td>Nazwa przestrzeni</td><td class="v"><span class="in">Produkcja</span></td><td class="src">Własne</td><td></td></tr>
+                <tr><td>Język</td><td class="v"><span class="in">Polski ▾</span></td><td class="src"><span class="chip">instancja</span>Domyślne instancji</td><td></td></tr>
+                <tr><td>Strefa czasowa</td><td class="v"><span class="in">Europe/Warsaw ▾</span></td><td class="src own"><span class="dot"></span>Własne · nadpisuje UTC</td><td><span class="restore">Przywróć</span></td></tr>
+              </tbody>
+            </table>
+            <h3>Domyślne dla nowych checków</h3>
+            <table>
+              <thead><tr><th>Ustawienie</th><th>Wartość</th><th>Źródło</th><th></th></tr></thead>
+              <tbody>
+                <tr><td>Interwał</td><td class="v"><span class="in">300 s</span></td><td class="src own"><span class="dot"></span>Własne · nadpisuje 60 s</td><td><span class="restore">Przywróć</span></td></tr>
+                <tr><td>Timeout</td><td class="v"><span class="in">10 s</span></td><td class="src"><span class="chip">instancja</span>Wartość instancji</td><td></td></tr>
+                <tr><td>Potwierdzenia przed DOWN</td><td class="v"><span class="in">2 z 3</span></td><td class="src own"><span class="dot"></span>Własne · nadpisuje 1</td><td><span class="restore">Przywróć</span></td></tr>
+                <tr><td>Próg wolnej odpowiedzi</td><td class="v"><span class="in">1 500 ms</span></td><td class="src"><span class="chip">instancja</span>Wartość instancji</td><td></td></tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="foot">
+            <span class="note2">2 wartości własne · 4 dziedziczone</span>
+            <span class="sp"></span>
+            <span class="btn ghost">Odrzuć zmiany</span>
+            <span class="btn primary">Zapisz zmiany</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 2. Telefon, jasny: lista, tap otwiera edycję -->
+  <div>
+    <p class="frame-label">2. Telefon, jasny: lista z tym samym źródłem, dotknięcie otwiera edycję</p>
+    <div class="frame t-light phone">
+      <div class="ptop"><span class="title">Ogólne i domyślne</span></div>
+      <div class="pbody">
+        <div class="prow"><div class="txt"><span class="l">Interwał</span><span class="v">300 s</span><span class="s own">Własne · nadpisuje 60 s · Przywróć</span></div><span class="chev">›</span></div>
+        <div class="prow"><div class="txt"><span class="l">Timeout</span><span class="v">10 s</span><span class="s">Wartość instancji</span></div><span class="chev">›</span></div>
+        <div class="prow"><div class="txt"><span class="l">Potwierdzenia przed DOWN</span><span class="v">2 z 3</span><span class="s own">Własne · nadpisuje 1 · Przywróć</span></div><span class="chev">›</span></div>
+        <div class="prow"><div class="txt"><span class="l">Strefa czasowa</span><span class="v">Europe/Warsaw</span><span class="s own">Własne · Przywróć</span></div><span class="chev">›</span></div>
+      </div>
+      <div class="pfoot"><span class="btn">Odrzuć</span><span class="btn primary">Zapisz</span></div>
+    </div>
+  </div>
+
+</div>
+
+<ul class="legend">
+  <li>Trzy kolumny: wartość, źródło (własne, instancja, domyślne przestrzeni) i akcja „Przywróć”, gdy wartość jest własna.</li>
+  <li>„Przywróć wszystkie” w nagłówku cofa wszystkie wartości własne do dziedziczenia. Potwierdzenie jest potrzebne (nie pokazane).</li>
+  <li>Na telefonie każdy wiersz otwiera edycję jednego pola. Podpowiedź źródła jest pod wartością.</li>
+  <li>Stany ładowania, błędu i zapisu nie są w makiecie. Wartości przykładowe; wartość instancji zależy od wdrożenia.</li>
+</ul>
+
+</body>
+</html>

@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Makieta: tokeny API i sesje (etap 1b, szkic)</title>
+<style>
+/* Tokeny z docs/specs/theme-preview.html (wartości właściciela). */
+.t-light {
+  --page:#F6F6F8; --surface:#FFFFFF; --surface-subtle:#F1F1F4; --sidebar:#FBFBFC;
+  --heading:#1C1C23; --body:#3D3D48; --muted:#62626F; --soft:#E3E3E9; --border:#8A8A97;
+  --selected:color-mix(in srgb,#7367F0 8%,#FFFFFF);
+  --accent:#7367F0; --accent-text:#5B4FD3; --primary:#665AD8; --on-primary:#FFFFFF;
+  --up-text:#166534; --up-bg:#DCFCE7;
+  --down-text:#991B1B; --down-bg:#FEE2E2; --down-solid:#E11D48;
+  --deg-text:#854D0E; --deg-bg:#FEF3C7; --deg-solid:#CC6F05;
+  --scrim:rgb(16 16 24 / .32); --shadow:0 2px 4px rgb(16 16 24 / .06), 0 16px 48px rgb(16 16 24 / .14);
+}
+.t-dark {
+  --page:#121316; --surface:#1B1B1F; --surface-subtle:#17171B; --sidebar:#18191D;
+  --heading:#EDEDF1; --body:#C6C6CE; --muted:#93939F; --soft:#2D2D34; --border:#74747F;
+  --selected:color-mix(in srgb,#7367F0 12%,#1B1B1F);
+  --accent:#7367F0; --accent-text:#8E84F5; --primary:#665AD8; --on-primary:#FFFFFF;
+  --up-text:#10B981; --up-bg:color-mix(in srgb,#10B981 16%,#1B1B1F);
+  --down-text:#F43F5E; --down-bg:color-mix(in srgb,#F43F5E 16%,#1B1B1F); --down-solid:#F43F5E;
+  --deg-text:#F59E0B; --deg-bg:color-mix(in srgb,#F59E0B 16%,#1B1B1F); --deg-solid:#F59E0B;
+  --scrim:rgb(0 0 0 / .5); --shadow:0 2px 4px rgb(0 0 0 / .3), 0 16px 48px rgb(0 0 0 / .5);
+}
+* { box-sizing:border-box; }
+body { margin:0; padding:24px; background:#E9E9EE; font:14px/20px Geist, Inter, "Segoe UI", sans-serif; color:#1C1C23; }
+h1 { font-size:20px; margin:0 0 4px; }
+.note { color:#444; margin:0 0 20px; max-width:960px; }
+.frame-label { font-weight:600; margin:0 0 8px; color:#333; }
+.frame { border:1px solid #C9C9D1; border-radius:10px; overflow:hidden; background:var(--page); color:var(--body); position:relative; }
+.t-dark.frame { border-color:#000; }
+.grid { display:grid; grid-template-columns:1fr; gap:24px; align-items:start; }
+.muted { color:var(--muted); }
+.mono { font-family:"JetBrains Mono", Consolas, monospace; font-size:12px; }
+.btn { height:32px; padding:0 12px; border-radius:5px; border:1px solid var(--border); background:var(--surface); color:var(--heading); font-weight:500; display:inline-flex; align-items:center; gap:6px; white-space:nowrap; font-size:13px; }
+.btn.primary { background:var(--primary); border-color:var(--primary); color:var(--on-primary); }
+.btn.danger { background:var(--down-solid); border-color:var(--down-solid); color:#FFFFFF; }
+.btn.ghost { border-color:transparent; background:transparent; color:var(--accent-text); padding:0 6px; }
+
+/* Desktop: lewa kolumna z sekcjami ustawień, zakładki tokenów i sesji */
+.desk { display:grid; grid-template-columns:200px 1fr; height:600px; background:var(--surface); }
+.nav { background:var(--sidebar); border-right:1px solid var(--soft); padding:14px 10px; display:flex; flex-direction:column; gap:2px; font-size:13px; }
+.nav h4 { margin:0 0 6px 8px; font-size:12px; color:var(--muted); font-weight:600; letter-spacing:.04em; text-transform:uppercase; }
+.nav span { height:30px; display:flex; align-items:center; padding:0 8px; border-radius:5px; color:var(--body); }
+.nav span.on { background:var(--selected); color:var(--accent-text); font-weight:600; box-shadow:inset 3px 0 0 var(--accent-text); }
+.main { display:flex; flex-direction:column; min-width:0; }
+.head { padding:14px 20px 0; border-bottom:1px solid var(--soft); display:flex; flex-direction:column; gap:6px; }
+.crumb { font-size:12px; color:var(--muted); }
+.head h2 { margin:0; font-size:18px; color:var(--heading); font-weight:600; padding-bottom:8px; }
+.tabs { display:flex; gap:18px; font-size:13px; }
+.tabs span { padding:8px 0 10px; color:var(--muted); font-weight:500; border-bottom:2px solid transparent; }
+.tabs span.on { color:var(--accent-text); border-bottom-color:var(--accent-text); font-weight:600; }
+.body { flex:1; padding:16px 20px; display:flex; flex-direction:column; gap:12px; overflow:hidden; position:relative; }
+.bar { display:flex; align-items:center; gap:8px; }
+.bar .sp { flex:1; }
+table { width:100%; border-collapse:collapse; font-size:13px; }
+th { text-align:left; font-weight:600; color:var(--muted); font-size:12px; height:28px; border-bottom:1px solid var(--soft); }
+td { height:36px; border-bottom:1px solid var(--soft); color:var(--body); }
+.you { font-size:11px; color:var(--accent-text); border:1px solid var(--accent-text); border-radius:4px; padding:0 4px; margin-left:6px; }
+.pill { display:inline-flex; align-items:center; height:22px; padding:0 8px; border-radius:999px; font-size:12px; font-weight:600; width:max-content; }
+.scrim { position:absolute; inset:0; background:var(--scrim); }
+.dialog { position:absolute; left:50%; top:50%; transform:translate(-50%,-50%); width:420px; background:var(--surface); border-radius:10px; box-shadow:var(--shadow); padding:20px; display:flex; flex-direction:column; gap:12px; border:1px solid var(--soft); }
+.dialog h3 { margin:0; font-size:16px; color:var(--heading); font-weight:600; }
+.dialog p { margin:0; font-size:13px; color:var(--body); }
+.dialog .row { display:flex; gap:8px; justify-content:flex-end; margin-top:6px; }
+
+/* Telefon */
+.phone { width:375px; height:700px; margin:0 auto; display:flex; flex-direction:column; position:relative; overflow:hidden; background:var(--page); }
+.ptop { height:56px; background:var(--surface); border-bottom:1px solid var(--soft); display:flex; align-items:center; gap:10px; padding:0 14px; }
+.ptop .title { font-weight:600; color:var(--heading); font-size:17px; flex:1; }
+.ptabs { display:flex; gap:14px; padding:0 14px; background:var(--surface); border-bottom:1px solid var(--soft); font-size:13px; }
+.ptabs span { padding:12px 0 10px; color:var(--muted); font-weight:500; border-bottom:2px solid transparent; }
+.ptabs span.on { color:var(--accent-text); border-bottom-color:var(--accent-text); font-weight:600; }
+.pbody { flex:1; overflow:hidden; background:var(--surface); padding:12px 14px; display:flex; flex-direction:column; gap:10px; }
+.shown { border:1px solid var(--deg-solid); background:var(--deg-bg); color:var(--deg-text); border-radius:8px; padding:10px 12px; font-size:13px; display:flex; flex-direction:column; gap:6px; }
+.shown b { font-weight:600; }
+.shown .mono { color:var(--heading); word-break:break-all; }
+.pcard { border:1px solid var(--soft); border-radius:8px; padding:10px 12px; display:flex; flex-direction:column; gap:4px; font-size:13px; }
+.pcard .r { display:flex; justify-content:space-between; gap:8px; }
+.pcard .r span:first-child { color:var(--heading); font-weight:600; }
+.pcard .muted { font-size:12px; }
+.pfoot { background:var(--surface); border-top:1px solid var(--border); padding:10px 12px; display:flex; gap:8px; }
+.pfoot .btn { flex:1; height:44px; justify-content:center; }
+
+.legend { margin-top:16px; font-size:13px; color:#333; max-width:960px; padding-left:18px; }
+.legend li { margin-bottom:4px; }
+</style>
+</head>
+<body>
+
+<h1>Tokeny API i aktywne sesje (etap 1b)</h1>
+<p class="note">Wariant B: zakładki „Tokeny API” i „Aktywne sesje” w obrębie sekcji ustawień. Na zakładce sesji pokazano potwierdzenie „Wyloguj wszędzie”. Dane przykładowe. Ikony są placeholderami.</p>
+
+<div class="grid">
+
+  <!-- 1. Desktop, ciemny: potwierdzenie „Wyloguj wszędzie” -->
+  <div>
+    <p class="frame-label">1. Desktop, ciemny: zakładka Aktywne sesje z potwierdzeniem</p>
+    <div class="frame t-dark" style="width:100%;max-width:900px">
+      <div class="desk">
+        <aside class="nav">
+          <h4>Przestrzeń</h4>
+          <span>Ogólne i domyślne</span>
+          <span>Zweryfikowane cele</span>
+          <span>Automatyzacja</span>
+          <span>Powiadomienia</span>
+          <span>Lokalizacje i agenci</span>
+          <span>Zespół i logowanie</span>
+          <span class="on">Tokeny API i sekrety</span>
+          <span>Plan i limity</span>
+          <span>Konfiguracja</span>
+          <span>Audyt</span>
+        </aside>
+        <div class="main">
+          <div class="head">
+            <span class="crumb">Ustawienia przestrzeni › Tokeny API i sekrety</span>
+            <h2>Tokeny API i sesje</h2>
+            <div class="tabs"><span>Tokeny API</span><span class="on">Aktywne sesje</span><span>Sekrety</span></div>
+          </div>
+          <div class="body">
+            <div class="bar"><span class="muted">3 urządzenia, na których jesteś zalogowany</span><span class="sp"></span><span class="btn danger">Wyloguj wszędzie</span></div>
+            <table>
+              <thead><tr><th>Urządzenie</th><th>Przeglądarka</th><th>Ostatnio aktywna</th><th>Lokalizacja</th><th></th></tr></thead>
+              <tbody>
+                <tr><td>Windows 11 <span class="you">to urządzenie</span></td><td>Chrome 131</td><td>teraz</td><td>Warszawa, PL</td><td></td></tr>
+                <tr><td>iPhone 15</td><td>Safari</td><td>wczoraj 21:10</td><td>Kraków, PL</td><td><span class="btn" style="height:26px;font-size:12px">Wyloguj</span></td></tr>
+                <tr><td>Linux</td><td>Firefox 133</td><td>12.11.2026</td><td>Frankfurt, DE</td><td><span class="btn" style="height:26px;font-size:12px">Wyloguj</span></td></tr>
+              </tbody>
+            </table>
+            <div class="scrim"></div>
+            <div class="dialog" role="dialog" aria-modal="true" aria-labelledby="d1">
+              <h3 id="d1">Wylogować ze wszystkich urządzeń?</h3>
+              <p>Zakończysz 3 sesje, w tym na tym urządzeniu. Tokeny API nie zostaną unieważnione.</p>
+              <p class="muted" style="font-size:12px">Zalogujesz się ponownie na każdym urządzeniu.</p>
+              <div class="row"><span class="btn ghost">Anuluj</span><span class="btn danger">Wyloguj wszędzie</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 2. Telefon, jasny: zakładka Tokeny API, token pokazany raz -->
+  <div>
+    <p class="frame-label">2. Telefon, jasny: nowy token pokazany raz po utworzeniu</p>
+    <div class="frame t-light phone">
+      <div class="ptop"><span class="title">Tokeny API i sesje</span></div>
+      <div class="ptabs"><span class="on">Tokeny API</span><span>Sesje</span><span>Sekrety</span></div>
+      <div class="pbody">
+        <div class="shown">
+          <b>Token „ci-deploy-2” utworzony</b>
+          <span>Skopiuj go teraz. Nie pokażemy go ponownie.</span>
+          <span class="mono">wk_live_7f3a9c…</span>
+          <span style="height:40px;display:flex;align-items:center;justify-content:center;border:1px solid var(--border);border-radius:6px;background:var(--surface);color:var(--heading);font-weight:500;font-family:Geist,sans-serif">Kopiuj</span>
+        </div>
+        <div class="pcard"><div class="r"><span>ci-deploy</span><span class="muted">dziś 17:42</span></div><span class="muted">checki: odczyt, zapis</span></div>
+        <div class="pcard"><div class="r"><span>grafana-export</span><span class="muted">wczoraj</span></div><span class="muted">checki: odczyt</span></div>
+      </div>
+      <div class="pfoot"><span class="btn">Zamknij</span><span class="btn primary">Nowy token</span></div>
+    </div>
+  </div>
+
+</div>
+
+<ul class="legend">
+  <li>Sekcja ustawień z listą zakładek po lewej, w zgodzie z tabelą 4.11. Tokeny i sesje to zakładki w tej sekcji.</li>
+  <li>„Wyloguj wszędzie” wymaga potwierdzenia. Okno mówi, ile sesji zakończy i że tokeny API zostają.</li>
+  <li>Token pokazany raz po utworzeniu, z przyciskiem kopiowania. Zamknięcie okna go ukrywa.</li>
+  <li>Sekrety zamaskowane, jedyna akcja to „Podmień” (na zakładce Sekrety).</li>
+  <li>Stany ładowania, błędu i pusty stan nie są w makiecie.</li>
+</ul>
+
+</body>
+</html>
