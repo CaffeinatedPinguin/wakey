@@ -1,12 +1,11 @@
-import { apiClient, serverClient } from '../../../shared/api/instances'
+import { contract } from '../../../shared/api/generated/contract'
+import { serverClient } from '../../../shared/api/instances'
 import { appConfig } from '../../../shared/config'
 import { meSchema } from './auth.schemas'
 import type { Me } from './auth.schemas'
 
-export const ME_PATH = '/me'
-
 export async function fetchMe(): Promise<Me> {
-  const response = await apiClient.get<unknown>(ME_PATH)
+  const response = await serverClient.get<unknown>(contract.getMe.path)
   return meSchema.parse(response.data)
 }
 

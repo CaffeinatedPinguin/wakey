@@ -1,5 +1,8 @@
 import axios from 'axios'
 import type { AxiosInstance } from 'axios'
+import { ApiError, toApiError } from './problem'
+
+export { isNotFoundError, isUnauthorizedError } from './problem'
 
 const NETWORK_RETRY_LIMIT = 2
 
@@ -12,14 +15,24 @@ export interface ApiClientOptions {
 // writes and expects (ADR 0006). Axios only adds the header to same-origin
 // requests, so no withXSRFToken option is needed either.
 export function createApiClient({ baseURL }: ApiClientOptions): AxiosInstance {
-  return axios.create({
+  const client = axios.create({
     baseURL,
     withCredentials: true,
   })
+  client.interceptors.response.use(
+    (response) => response,
+    (error: unknown) => Promise.reject(toResponseError(error)),
+  )
+  return client
 }
 
-export function isUnauthorizedError(error: unknown): boolean {
-  return axios.isAxiosError(error) && error.response?.status === 401
+// A cancelled request is not a failure the UI should report, so it keeps its
+// original cancellation error; everything else becomes one ApiError.
+function toResponseError(error: unknown): Error {
+  if (axios.isCancel(error) && error instanceof Error) {
+    return error
+  }
+  return toApiError(error)
 }
 
 export function shouldRetryRequest(failureCount: number, error: unknown): boolean {
@@ -27,5 +40,8 @@ export function shouldRetryRequest(failureCount: number, error: unknown): boolea
 }
 
 function isNetworkError(error: unknown): boolean {
+  if (error instanceof ApiError) {
+    return error.code === 'network'
+  }
   return axios.isAxiosError(error) && error.response === undefined
 }
