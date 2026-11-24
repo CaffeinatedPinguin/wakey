@@ -46,6 +46,12 @@ class MockXMLHttpRequest {
     return 'content-type: application/json'
   }
 
+  // Axios aborts a request through this method when a query is cancelled, so a
+  // no-op keeps the stub usable with callers that pass an AbortSignal.
+  abort(): void {
+    return undefined
+  }
+
   send(): void {
     const reply = handler({
       method: this.method,

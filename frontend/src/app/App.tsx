@@ -20,6 +20,8 @@ interface AppThemeProviderProps {
 
 export function AppThemeProvider({ children }: AppThemeProviderProps): ReactElement {
   const { t } = useTranslation()
+  // Mantine skips transition timers in tests, so menu content is available right after it opens.
+  const testEnv = import.meta.env.MODE === 'test' ? { env: 'test' as const } : {}
   const appTheme = useMemo(
     () =>
       createAppTheme({
@@ -30,6 +32,7 @@ export function AppThemeProvider({ children }: AppThemeProviderProps): ReactElem
   )
   return (
     <MantineProvider
+      {...testEnv}
       theme={appTheme.theme}
       cssVariablesResolver={appTheme.cssVariablesResolver}
       defaultColorScheme="auto"

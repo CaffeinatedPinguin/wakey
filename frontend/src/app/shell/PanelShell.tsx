@@ -3,10 +3,12 @@ import { Outlet } from '@tanstack/react-router'
 import type { ReactElement } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useMe } from '../../features/auth'
+import { CreateSpaceDialog, SpaceNotFoundView } from '../../features/spaces'
 import { MobilePanelNav } from './MobilePanelNav'
 import { PanelHeader } from './PanelHeader'
 import { PanelNavbar } from './PanelNavbar'
 import { MOBILE_BREAKPOINT, useIsMobile } from './useIsMobile'
+import { useSpaceController } from './useSpaceController'
 
 const shellLayout = {
   header: { height: 'var(--app-layout-topbar-height)' },
@@ -27,15 +29,16 @@ export function PanelShell(): ReactElement {
   const { t } = useTranslation()
   const { data: me } = useMe()
   const isMobile = useIsMobile()
+  const space = useSpaceController(me.admin)
 
   return (
     <AppShell {...shellLayout}>
       <AppShell.Header>
-        <PanelHeader me={me} isMobile={isMobile} />
+        <PanelHeader me={me} isMobile={isMobile} switcher={space.switcher} />
       </AppShell.Header>
       {isMobile ? (
         <AppShell.Footer>
-          <MobilePanelNav />
+          <MobilePanelNav switcher={space.switcher} />
         </AppShell.Footer>
       ) : (
         <AppShell.Navbar aria-label={t('common.nav.label')}>
@@ -43,8 +46,9 @@ export function PanelShell(): ReactElement {
         </AppShell.Navbar>
       )}
       <AppShell.Main>
-        <Outlet />
+        {space.isUnknown ? <SpaceNotFoundView spaces={space.spaces} /> : <Outlet />}
       </AppShell.Main>
+      <CreateSpaceDialog {...space.dialog} />
     </AppShell>
   )
 }

@@ -61,6 +61,13 @@ export const commonResources = {
           generic: 'Nie udało się utworzyć przestrzeni. Spróbuj ponownie.',
         },
       },
+      notFound: {
+        title: 'Nie znaleziono przestrzeni',
+        message: 'Przestrzeń z adresu nie istnieje lub nie masz do niej dostępu.',
+        openFirst: 'Otwórz przestrzeń {{name}}',
+        noAccessTitle: 'Brak dostępu do przestrzeni',
+        noAccess: 'Nie masz dostępu do żadnej przestrzeni. Poproś administratora instancji.',
+      },
     },
   },
   en: {
@@ -124,6 +131,13 @@ export const commonResources = {
           slugTaken: 'This slug is already taken.',
           generic: 'Could not create the space. Please try again.',
         },
+      },
+      notFound: {
+        title: 'Space not found',
+        message: 'The space in the address does not exist or you cannot access it.',
+        openFirst: 'Open space {{name}}',
+        noAccessTitle: 'No space access',
+        noAccess: 'You have access to no spaces. Ask the instance administrator.',
       },
     },
   },
