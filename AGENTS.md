@@ -31,7 +31,7 @@ Domain: backend and frontend (the maintainer's generic rules live outside this r
 - Simple arguments: a call argument carries at most one method call; extract a longer expression into a named variable (ADR 0007).
 - A rule from an ADR that can be checked statically becomes an ArchUnit or lint rule, not a review comment.
 - Colours, sizes, radius and typography only from `--app-*` tokens or the Mantine theme (lint guards hex and px); a state is always `Badge color="<state>"` + icon + text, never colour alone; UI text goes through i18n.
-- Every screen works on a phone (< 768 px, 44 px touch targets); theme rules and mobile layout are in ADR 0009 and `docs/specs/theme.md`.
+- Every screen works on mobile (< 768 px, 44 px touch targets); theme rules and mobile layout are in ADR 0009 and `docs/specs/theme.md`.
 - PostgreSQL is the only database (ADR 0008). Every PostgreSQL-only place (SQL, Liquibase changeset, code, configuration) carries a `postgres-only: ...` comment and a row in the ADR 0008 table in the same pull request; `PostgresOnlyRegistryTest` enforces the row.
 - Docs stay in Polish until backlog item 13 (English translation); new docs may be in Polish.
 - `docs/research/` is a local doc type for research briefs and reports. A report recommends; only an ADR in `docs/decisions/` decides.

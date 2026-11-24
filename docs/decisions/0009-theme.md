@@ -30,7 +30,7 @@ opcjonalnym dodatkiem ([ui-ux.md](../specs/ui-ux.md) 8).
   albo z theme Mantine. Stan to zawsze `<Badge color="up|degraded|down|unknown|maintenance">`
   z ikoną i tekstem — nigdy sam kolor. `danger` jest zarezerwowany dla akcji destrukcyjnych,
   nie dla stanu. Teksty UI tylko przez i18n (PL/EN).
-- **Mobile jest wymaganiem.** Każdy ekran działa na telefonie (< 768 px, układ wg
+- **Mobile jest wymaganiem.** Każdy ekran działa na mobile (< 768 px, układ wg
   [ui-ux.md](../specs/ui-ux.md) 3.3), cele dotyku mają 44 px z `base.css`, a akcje kryzysowe
   (potwierdzenie, przejęcie) 48 px.
 

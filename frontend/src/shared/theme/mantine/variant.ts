@@ -14,6 +14,7 @@ export type ControlVars = (
 ) => Record<string, string>
 
 const VARIABLE = /^var\((--[\w-]+)\)$/
+const MAX_ALIAS_DEPTH = 20
 
 const isDanger = (color: string | undefined): boolean => color === 'danger' || color === 'red'
 
@@ -24,7 +25,10 @@ function schemeVars(tokens: ComposedTokens, scheme: Scheme): TokenMap {
   return { ...tokens.shared, ...tokens[scheme] }
 }
 
-function resolveAlias(vars: TokenMap, name: `--${string}`): string {
+function resolveAlias(vars: TokenMap, name: `--${string}`, depth = 0): string {
+  if (depth > MAX_ALIAS_DEPTH) {
+    throw new Error(`Too deep token reference: ${name}`)
+  }
   const value = vars[name]
   if (value === undefined) {
     throw new Error(`Missing token ${name}`)
@@ -33,7 +37,7 @@ function resolveAlias(vars: TokenMap, name: `--${string}`): string {
   if (alias === undefined) {
     return value
   }
-  return resolveAlias(vars, alias as `--${string}`)
+  return resolveAlias(vars, alias as `--${string}`, depth + 1)
 }
 
 /** The text on a solid state: dark text needs a lighter fill, light text a darker one. */

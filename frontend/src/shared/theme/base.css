@@ -121,7 +121,7 @@ i {
   animation: app-live-flash var(--app-motion-live-flash);
 }
 
-/* Phone and touch: every control ≥ 44 px (spec 3.3, WCAG 2.5.8 with margin). */
+/* Mobile and touch: every control ≥ 44 px (spec 3.3, WCAG 2.5.8 with margin). */
 @media (max-width: 63.99em), (pointer: coarse) {
   html[data-mantine-color-scheme] {
     --app-size-control-compact: var(--app-size-control-touch);
