@@ -34,6 +34,21 @@ h1 { font-size:20px; margin:0 0 4px; }
 .note { color:#444; margin:0 0 20px; max-width:900px; }
 .grid { display:grid; grid-template-columns:1fr 1fr; gap:24px; align-items:start; }
 .frame-label { font-weight:600; margin:0 0 8px; color:#333; }
+.spw { position:relative; }
+.pop { display:block; position:absolute; top:44px; left:0; width:240px; background:var(--surface); border:1px solid var(--soft); border-radius:10px; box-shadow:0 8px 24px rgb(16 16 24 / .14); padding:8px; z-index:5; }
+.pop .it { height:36px; display:flex; align-items:center; gap:8px; padding:0 8px; border-radius:6px; color:var(--heading); font-weight:500; }
+.pop .it.on { background:var(--selected, #EEEBFD); color:var(--accent-text); }
+.pop .it .ck { margin-left:auto; color:var(--accent-text); }
+.pop .sep { height:1px; background:var(--soft); margin:6px 0; }
+.pop .it.new { color:var(--accent-text); }
+.scrim { position:absolute; inset:0; background:rgb(16 16 24 / .32); }
+.sheet { position:absolute; left:0; right:0; bottom:0; background:var(--surface); border-radius:12px 12px 0 0; padding:8px 0 12px; box-shadow:0 -8px 24px rgb(16 16 24 / .14); }
+.sheet .grab { width:40px; height:4px; border-radius:2px; background:var(--soft); margin:4px auto 10px; }
+.sheet .hdr { padding:4px 16px 8px; font-size:12px; color:var(--muted); letter-spacing:.04em; text-transform:uppercase; }
+.sheet .srow { min-height:48px; display:flex; align-items:center; gap:12px; padding:0 16px; color:var(--heading); font-weight:500; }
+.sheet .srow .sq { width:28px; height:28px; border-radius:6px; background:var(--primary); color:var(--on-primary); display:flex; align-items:center; justify-content:center; font-weight:600; font-size:13px; }
+.sheet .srow .sel { margin-left:auto; color:var(--accent-text); font-weight:600; }
+.sheet .srow.create { color:var(--accent-text); border-top:1px solid var(--soft); margin-top:6px; padding-top:4px; }
 .frame { border:1px solid #C9C9D1; border-radius:10px; overflow:hidden; background:var(--page); color:var(--body); }
 .t-dark.frame { border-color:#000; }
 
@@ -96,7 +111,8 @@ h1 { font-size:20px; margin:0 0 4px; }
 <div class="grid">
 
   <!-- 1. Desktop, jasny -->
-  <div>
+  <div style="grid-column:1 / -1">
+    <div style="max-width:700px;margin:0 auto">
     <p class="frame-label">1. Desktop, jasny (≥ 768 px)</p>
     <div class="frame t-light">
       <div class="desk">
@@ -110,7 +126,16 @@ h1 { font-size:20px; margin:0 0 4px; }
         </aside>
         <div class="main">
           <div class="topbar">
-            <div class="space">Przestrzeń: Produkcja<span class="chev">▾</span></div>
+            <div class="spw">
+              <div class="space">Przestrzeń: Produkcja<span class="chev">▾</span></div>
+              <div class="pop">
+                <div class="it on">Produkcja<span class="ck">✓</span></div>
+                <div class="it">Staging</div>
+                <div class="it">Domowy serwer</div>
+                <div class="sep"></div>
+                <div class="it new">+ Utwórz przestrzeń</div>
+              </div>
+            </div>
             <div class="search">Szukaj…<kbd>/</kbd></div>
             <div class="top-right">
               <span class="btn primary">+ Check</span>
@@ -126,6 +151,7 @@ h1 { font-size:20px; margin:0 0 4px; }
           </div>
         </div>
       </div>
+    </div>
     </div>
   </div>
 
@@ -179,7 +205,6 @@ h1 { font-size:20px; margin:0 0 4px; }
         <div class="srow"><span class="ico"></span>Status pages</div>
         <div class="srow"><span class="ico"></span>Ustawienia</div>
         <div class="srow"><span class="ico"></span>Lokalizacje i agenci</div>
-        <div class="srow"><span class="ico"></span>Przestrzeń<span class="sub">Produkcja</span></div>
         <div class="srow admin"><span class="ico" style="border-color:var(--admin)"></span>Administracja instancji</div>
       </div>
       <div class="pbottom">
@@ -209,13 +234,34 @@ h1 { font-size:20px; margin:0 0 4px; }
     </div>
   </div>
 
+  <!-- 5. Telefon, jasny: przełącznik przestrzeni otwarty z nagłówka -->
+  <div>
+    <p class="frame-label">5. Telefon, jasny: przełącznik przestrzeni (dotknięcie nazwy w nagłówku)</p>
+    <div class="frame t-light phone">
+      <div class="ptop">
+        <div class="space">Produkcja<span class="chev">▾</span></div>
+        <span class="btn primary" style="height:44px">+ Check</span>
+      </div>
+      <div class="pbody"><h2>Przegląd</h2>Treść poza zakresem makiety.</div>
+      <div class="scrim"></div>
+      <div class="sheet" style="bottom:0">
+        <div class="grab"></div>
+        <div class="hdr">Przestrzeń</div>
+        <div class="srow"><span class="sq">P</span>Produkcja<span class="sel">✓</span></div>
+        <div class="srow"><span class="sq">S</span>Staging</div>
+        <div class="srow"><span class="sq">D</span>Domowy serwer</div>
+        <div class="srow create">+ Utwórz przestrzeń</div>
+      </div>
+    </div>
+  </div>
+
 </div>
 
 <ul class="legend">
   <li>Desktop: lewy pasek 232 px (układ z tokenów: 14,5 rem), górny pasek 56 px. „Administracja instancji” jest na dole paska, wizualnie odrębna (kolor admin).</li>
+  <li>Przełącznik przestrzeni (decyzja w ui-ux 3.3): na desktopie nazwa w górnym pasku otwiera listę (ramka 1); na telefonie w nagłówku otwiera arkusz (ramka 5). Na obu jest „Utwórz przestrzeń”.</li>
   <li>Telefon: dolny pasek 64 px, cele dotyku ≥ 44 px. Akcja „+ Check” na telefonie ma 44 px.</li>
   <li>Licznik na Przeglądzie jest w obu układach (liczba niepotwierdzonych alertów). Wartość 3 jest przykładowa.</li>
-  <li>Do decyzji: czy „Przestrzeń” ma być w „Więcej” na telefonie (tu tak), czy w górnym pasku (jak na desktopie).</li>
   <li>Nie pokazano stanów ładowania, pusto i błędu: nawigacja ich nie ma. Mogą wystąpić tylko w treści ekranu.</li>
 </ul>
 
