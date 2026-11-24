@@ -8,5 +8,6 @@
   <include file="changes/0001-leader-lock.xml" relativeToChangelogFile="true"/>
   <include file="changes/0002-message-queue.xml" relativeToChangelogFile="true"/>
   <include file="changes/0003-spring-session.xml" relativeToChangelogFile="true"/>
+  <include file="changes/0004-spaces.xml" relativeToChangelogFile="true"/>
   <!-- SPRING_SESSION and SPRING_SESSION_ATTRIBUTES are created in changes/0003-spring-session.xml. -->
 </databaseChangeLog>

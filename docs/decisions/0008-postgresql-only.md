@@ -44,6 +44,7 @@ ma opisaną ścieżkę.
 | Właściwość `options` pgjdbc z limitami sesji | `server/src/main/java/dev/wakey/config/PostgresSessionLimitsBeanPostProcessor.java` | Ustawić limity przez API nowego sterownika albo `SET` po otwarciu połączenia. |
 | Typ `BYTEA` dla atrybutów sesji | `server/src/main/resources/db/changelog/changes/0003-spring-session.xml` | Zmienić typ na odpowiednik binarny nowej bazy (np. `BLOB`) i usunąć znacznik. |
 | Konfiguracja limitów sesji | `server/src/main/resources/application.yml` | Przenieść `wakey.database.*` do konfiguracji nowej bazy i usunąć znacznik. |
+| Natywne typy `UUID` i `TIMESTAMPTZ` w tabelach przestrzeni | `server/src/main/resources/db/changelog/changes/0004-spaces.xml` | Zmienić kolumny na typ binarny i znacznik czasu z offsetem nowej bazy i usunąć znacznik. |
 
 ## Migracja na inną bazę
 
