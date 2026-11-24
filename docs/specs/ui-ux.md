@@ -172,7 +172,9 @@ Wspólne: język stanów, tokeny, StatusBadge, HistoryBar, renderer SafeRichText
 
 ## 3.3 Telefon (< 768 px)
 
-Dolny pasek, cele dotyku 44–48 px: **Przegląd** (z plakietką liczby niepotwierdzonych alertów), **Checki**, **Incydenty**, **Więcej** (Status pages, Ustawienia, Lokalizacje i agenci, przełączanie przestrzeni, Administracja instancji).
+Dolny pasek, cele dotyku 44–48 px: **Przegląd** (z plakietką liczby niepotwierdzonych alertów), **Checki**, **Incydenty**, **Więcej** (Status pages, Ustawienia, Lokalizacje i agenci, Administracja instancji).
+
+**Decyzja:** przełącznik przestrzeni na telefonie jest w nagłówku (nazwa przestrzeni otwiera listę), nie w „Więcej”. Makieta: `docs/specs/screens/navigation.html`.
 
 ### Macierz funkcji mobilnych
 
@@ -328,7 +330,7 @@ Ponowna weryfikacja co 30 dni: ostrzeżenie → okres łaski → pauza z powodem
 **Nagłówek:** nazwa, StatusBadge, decyzja z lokalizacji lub powód UNKNOWN, wiek ostatniego sprawdzenia, akcje: Sprawdź teraz, Pauza, Wycisz, Klonuj, Edytuj. Dla „do sprawdzenia konfiguracji” zaraz pod nagłówkiem karta z konkretną podpowiedzią diagnostyczną. Jeśli konfiguracja różni się od pliku, jest pasek informacyjny z przejściem do diffu.
 
 **Sekcje / zakładki:**
-1. Wykres czasu odpowiedzi w fazach (DNS, TCP, TLS, TTFB) per lokalizacja, z linią progu; zakresy 24 h / 7 / 30 / 60 / 365 dni (w granicach planu), zakres w URL.
+1. Wykres czasu odpowiedzi w fazach (DNS, TCP, TLS, TTFB) per lokalizacja, z linią progu; zakresy 24 h / 7 / 30 / 60 / 365 dni (w granicach planu), zakres w URL. **Decyzja:** wykres zostaje, zgodnie z tym punktem. Makieta szczegółów (`docs/specs/screens/check-details.html`) nie ma jeszcze wykresu i trzeba ją uzupełnić osobno.
 2. Uptime za okres, bez okresów oznaczonych jako fałszywe alarmy (patrz 12.3 — jak liczyć UNKNOWN).
 3. Lokalizacje: wynik i dostępność każdej.
 4. Zdarzenia i błędy: kategoria, zakres czasu, pełny request/response po rozwinięciu.
@@ -798,9 +800,9 @@ Problemy zgłaszane przez pojedynczych użytkowników to sygnały, nie uniwersal
 - Jeden model Incident z aktualizacjami prywatnymi/publicznymi? **Rekomendacja: tak.**
 - `degradedReason` i powód UNKNOWN w API? **Rekomendacja: tak.**
 - Reguła backendu: kiedy dokładnie UNKNOWN przy awarii monitoringu i jak długo wolno używać danych z cache.
-- **Jak liczyć uptime przy UNKNOWN?** Rekomendacja: okresy UNKNOWN wyłączone z mianownika i pokazane osobno jako „pokrycie danymi: 99,2%”, żeby nasza awaria nie psuła ani nie zawyżała uptime’u klienta. Analogicznie MAINTENANCE wg flagi „wlicz do SLA”.
-- Próg „szerokiej” akcji wymagającej dodatkowego potwierdzenia (np. > 20 checków lub zakres „wszystko”).
-- Zachowanie zakresu „wszystko” na telefonie (12.2 pkt 3).
+- **Jak liczyć uptime przy UNKNOWN?** Rekomendacja: okresy UNKNOWN wyłączone z mianownika i pokazane osobno jako „pokrycie danymi: 99,2%”, żeby nasza awaria nie psuła ani nie zawyżała uptime’u klienta. Analogicznie MAINTENANCE wg flagi „wlicz do SLA”. **Status: odłożone do późniejszej decyzji.**
+- Próg „szerokiej” akcji wymagającej dodatkowego potwierdzenia (np. > 20 checków lub zakres „wszystko”). **Status: bez decyzji na razie.**
+- Zachowanie zakresu „wszystko” na telefonie (12.2 pkt 3). **Status: bez decyzji na razie.**
 - Które ustawienia są tylko do podglądu na telefonie (macierz 3.3).
 
 ---
