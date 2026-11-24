@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Makieta: nawigacja (etap 1b, szkic)</title>
+<style>
+/* Tokeny skopiowane z docs/specs/theme-preview.html (wartości właściciela). */
+.t-light {
+  --page:#F6F6F8; --surface:#FFFFFF; --surface-sidebar:#FBFBFC; --surface-subtle:#F1F1F4;
+  --heading:#1C1C23; --body:#3D3D48; --muted:#62626F; --soft:#E3E3E9; --border:#8A8A97;
+  --hover:#F0F0F4; --pressed:#E6E6EC;
+  --accent:#7367F0; --accent-text:#5B4FD3; --primary:#665AD8; --on-primary:#FFFFFF;
+  --nav-active-bg:color-mix(in srgb,#7367F0 8%,#FBFBFC);
+  --focus:#7367F0; --admin:#A04A06; --admin-bg:#FFF4E5;
+  --up:#059669; --up-on:#0B0F17; --deg:#CC6F05; --deg-on:#0B0F17;
+  --down:#E11D48; --down-on:#FFFFFF; --unk:#64748B; --unk-on:#FFFFFF;
+  --mnt:#2563EB; --mnt-on:#FFFFFF;
+}
+.t-dark {
+  --page:#121316; --surface:#1B1B1F; --surface-sidebar:#18191D; --surface-subtle:#17171B;
+  --heading:#EDEDF1; --body:#C6C6CE; --muted:#93939F; --soft:#2D2D34; --border:#74747F;
+  --hover:#26262D; --pressed:#2D2D34;
+  --accent:#7367F0; --accent-text:#8E84F5; --primary:#665AD8; --on-primary:#FFFFFF;
+  --nav-active-bg:color-mix(in srgb,#7367F0 12%,transparent);
+  --focus:#7367F0; --admin:#F59E0B; --admin-bg:#2A1E08;
+  --up:#10B981; --up-on:#0B0F17; --deg:#F59E0B; --deg-on:#0B0F17;
+  --down:#F43F5E; --down-on:#FFFFFF; --unk:#94A3B8; --unk-on:#0B0F17;
+  --mnt:#3B82F6; --mnt-on:#FFFFFF;
+}
+* { box-sizing:border-box; }
+body { margin:0; padding:24px; background:#E9E9EE; font:14px/20px Geist, Inter, "Segoe UI", sans-serif; color:#1C1C23; }
+h1 { font-size:20px; margin:0 0 4px; }
+.note { color:#444; margin:0 0 20px; max-width:900px; }
+.grid { display:grid; grid-template-columns:1fr 1fr; gap:24px; align-items:start; }
+.frame-label { font-weight:600; margin:0 0 8px; color:#333; }
+.frame { border:1px solid #C9C9D1; border-radius:10px; overflow:hidden; background:var(--page); color:var(--body); }
+.t-dark.frame { border-color:#000; }
+
+/* --- Desktop shell --- */
+.desk { display:grid; grid-template-columns:232px 1fr; height:460px; }
+.side { background:var(--surface-sidebar); border-right:1px solid var(--soft); padding:10px 8px; display:flex; flex-direction:column; gap:2px; }
+.side .sec { font-size:12px; letter-spacing:.04em; color:var(--muted); padding:10px 10px 4px; text-transform:uppercase; }
+.nav-item { height:36px; display:flex; align-items:center; gap:10px; padding:0 10px; border-radius:5px; color:var(--body); font-weight:500; }
+.nav-item .ico { width:16px; height:16px; border:1.5px solid currentColor; border-radius:3px; opacity:.8; }
+.nav-item.active { background:var(--nav-active-bg); color:var(--accent-text); box-shadow: inset 3px 0 0 var(--accent-text); }
+.nav-item:hover { background:var(--hover); }
+.nav-item .count { margin-left:auto; min-width:20px; height:20px; padding:0 6px; border-radius:999px; background:var(--down); color:var(--down-on); font-size:12px; line-height:20px; text-align:center; font-weight:600; font-variant-numeric: tabular-nums; }
+.admin-btn { margin-top:auto; height:36px; display:flex; align-items:center; padding:0 10px; border-radius:5px; color:var(--admin); background:var(--admin-bg); font-weight:600; }
+.main { display:flex; flex-direction:column; min-width:0; }
+.topbar { height:56px; background:var(--surface); border-bottom:1px solid var(--soft); display:flex; align-items:center; gap:10px; padding:0 16px; }
+.space { height:36px; display:flex; align-items:center; gap:8px; padding:0 10px; border:1px solid var(--border); border-radius:5px; color:var(--heading); background:var(--surface); font-weight:500; min-width:150px; }
+.space .chev { margin-left:auto; color:var(--muted); }
+.search { flex:1; min-width:120px; max-width:260px; height:36px; display:flex; align-items:center; gap:8px; padding:0 10px; border:1px solid var(--border); border-radius:5px; background:var(--surface-subtle); color:var(--muted); }
+.search kbd { margin-left:auto; font:12px "JetBrains Mono", Consolas, monospace; border:1px solid var(--soft); border-radius:3px; padding:0 5px; }
+.btn { height:36px; padding:0 14px; border-radius:5px; border:1px solid var(--border); background:var(--surface); color:var(--heading); font-weight:500; display:inline-flex; align-items:center; }
+.btn.primary { background:var(--primary); border-color:var(--primary); color:var(--on-primary); }
+.seg { display:inline-flex; border:1px solid var(--border); border-radius:5px; overflow:hidden; height:36px; }
+.seg span { padding:0 10px; display:flex; align-items:center; color:var(--muted); font-weight:500; }
+.seg span.on { background:var(--nav-active-bg); color:var(--accent-text); }
+.top-right { margin-left:auto; display:flex; gap:8px; align-items:center; }
+.content { padding:20px; color:var(--muted); }
+.content h2 { margin:0 0 6px; font-size:18px; color:var(--heading); font-weight:600; }
+.ph { height:96px; border:1px dashed var(--border); border-radius:8px; margin-top:12px; display:flex; align-items:center; justify-content:center; color:var(--muted); }
+
+/* --- Phone shell --- */
+.phone { width:375px; height:700px; margin:0 auto; display:flex; flex-direction:column; position:relative; overflow:hidden; background:var(--page); }
+.ptop { height:56px; background:var(--surface); border-bottom:1px solid var(--soft); display:flex; align-items:center; gap:10px; padding:0 14px; }
+.ptop .space { min-width:0; height:44px; flex:1; }
+.pbody { flex:1; padding:16px; color:var(--muted); }
+.pbody h2 { margin:0 0 6px; font-size:18px; color:var(--heading); font-weight:600; }
+.pbottom { height:64px; background:var(--surface); border-top:1px solid var(--soft); display:grid; grid-template-columns:repeat(4,1fr); }
+.pbottom .tab { display:flex; flex-direction:column; align-items:center; justify-content:center; gap:3px; min-height:44px; color:var(--muted); font-size:12px; font-weight:500; position:relative; }
+.pbottom .tab .ico { width:20px; height:20px; border:1.5px solid currentColor; border-radius:4px; }
+.pbottom .tab.active { color:var(--accent-text); }
+.pbottom .tab.active::before { content:""; position:absolute; top:0; left:25%; right:25%; height:2px; background:var(--accent-text); border-radius:0 0 2px 2px; }
+.pbottom .badge { position:absolute; top:6px; left:calc(50% + 6px); min-width:18px; height:18px; padding:0 5px; border-radius:999px; background:var(--down); color:var(--down-on); font-size:11px; line-height:18px; font-weight:600; text-align:center; font-variant-numeric: tabular-nums; }
+.scrim { position:absolute; inset:0; background:rgb(16 16 24 / .32); }
+.sheet { position:absolute; left:0; right:0; bottom:0; background:var(--surface); border-radius:12px 12px 0 0; padding:8px 0 12px; box-shadow:0 -8px 24px rgb(16 16 24 / .14); }
+.sheet .grab { width:40px; height:4px; border-radius:2px; background:var(--soft); margin:4px auto 10px; }
+.sheet .srow { min-height:48px; display:flex; align-items:center; gap:12px; padding:0 16px; color:var(--heading); font-weight:500; }
+.sheet .srow .ico { width:18px; height:18px; border:1.5px solid var(--muted); border-radius:4px; }
+.sheet .srow.admin { color:var(--admin); background:var(--admin-bg); margin:6px 12px 0; border-radius:6px; }
+.sheet .srow .sub { margin-left:auto; color:var(--muted); font-size:13px; font-weight:400; }
+.sheet .hdr { padding:4px 16px 8px; font-size:12px; color:var(--muted); letter-spacing:.04em; text-transform:uppercase; }
+
+.legend { margin-top:12px; font-size:13px; color:#333; max-width:900px; }
+.legend li { margin-bottom:4px; }
+</style>
+</head>
+<body>
+
+<h1>Nawigacja — szkic makiety (etap 1b)</h1>
+<p class="note">Szkic do akceptacji właściciela. Kolory i rozmiary z tokenów motywu (docs/specs/theme-preview.html). Bez tekstów z realnymi danymi: nazwy przestrzeni i checków są przykładowe. Ikony są placeholderami.</p>
+
+<div class="grid">
+
+  <!-- 1. Desktop, jasny -->
+  <div>
+    <p class="frame-label">1. Desktop, jasny (≥ 768 px)</p>
+    <div class="frame t-light">
+      <div class="desk">
+        <aside class="side">
+          <div class="nav-item active"><span class="ico"></span>Przegląd<span class="count">3</span></div>
+          <div class="nav-item"><span class="ico"></span>Checki</div>
+          <div class="nav-item"><span class="ico"></span>Incydenty</div>
+          <div class="nav-item"><span class="ico"></span>Status pages</div>
+          <div class="nav-item"><span class="ico"></span>Ustawienia</div>
+          <div class="admin-btn">Administracja instancji</div>
+        </aside>
+        <div class="main">
+          <div class="topbar">
+            <div class="space">Przestrzeń: Produkcja<span class="chev">▾</span></div>
+            <div class="search">Szukaj…<kbd>/</kbd></div>
+            <div class="top-right">
+              <span class="btn primary">+ Check</span>
+              <div class="seg"><span class="on">PL</span><span>EN</span></div>
+              <span class="btn">Motyw</span>
+              <span class="btn">Profil</span>
+            </div>
+          </div>
+          <div class="content">
+            <h2>Przegląd</h2>
+            <div>Treść ekranu poza zakresem tej makiety.</div>
+            <div class="ph">obszar treści</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 2. Desktop, ciemny -->
+  <div>
+    <p class="frame-label">2. Desktop, ciemny</p>
+    <div class="frame t-dark">
+      <div class="desk">
+        <aside class="side">
+          <div class="nav-item active"><span class="ico"></span>Przegląd<span class="count">3</span></div>
+          <div class="nav-item"><span class="ico"></span>Checki</div>
+          <div class="nav-item"><span class="ico"></span>Incydenty</div>
+          <div class="nav-item"><span class="ico"></span>Status pages</div>
+          <div class="nav-item"><span class="ico"></span>Ustawienia</div>
+          <div class="admin-btn">Administracja instancji</div>
+        </aside>
+        <div class="main">
+          <div class="topbar">
+            <div class="space" style="background:var(--surface);color:var(--heading)">Przestrzeń: Produkcja<span class="chev">▾</span></div>
+            <div class="search">Szukaj…<kbd>/</kbd></div>
+            <div class="top-right">
+              <span class="btn primary">+ Check</span>
+              <div class="seg"><span class="on">PL</span><span>EN</span></div>
+              <span class="btn">Motyw</span>
+              <span class="btn">Profil</span>
+            </div>
+          </div>
+          <div class="content">
+            <h2>Przegląd</h2>
+            <div>Treść ekranu poza zakresem tej makiety.</div>
+            <div class="ph">obszar treści</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 3. Telefon, jasny, z otwartym „Więcej” -->
+  <div>
+    <p class="frame-label">3. Telefon, jasny: „Więcej” otwarte (< 768 px)</p>
+    <div class="frame t-light phone">
+      <div class="ptop">
+        <div class="space">Produkcja<span class="chev">▾</span></div>
+        <span class="btn primary" style="height:44px">+ Check</span>
+      </div>
+      <div class="pbody"><h2>Przegląd</h2>Treść poza zakresem makiety.</div>
+      <div class="scrim"></div>
+      <div class="sheet" style="bottom:64px">
+        <div class="grab"></div>
+        <div class="hdr">Więcej</div>
+        <div class="srow"><span class="ico"></span>Status pages</div>
+        <div class="srow"><span class="ico"></span>Ustawienia</div>
+        <div class="srow"><span class="ico"></span>Lokalizacje i agenci</div>
+        <div class="srow"><span class="ico"></span>Przestrzeń<span class="sub">Produkcja</span></div>
+        <div class="srow admin"><span class="ico" style="border-color:var(--admin)"></span>Administracja instancji</div>
+      </div>
+      <div class="pbottom">
+        <div class="tab active"><span class="ico"></span>Przegląd<span class="badge">3</span></div>
+        <div class="tab"><span class="ico"></span>Checki</div>
+        <div class="tab"><span class="ico"></span>Incydenty</div>
+        <div class="tab"><span class="ico"></span>Więcej</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 4. Telefon, ciemny, zamknięte -->
+  <div>
+    <p class="frame-label">4. Telefon, ciemny: zwykły widok</p>
+    <div class="frame t-dark phone">
+      <div class="ptop">
+        <div class="space" style="background:var(--surface);color:var(--heading)">Produkcja<span class="chev">▾</span></div>
+        <span class="btn primary" style="height:44px">+ Check</span>
+      </div>
+      <div class="pbody"><h2>Przegląd</h2>Treść poza zakresem makiety.</div>
+      <div class="pbottom">
+        <div class="tab active"><span class="ico"></span>Przegląd<span class="badge">3</span></div>
+        <div class="tab"><span class="ico"></span>Checki</div>
+        <div class="tab"><span class="ico"></span>Incydenty</div>
+        <div class="tab"><span class="ico"></span>Więcej</div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<ul class="legend">
+  <li>Desktop: lewy pasek 232 px (układ z tokenów: 14,5 rem), górny pasek 56 px. „Administracja instancji” jest na dole paska, wizualnie odrębna (kolor admin).</li>
+  <li>Telefon: dolny pasek 64 px, cele dotyku ≥ 44 px. Akcja „+ Check” na telefonie ma 44 px.</li>
+  <li>Licznik na Przeglądzie jest w obu układach (liczba niepotwierdzonych alertów). Wartość 3 jest przykładowa.</li>
+  <li>Do decyzji: czy „Przestrzeń” ma być w „Więcej” na telefonie (tu tak), czy w górnym pasku (jak na desktopie).</li>
+  <li>Nie pokazano stanów ładowania, pusto i błędu: nawigacja ich nie ma. Mogą wystąpić tylko w treści ekranu.</li>
+</ul>
+
+</body>
+</html>
