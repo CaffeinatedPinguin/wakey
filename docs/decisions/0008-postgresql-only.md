@@ -48,6 +48,8 @@ ma opisaną ścieżkę.
 | Natywne typy `UUID` i `TIMESTAMPTZ` w tabeli audytu | `server/src/main/resources/db/changelog/changes/0005-audit.xml` | Zmienić kolumny na typ binarny i znacznik czasu z offsetem nowej bazy i usunąć znacznik. |
 | Natywne typy `UUID` i `TIMESTAMPTZ` w tabeli tokenów API | `server/src/main/resources/db/changelog/changes/0006-api-tokens.xml` | Zmienić kolumny na typ binarny i znacznik czasu z offsetem nowej bazy i usunąć znacznik. |
 | Natywne typy `UUID` i `TIMESTAMPTZ` w tabeli ustawień przestrzeni | `server/src/main/resources/db/changelog/changes/0007-space-settings.xml` | Zmienić kolumny na typ binarny i znacznik czasu z offsetem nowej bazy i usunąć znacznik. |
+| Natywne typy `UUID` i `TIMESTAMPTZ` oraz ograniczenia CHECK tabel checków | `server/src/main/resources/db/changelog/changes/0008-checks.xml` | Zmienić kolumny na typ binarny i znacznik czasu z offsetem nowej bazy i usunąć znacznik. |
+| Agregacja `COUNT(*) FILTER` licząca stany checków w jednym zapytaniu | `server/src/main/java/dev/wakey/checks/internal/CheckSql.java` | Zastąpić agregatami warunkowymi (`SUM(CASE ...)`) i usunąć znacznik. |
 
 ## Migracja na inną bazę
 

@@ -12,5 +12,6 @@
   <include file="changes/0005-audit.xml" relativeToChangelogFile="true"/>
   <include file="changes/0006-api-tokens.xml" relativeToChangelogFile="true"/>
   <include file="changes/0007-space-settings.xml" relativeToChangelogFile="true"/>
+  <include file="changes/0008-checks.xml" relativeToChangelogFile="true"/>
   <!-- SPRING_SESSION and SPRING_SESSION_ATTRIBUTES are created in changes/0003-spring-session.xml. -->
 </databaseChangeLog>
