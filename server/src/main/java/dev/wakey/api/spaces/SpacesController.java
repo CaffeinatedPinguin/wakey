@@ -70,6 +70,13 @@ final class SpacesController {
             @RequestParam(defaultValue = DEFAULT_PAGE_SIZE) int limit,
             @RequestParam(required = false) Optional<String> cursor,
             Authentication authentication) {
+        return SpacesErrors.tokenSpaceSlug(authentication)
+                .map(slug -> SpacesErrors.tokenSpacePage(spaces, authentication, slug))
+                .orElseGet(() -> visibleSpacePage(limit, cursor, authentication));
+    }
+
+    private CursorPage<SpaceResponse> visibleSpacePage(
+            int limit, Optional<String> cursor, Authentication authentication) {
         var actor = SpacesErrors.principal(authentication);
         int requested = Math.max(1, limit);
         int capped = apiProperties.capPageSize(requested);
@@ -104,7 +111,7 @@ final class SpacesController {
             content = @Content(mediaType = PROBLEM_JSON, schema = @Schema(implementation = ProblemDetail.class)))
     @GetMapping(path = ITEM_PATH, produces = JSON)
     SpaceResponse getSpace(@PathVariable String slug, Authentication authentication) {
-        var actor = SpacesErrors.principal(authentication);
+        var actor = SpacesErrors.principalFor(authentication, slug);
         var view = SpacesErrors.mapped(() -> spaces.view(actor, slug));
         return SpaceResponse.from(view);
     }
@@ -141,7 +148,7 @@ final class SpacesController {
             @RequestHeader(name = "If-None-Match", required = false) Optional<String> ifNoneMatch,
             @Valid @RequestBody PutSpaceRequest request,
             Authentication authentication) {
-        var actor = SpacesErrors.principal(authentication);
+        var actor = SpacesErrors.principalFor(authentication, slug);
         boolean createOnly = ifNoneMatch.map(IF_NONE_MATCH_ANY::equals).orElse(false);
         PutResult result = createOnly
                 ? SpacesErrors.mapped(() -> spaces.create(actor, slug, request.name()))

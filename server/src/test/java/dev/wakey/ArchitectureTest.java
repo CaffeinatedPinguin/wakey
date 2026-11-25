@@ -39,7 +39,7 @@ class ArchitectureTest {
 
     private static Map<String, Set<String>> moduleDependencies() {
         Map<String, Set<String>> dependencies = new HashMap<>();
-        dependencies.put("api", Set.of("checks", "spaces", "settings", "web", "security"));
+        dependencies.put("api", Set.of("checks", "spaces", "settings", "web", "security", "tokens"));
         dependencies.put("audit", Set.of());
         dependencies.put("checks", Set.of());
         dependencies.put("config", Set.of());
@@ -51,7 +51,7 @@ class ArchitectureTest {
         dependencies.put("spaces", Set.of());
         dependencies.put("tokens", Set.of("spaces"));
         dependencies.put("web", Set.of());
-        dependencies.put("security", Set.of("web"));
+        dependencies.put("security", Set.of("web", "tokens"));
         dependencies.put("executor", Set.of("leadership", "messaging"));
         dependencies.put("alerts", Set.of("leadership", "messaging"));
         return dependencies;

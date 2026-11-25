@@ -77,7 +77,8 @@ final class JdbcApiTokens implements ApiTokens {
         if (effectiveScope.isPresent()) {
             store.markUsed(token.id(), now);
             TokenScope scope = effectiveScope.get();
-            TokenIdentity resolved = new TokenIdentity(token.id(), token.spaceId(), token.ownerSubject(), scope);
+            TokenIdentity resolved =
+                    new TokenIdentity(token.id(), token.spaceId(), token.spaceSlug(), token.ownerSubject(), scope);
             identity = Optional.of(resolved);
         }
         return identity;

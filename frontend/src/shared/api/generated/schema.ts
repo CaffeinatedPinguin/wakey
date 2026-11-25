@@ -197,6 +197,41 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/spaces/{slug}/tokens": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List the caller's API tokens in a space */
+        get: operations["listTokens"];
+        put?: never;
+        /** Create an API token for a space */
+        post: operations["createToken"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/spaces/{slug}/tokens/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Revoke one of the caller's API tokens */
+        delete: operations["revokeToken"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -321,6 +356,31 @@ export interface components {
              */
             type: "HTTP" | "TCP" | "CERTIFICATE";
         };
+        /** @description A new API token */
+        CreateTokenRequest: {
+            /**
+             * Format: date-time
+             * @description When the token expires, or null for no expiry
+             */
+            expiresAt?: string | null;
+            /**
+             * @description The token name
+             * @example ci-deploy
+             */
+            name: string;
+            /**
+             * @description The greatest scope the token may use
+             * @enum {string}
+             */
+            scope: "READ" | "WRITE";
+        };
+        /** @description A newly created API token and its secret, shown only once */
+        CreateTokenResponse: {
+            /** @description The token secret, shown only in this response */
+            secret: string;
+            /** @description The stored token, without the secret or the hash */
+            token: components["schemas"]["TokenSummary"];
+        };
         CurrentUser: {
             /** @description Whether the user is an instance administrator */
             admin: boolean;
@@ -336,6 +396,12 @@ export interface components {
         CursorPageSpaceResponse: {
             /** @description The items on this page */
             items: components["schemas"]["SpaceResponse"][];
+            /** @description The cursor of the next page, or null on the last page */
+            nextCursor: string | null;
+        };
+        CursorPageTokenSummary: {
+            /** @description The items on this page */
+            items: components["schemas"]["TokenSummary"][];
             /** @description The cursor of the next page, or null on the last page */
             nextCursor: string | null;
         };
@@ -449,6 +515,21 @@ export interface components {
             unknown: number;
             /** Format: int64 */
             up: number;
+        };
+        TokenSummary: {
+            /** Format: date-time */
+            createdAt?: string;
+            /** Format: date-time */
+            expiresAt?: string;
+            /** Format: uuid */
+            id?: string;
+            /** Format: date-time */
+            lastUsedAt?: string;
+            name?: string;
+            /** Format: date-time */
+            revokedAt?: string;
+            /** @enum {string} */
+            scope?: "READ" | "WRITE";
         };
         /** @description The replacement values of a check */
         UpdateCheckRequest: {
@@ -1358,6 +1439,156 @@ export interface operations {
                 };
             };
             /** @description The caller cannot change the settings of this space. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description The space was not found. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
+                };
+            };
+        };
+    };
+    listTokens: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CursorPageTokenSummary"];
+                };
+            };
+            /** @description Authentication is required. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description The space was not found. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
+                };
+            };
+        };
+    };
+    createToken: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateTokenRequest"];
+            };
+        };
+        responses: {
+            /** @description The token was created; the secret is returned only here. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CreateTokenResponse"];
+                };
+            };
+            /** @description The token request is invalid. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description Authentication is required. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description The caller is not allowed to create this token. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description The space was not found. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
+                };
+            };
+        };
+    };
+    revokeToken: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: string;
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The token was revoked. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Authentication is required. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description The caller is not allowed to revoke this token. */
             403: {
                 headers: {
                     [name: string]: unknown;
