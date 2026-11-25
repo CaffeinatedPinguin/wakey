@@ -1,8 +1,8 @@
 package dev.wakey.api.checks;
 
-import dev.wakey.security.CurrentUser;
+import dev.wakey.api.SpacePrincipals;
+import dev.wakey.spaces.SpaceAccessDeniedException;
 import dev.wakey.spaces.SpacePrincipal;
-import dev.wakey.spaces.SpaceRole;
 import dev.wakey.spaces.SpaceService;
 import dev.wakey.spaces.SpaceView;
 import org.springframework.security.core.Authentication;
@@ -12,27 +12,23 @@ import org.springframework.stereotype.Component;
 @Component
 final class ChecksAccess {
 
+    private static final String WRITE_DENIED = "Only an editor or an administrator can change checks";
+
     private final SpaceService spaces;
 
     ChecksAccess(SpaceService spaces) {
         this.spaces = spaces;
     }
 
-    SpacePrincipal principal(Authentication authentication) {
-        CurrentUser user = CurrentUser.from(authentication);
-        return new SpacePrincipal(user.subject(), user.admin());
-    }
-
     SpaceView read(Authentication authentication, String slug) {
-        SpacePrincipal principal = principal(authentication);
-        return ChecksErrors.mapped(() -> spaces.view(principal, slug));
+        SpacePrincipal principal = SpacePrincipals.forSpace(authentication, slug);
+        return spaces.view(principal, slug);
     }
 
     SpaceView write(Authentication authentication, String slug) {
         SpaceView view = read(authentication, slug);
-        boolean editable = view.admin() || view.role() == SpaceRole.EDITOR;
-        if (!editable) {
-            throw ChecksErrors.forbidden();
+        if (!view.canWrite()) {
+            throw new SpaceAccessDeniedException(WRITE_DENIED);
         }
         return view;
     }

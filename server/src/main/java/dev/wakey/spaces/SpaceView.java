@@ -15,4 +15,10 @@ public record SpaceView(
         @Nullable String planName,
         long version,
         boolean admin,
-        @Nullable SpaceRole role) {}
+        @Nullable SpaceRole role) {
+
+    /** Whether the caller may change the space: an application Admin or a member with the Editor role. */
+    public boolean canWrite() {
+        return admin || role == SpaceRole.EDITOR;
+    }
+}

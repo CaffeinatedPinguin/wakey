@@ -20,6 +20,7 @@ import dev.wakey.tokens.TokenOptions;
 import dev.wakey.tokens.TokenOwner;
 import dev.wakey.tokens.TokenScope;
 import jakarta.servlet.http.HttpSession;
+import java.net.URI;
 import java.time.Clock;
 import java.time.Instant;
 import java.util.ArrayList;
@@ -333,6 +334,45 @@ class TokensHttpIntegrationTest extends SecurityIntegrationTest {
     }
 
     @Test
+    void aTokenCannotManageTokensThroughAPercentEncodedPath() throws Exception {
+        // given
+        String subject = uniqueSubject("encoded-tokens");
+        Space space = seedSpace("encoded", subject, SpaceRole.EDITOR);
+        CreatedToken writeToken = createToken(subject, space.slug(), TokenScope.WRITE);
+        CreatedToken readToken = createToken(subject, space.slug(), TokenScope.READ);
+        URI encodedCollection = encodedTokensPath(space.slug());
+
+        // when
+        MockHttpServletRequestBuilder writeListRequest = get("/").uri(encodedCollection);
+        MockHttpServletRequestBuilder readListRequest = get("/").uri(encodedCollection);
+        MvcResult writeCreate = performWithToken(tokenCreateRequest(encodedCollection), writeToken);
+        MvcResult readCreate = performWithToken(tokenCreateRequest(encodedCollection), readToken);
+        MvcResult writeList = performWithToken(writeListRequest, writeToken);
+        MvcResult readList = performWithToken(readListRequest, readToken);
+        MockHttpServletRequestBuilder listRequest =
+                get(SPACES + "/" + space.slug() + TOKENS).with(login(subject));
+        MvcResult listed = mockMvc().perform(listRequest).andReturn();
+
+        // then
+        String listedBody = listed.getResponse().getContentAsString();
+        assertThat(statusOf(writeCreate)).isEqualTo(403);
+        assertThat(codeOf(writeCreate)).isEqualTo("insufficient_scope");
+        assertThat(statusOf(readCreate)).isEqualTo(403);
+        assertThat(codeOf(readCreate)).isEqualTo("insufficient_scope");
+        assertThat(statusOf(writeList)).isEqualTo(403);
+        assertThat(codeOf(writeList)).isEqualTo("insufficient_scope");
+        assertThat(statusOf(readList)).isEqualTo(403);
+        assertThat(codeOf(readList)).isEqualTo("insufficient_scope");
+        assertThat(statusOf(listed)).isEqualTo(200);
+        assertThat(listedBody).doesNotContain("from-encoded");
+    }
+
+    private static String codeOf(MvcResult result) throws Exception {
+        JsonNode body = jsonOf(result);
+        return body.path("code").asString();
+    }
+
+    @Test
     void loweringTheRoleLowersTheTokenOverHttp() throws Exception {
         // given
         String subject = uniqueSubject("lower-token");
@@ -410,6 +450,17 @@ class TokensHttpIntegrationTest extends SecurityIntegrationTest {
 
     private static String tokenBody(String name, TokenScope scope) {
         return "{\"name\":\"" + name + "\",\"scope\":\"" + scope.name() + "\"}";
+    }
+
+    private static MockHttpServletRequestBuilder tokenCreateRequest(URI encodedCollection) {
+        return post("/")
+                .uri(encodedCollection)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(tokenBody("from-encoded", TokenScope.READ));
+    }
+
+    private static URI encodedTokensPath(String slug) {
+        return URI.create(SPACES + "/" + slug + "/t%6Fkens");
     }
 
     private static RequestPostProcessor login(String subject) {

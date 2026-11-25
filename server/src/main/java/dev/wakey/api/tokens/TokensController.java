@@ -1,6 +1,10 @@
 package dev.wakey.api.tokens;
 
+import dev.wakey.api.SpacePrincipals;
 import dev.wakey.tokens.ApiTokens;
+import dev.wakey.tokens.CreatedToken;
+import dev.wakey.tokens.TokenOptions;
+import dev.wakey.tokens.TokenOwner;
 import dev.wakey.tokens.TokenSummary;
 import dev.wakey.web.CursorPage;
 import io.swagger.v3.oas.annotations.Operation;
@@ -22,7 +26,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 /**
  * The HTTP adapter for API tokens; all access rules and validation live in the tokens module.
- * These endpoints accept a session only, never a token, so a token cannot mint or revoke tokens.
+ * These endpoints accept a session only, so a token cannot mint or revoke tokens.
  */
 @RestController
 final class TokensController {
@@ -65,8 +69,11 @@ final class TokensController {
     @PostMapping(path = COLLECTION_PATH, consumes = JSON, produces = JSON)
     ResponseEntity<CreateTokenResponse> createToken(
             @PathVariable String slug, @Valid @RequestBody CreateTokenRequest request, Authentication authentication) {
-        CreateTokenResponse response = TokenErrors.create(tokens, authentication, slug, request);
-        return ResponseEntity.status(201).body(response);
+        SpacePrincipals.requireUserSession(authentication);
+        TokenOwner owner = owner(authentication);
+        TokenOptions options = new TokenOptions(request.scope(), request.expiresAt());
+        CreatedToken created = tokens.create(owner, slug, request.name(), options);
+        return ResponseEntity.status(201).body(CreateTokenResponse.from(created));
     }
 
     @Operation(operationId = "listTokens", summary = "List the caller's API tokens in a space")
@@ -81,7 +88,9 @@ final class TokensController {
             content = @Content(mediaType = PROBLEM_JSON, schema = @Schema(implementation = ProblemDetail.class)))
     @GetMapping(path = COLLECTION_PATH, produces = JSON)
     CursorPage<TokenSummary> listTokens(@PathVariable String slug, Authentication authentication) {
-        List<TokenSummary> summaries = TokenErrors.list(tokens, authentication, slug);
+        SpacePrincipals.requireUserSession(authentication);
+        TokenOwner owner = owner(authentication);
+        List<TokenSummary> summaries = tokens.list(owner, slug);
         return new CursorPage<>(summaries, null);
     }
 
@@ -101,7 +110,14 @@ final class TokensController {
             content = @Content(mediaType = PROBLEM_JSON, schema = @Schema(implementation = ProblemDetail.class)))
     @DeleteMapping(path = ITEM_PATH)
     ResponseEntity<Void> revokeToken(@PathVariable String slug, @PathVariable UUID id, Authentication authentication) {
-        TokenErrors.revoke(tokens, authentication, slug, id);
+        SpacePrincipals.requireUserSession(authentication);
+        TokenOwner owner = owner(authentication);
+        tokens.revoke(owner, slug, id);
         return ResponseEntity.noContent().build();
+    }
+
+    private static TokenOwner owner(Authentication authentication) {
+        var principal = SpacePrincipals.of(authentication);
+        return new TokenOwner(principal.subject());
     }
 }

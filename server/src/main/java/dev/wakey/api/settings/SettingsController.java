@@ -1,8 +1,9 @@
 package dev.wakey.api.settings;
 
+import dev.wakey.api.SpacePrincipals;
 import dev.wakey.settings.PlanCatalog;
 import dev.wakey.settings.SpaceSettings;
-import dev.wakey.spaces.SpacePrincipal;
+import dev.wakey.spaces.SpaceAccessDeniedException;
 import dev.wakey.spaces.SpaceService;
 import dev.wakey.spaces.SpaceView;
 import dev.wakey.web.ApiPaths;
@@ -25,7 +26,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 /**
  * The HTTP adapter for the space settings and the assigned plan. Access rules and plan bounds live
- * in the spaces and settings modules; this adapter resolves the effective plan name and maps errors.
+ * in the spaces and settings modules; this adapter resolves the effective plan name.
  */
 @RestController
 final class SettingsController {
@@ -39,6 +40,10 @@ final class SettingsController {
     private static final String JSON = "application/json";
 
     private static final String PROBLEM_JSON = "application/problem+json";
+
+    private static final String WRITE_DENIED = "Only an editor or an administrator can change settings";
+
+    private static final String ADMIN_DENIED = "Only an administrator can assign a plan";
 
     private final SpaceService spaces;
 
@@ -68,10 +73,10 @@ final class SettingsController {
             content = @Content(mediaType = PROBLEM_JSON, schema = @Schema(implementation = ProblemDetail.class)))
     @GetMapping(path = COLLECTION_PATH, produces = JSON)
     List<SpaceSettingResponse> getSpaceSettings(@PathVariable String slug, Authentication authentication) {
-        SpacePrincipal actor = SettingsErrors.principal(authentication);
-        SpaceView view = SettingsErrors.mapped(() -> spaces.view(actor, slug));
+        var actor = SpacePrincipals.forSpace(authentication, slug);
+        var view = spaces.view(actor, slug);
         String planName = resolvePlan(view);
-        var effective = SettingsErrors.mapped(() -> settings.effectiveAll(view.id(), planName));
+        var effective = settings.effectiveAll(view.id(), planName);
         List<SpaceSettingResponse> response = new ArrayList<>();
         for (var entry : effective.entrySet()) {
             String key = entry.getKey();
@@ -105,8 +110,11 @@ final class SettingsController {
             @PathVariable String key,
             @Valid @RequestBody SetSpaceSettingRequest request,
             Authentication authentication) {
-        SpacePrincipal actor = SettingsErrors.principal(authentication);
-        SettingsErrors.run(() -> storeSetting(actor, slug, key, request));
+        var actor = SpacePrincipals.forSpace(authentication, slug);
+        var view = spaces.view(actor, slug);
+        requireWriter(view);
+        String planName = resolvePlan(view);
+        settings.set(view.id(), planName, key, request.value());
         return ResponseEntity.noContent().build();
     }
 
@@ -131,8 +139,10 @@ final class SettingsController {
     @DeleteMapping(path = ITEM_PATH)
     ResponseEntity<Void> deleteSpaceSetting(
             @PathVariable String slug, @PathVariable String key, Authentication authentication) {
-        SpacePrincipal actor = SettingsErrors.principal(authentication);
-        SettingsErrors.run(() -> resetSetting(actor, slug, key));
+        var actor = SpacePrincipals.forSpace(authentication, slug);
+        var view = spaces.view(actor, slug);
+        requireWriter(view);
+        settings.reset(view.id(), key);
         return ResponseEntity.noContent().build();
     }
 
@@ -157,30 +167,24 @@ final class SettingsController {
     @PutMapping(path = PLAN_PATH, consumes = JSON, produces = JSON)
     ResponseEntity<Void> putSpacePlan(
             @PathVariable String slug, @Valid @RequestBody PutSpacePlanRequest request, Authentication authentication) {
-        SpacePrincipal actor = SettingsErrors.principal(authentication);
-        SettingsErrors.run(() -> assignPlan(actor, slug, request));
+        var actor = SpacePrincipals.forSpace(authentication, slug);
+        var view = spaces.view(actor, slug);
+        requireAdmin(view);
+        String planName = plans.requireExisting(request.plan());
+        spaces.assignPlan(actor, slug, planName);
         return ResponseEntity.noContent().build();
     }
 
-    private void storeSetting(SpacePrincipal actor, String slug, String key, SetSpaceSettingRequest request) {
-        SpaceView view = spaces.view(actor, slug);
-        SettingsErrors.requireWriter(view);
-        String planName = resolvePlan(view);
-        String value = request.value();
-        settings.set(view.id(), planName, key, value);
+    private static void requireWriter(SpaceView view) {
+        if (!view.canWrite()) {
+            throw new SpaceAccessDeniedException(WRITE_DENIED);
+        }
     }
 
-    private void resetSetting(SpacePrincipal actor, String slug, String key) {
-        SpaceView view = spaces.view(actor, slug);
-        SettingsErrors.requireWriter(view);
-        settings.reset(view.id(), key);
-    }
-
-    private void assignPlan(SpacePrincipal actor, String slug, PutSpacePlanRequest request) {
-        SpaceView view = spaces.view(actor, slug);
-        SettingsErrors.requireAdmin(view);
-        String planName = plans.requireExisting(request.plan());
-        spaces.assignPlan(actor, slug, planName);
+    private static void requireAdmin(SpaceView view) {
+        if (!view.admin()) {
+            throw new SpaceAccessDeniedException(ADMIN_DENIED);
+        }
     }
 
     private String resolvePlan(SpaceView view) {

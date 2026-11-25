@@ -1,5 +1,6 @@
 package dev.wakey.api.spaces;
 
+import dev.wakey.api.SpacePrincipals;
 import dev.wakey.spaces.PutResult;
 import dev.wakey.spaces.SpaceService;
 import dev.wakey.web.ApiPaths;
@@ -70,14 +71,21 @@ final class SpacesController {
             @RequestParam(defaultValue = DEFAULT_PAGE_SIZE) int limit,
             @RequestParam(required = false) Optional<String> cursor,
             Authentication authentication) {
-        return SpacesErrors.tokenSpaceSlug(authentication)
-                .map(slug -> SpacesErrors.tokenSpacePage(spaces, authentication, slug))
+        return SpacePrincipals.tokenSpaceSlug(authentication)
+                .map(slug -> tokenSpacePage(authentication, slug))
                 .orElseGet(() -> visibleSpacePage(limit, cursor, authentication));
+    }
+
+    private CursorPage<SpaceResponse> tokenSpacePage(Authentication authentication, String slug) {
+        var actor = SpacePrincipals.of(authentication);
+        var view = spaces.view(actor, slug);
+        SpaceResponse response = SpaceResponse.from(view);
+        return new CursorPage<>(List.of(response), null);
     }
 
     private CursorPage<SpaceResponse> visibleSpacePage(
             int limit, Optional<String> cursor, Authentication authentication) {
-        var actor = SpacesErrors.principal(authentication);
+        var actor = SpacePrincipals.of(authentication);
         int requested = Math.max(1, limit);
         int capped = apiProperties.capPageSize(requested);
         int pageSize = Math.max(1, capped);
@@ -111,8 +119,8 @@ final class SpacesController {
             content = @Content(mediaType = PROBLEM_JSON, schema = @Schema(implementation = ProblemDetail.class)))
     @GetMapping(path = ITEM_PATH, produces = JSON)
     SpaceResponse getSpace(@PathVariable String slug, Authentication authentication) {
-        var actor = SpacesErrors.principalFor(authentication, slug);
-        var view = SpacesErrors.mapped(() -> spaces.view(actor, slug));
+        var actor = SpacePrincipals.forSpace(authentication, slug);
+        var view = spaces.view(actor, slug);
         return SpaceResponse.from(view);
     }
 
@@ -148,13 +156,12 @@ final class SpacesController {
             @RequestHeader(name = "If-None-Match", required = false) Optional<String> ifNoneMatch,
             @Valid @RequestBody PutSpaceRequest request,
             Authentication authentication) {
-        var actor = SpacesErrors.principalFor(authentication, slug);
+        var actor = SpacePrincipals.forSpace(authentication, slug);
         boolean createOnly = ifNoneMatch.map(IF_NONE_MATCH_ANY::equals).orElse(false);
-        PutResult result = createOnly
-                ? SpacesErrors.mapped(() -> spaces.create(actor, slug, request.name()))
-                : SpacesErrors.mapped(() -> spaces.put(actor, slug, request.name()));
+        PutResult result =
+                createOnly ? spaces.create(actor, slug, request.name()) : spaces.put(actor, slug, request.name());
         String storedSlug = result.space().slug();
-        var view = SpacesErrors.mapped(() -> spaces.view(actor, storedSlug));
+        var view = spaces.view(actor, storedSlug);
         SpaceResponse response = SpaceResponse.from(view);
         int status = result.created() ? 201 : 200;
         return ResponseEntity.status(status).body(response);

@@ -32,7 +32,7 @@ final class ChecksPages {
         int pageSize = Math.max(1, apiProperties.capPageSize(requested));
         @Nullable CheckCursor after = ChecksCursor.decode(query.getCursor());
         var filter = query.toFilter();
-        var page = ChecksErrors.mapped(() -> checks.list(space.id(), filter, after, pageSize));
+        var page = checks.list(space.id(), filter, after, pageSize);
         List<CheckResponse> items =
                 page.items().stream().map(CheckResponse::from).toList();
         @Nullable String next = ChecksCursor.encode(page.nextCursor());
@@ -42,7 +42,7 @@ final class ChecksPages {
     StateCountsResponse counts(Authentication authentication, String slug, CheckFilterQuery query) {
         SpaceView space = access.read(authentication, slug);
         var filter = query.toFilter();
-        var counts = ChecksErrors.mapped(() -> checks.counts(space.id(), filter));
+        var counts = checks.counts(space.id(), filter);
         return StateCountsResponse.from(counts);
     }
 }
