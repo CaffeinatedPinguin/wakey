@@ -13,7 +13,7 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 /** Turns Bean Validation failures into the {@code errors[]} entries of a Problem Details body. */
 final class FieldProblems {
 
-    private static final String DEFAULT_CODE = "invalid";
+    private static final String DEFAULT_CODE = CommonError.BAD_REQUEST.getCode();
 
     private static final List<String> NON_PARAMS = List.of("message", "groups", "payload");
 

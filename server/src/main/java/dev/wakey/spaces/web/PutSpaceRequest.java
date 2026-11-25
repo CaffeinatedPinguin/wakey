@@ -17,7 +17,8 @@ public record PutSpaceRequest(
         String name,
 
         @Schema(
-                description = "The version the caller read; omit to rename without a condition",
+                description = "The version the caller read; omit to rename without a version condition. "
+                        + "A concurrent change of the same space can still answer 409.",
                 example = "1",
                 minimum = "0")
         @Nullable

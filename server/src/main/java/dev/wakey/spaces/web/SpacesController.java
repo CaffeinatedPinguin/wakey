@@ -26,7 +26,7 @@ final class SpacesController {
 
     private final ApiProperties apiProperties;
 
-    @GetMapping(SpacesHttp.PATH)
+    @GetMapping(path = SpacesHttp.PATH, produces = SpacesHttp.JSON)
     CursorPage<SpaceResponse> listSpaces(
             @RequestParam(required = false) @Positive Integer limit,
             @RequestParam(required = false) String cursor,

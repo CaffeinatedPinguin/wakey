@@ -62,7 +62,7 @@ Jak robią inni:
 - **Bean Validation** (Hibernate Validator) sprawdza kształt danych, a ograniczenia trafiają do OpenAPI. Reguły biznesowe (granice planu, weryfikacja celu) leżą w domenie i zwracają błąd w tym samym formacie.
 
 ### Stronicowanie i filtrowanie
-- **Wszędzie kursor (keyset).** Odpowiedź ma postać `{ items, nextCursor }`. Kursor to nieprzezroczysty token zawierający wartość sortowania i `id`. Warunek jest przenośny między bazami: `ts < ? OR (ts = ? AND id < ?)`.
+- **Wszędzie kursor (keyset).** Odpowiedź ma postać `{ items, nextCursor }`. Kursor to nieprzezroczysty token z wartością sortowania (bez `id`; zakodowany base64url; maksymalna długość 256, zły kursor = 400 `invalid_cursor`).
 - Nie ma sumy wyników ani skoku do strony N. Liczniki (np. checki według stanu) zwraca osobny endpoint podsumowania.
 - Filtry to jawne parametry per endpoint. Sortowanie tylko po polach z białej listy (`?sort=name,asc`). Bez RSQL i OData.
 - Maksymalny rozmiar strony jest konfigurowalny na poziomie instancji, domyślnie 100.

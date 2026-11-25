@@ -43,6 +43,8 @@ class OpenApiContractTest extends SecurityIntegrationTest {
     // Every entry needs a justification in ADR 0006 before it is added.
     private static final Set<String> PUBLIC_OPERATIONS = Set.of();
 
+    private static final String PROBLEM_DETAIL_REF = "#/components/schemas/ProblemDetail";
+
     private static final ObjectMapper MAPPER = JsonMapper.builder()
             .enable(SerializationFeature.ORDER_MAP_ENTRIES_BY_KEYS)
             .build();
@@ -227,6 +229,69 @@ class OpenApiContractTest extends SecurityIntegrationTest {
 
         // then
         assertThat(checked).isPositive();
+    }
+
+    @Test
+    void everyOperationDocumentsItsErrorResponses() throws Exception {
+        // given
+        JsonNode document = MAPPER.readTree(generatedContract());
+        JsonNode paths = document.path("paths");
+        JsonNode listSpaces = paths.path("/api/v1/spaces").path("get");
+        JsonNode getSpace = paths.path("/api/v1/spaces/{slug}").path("get");
+        JsonNode createSpace = paths.path("/api/v1/spaces").path("post");
+        JsonNode putSpace = paths.path("/api/v1/spaces/{slug}").path("put");
+
+        // when
+        // then
+        assertProblemResponses(listSpaces, "GET /api/v1/spaces", "400", "401");
+        assertProblemResponses(getSpace, "GET /api/v1/spaces/{slug}", "400", "401", "404");
+        assertProblemResponses(createSpace, "POST /api/v1/spaces", "400", "401", "403", "409");
+        assertProblemResponses(putSpace, "PUT /api/v1/spaces/{slug}", "400", "401", "403", "409");
+    }
+
+    @Test
+    void listSpacesProducesJsonInTheContract() throws Exception {
+        // given
+        JsonNode document = MAPPER.readTree(generatedContract());
+        JsonNode operation = document.path("paths").path("/api/v1/spaces").path("get");
+
+        // when
+        JsonNode content = operation.path("responses").path("200").path("content");
+
+        // then
+        assertThat(content.has(MediaType.APPLICATION_JSON_VALUE)).isTrue();
+        assertThat(content.has(MediaType.ALL_VALUE)).isFalse();
+    }
+
+    @Test
+    void thePutDescriptionMentionsAConcurrentConflict() throws Exception {
+        // given
+        JsonNode document = MAPPER.readTree(generatedContract());
+        JsonNode operation =
+                document.path("paths").path("/api/v1/spaces/{slug}").path("put");
+        JsonNode version = document.path("components")
+                .path("schemas")
+                .path("PutSpaceRequest")
+                .path("properties")
+                .path("version");
+
+        // when
+        String operationDescription = operation.path("description").asString();
+        String versionDescription = version.path("description").asString();
+
+        // then
+        assertThat(operationDescription).contains("version", "concurrent", "version_conflict");
+        assertThat(versionDescription).contains("version", "concurrent", "409");
+    }
+
+    private static void assertProblemResponses(JsonNode operation, String label, String... statuses) {
+        for (String status : statuses) {
+            JsonNode response = operation.path("responses").path(status);
+            JsonNode mediaType = response.path("content").path(MediaType.APPLICATION_PROBLEM_JSON_VALUE);
+            String reference = mediaType.path("schema").path("$ref").asString();
+            assertThat(response.isMissingNode()).as(label + " " + status).isFalse();
+            assertThat(reference).as(label + " " + status).isEqualTo(PROBLEM_DETAIL_REF);
+        }
     }
 
     private static void assertNoPreconditionHeader(JsonNode operation) {

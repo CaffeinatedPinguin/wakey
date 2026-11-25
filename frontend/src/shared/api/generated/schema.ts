@@ -43,6 +43,10 @@ export interface paths {
             cookie?: never;
         };
         get: operations["getSpace"];
+        /**
+         * Create or rename a space idempotently
+         * @description A missing version renames the space without a version condition, but a concurrent change of the same space can still answer 409 version_conflict.
+         */
         put: operations["putSpace"];
         post?: never;
         delete?: never;
@@ -108,7 +112,7 @@ export interface components {
             name: string;
             /**
              * Format: int64
-             * @description The version the caller read; omit to rename without a condition
+             * @description The version the caller read; omit to rename without a version condition. A concurrent change of the same space can still answer 409.
              * @example 1
              */
             version?: number;
@@ -193,7 +197,16 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "*/*": components["schemas"]["CursorPageSpaceResponse"];
+                    "application/json": components["schemas"]["CursorPageSpaceResponse"];
+                };
+            };
+            /** @description The limit or the cursor is invalid. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
                 };
             };
             /** @description Authentication is required. */
@@ -231,8 +244,35 @@ export interface operations {
                     "application/json": components["schemas"]["SpaceResponse"];
                 };
             };
+            /** @description The request is invalid. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
+                };
+            };
             /** @description Authentication is required. */
             401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description Access is denied. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description A space with that slug already exists. */
+            409: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -262,8 +302,26 @@ export interface operations {
                     "application/json": components["schemas"]["SpaceResponse"];
                 };
             };
+            /** @description The slug is invalid. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
+                };
+            };
             /** @description Authentication is required. */
             401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description The requested resource was not found. */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -308,8 +366,35 @@ export interface operations {
                     "application/json": components["schemas"]["SpaceResponse"];
                 };
             };
+            /** @description The request is invalid. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
+                };
+            };
             /** @description Authentication is required. */
             401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description Access is denied. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description The space changed since the supplied version. */
+            409: {
                 headers: {
                     [name: string]: unknown;
                 };

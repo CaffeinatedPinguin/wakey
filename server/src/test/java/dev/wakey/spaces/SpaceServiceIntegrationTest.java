@@ -323,6 +323,30 @@ class SpaceServiceIntegrationTest extends PostgresIntegrationTest {
     }
 
     @Test
+    void aMemberSubjectWithAControlCharacterIsRejected() {
+        // given
+        SpaceService service = service();
+        Space space = seedSpace("subject-control");
+        String control = "user\u0000name";
+        String unpairedSurrogate = "user\uD800name";
+
+        // when
+        Throwable controlFailure =
+                catchThrowable(() -> service.addMember(ADMIN, space.slug(), control, SpaceRole.VIEWER));
+        Throwable surrogateFailure =
+                catchThrowable(() -> service.addMember(ADMIN, space.slug(), unpairedSurrogate, SpaceRole.VIEWER));
+
+        // then
+        assertThat(controlFailure).isInstanceOf(ApiException.class);
+        assertThat(surrogateFailure).isInstanceOf(ApiException.class);
+        ApiException exception = (ApiException) controlFailure;
+        FieldProblem problem = exception.getFieldProblems().getFirst();
+        assertThat(problem.pointer()).isEqualTo("/subject");
+        assertThat(problem.code()).isEqualTo(SpaceError.INVALID_SUBJECT.getCode());
+        assertThat(problem.params()).containsEntry("max", SpaceService.MAX_SUBJECT_LENGTH);
+    }
+
+    @Test
     void changingARoleInvalidatesTheUsersSessions() {
         // given
         SpaceService service = service();

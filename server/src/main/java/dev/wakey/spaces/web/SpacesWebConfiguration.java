@@ -51,6 +51,11 @@ class SpacesWebConfiguration {
         };
     }
 
+    @Bean
+    GlobalOperationCustomizer spacesProblemResponses() {
+        return new SpacesProblemResponses();
+    }
+
     private static void documentParameters(Operation operation) {
         List<Parameter> parameters = operation.getParameters();
         if (parameters != null) {

@@ -178,8 +178,11 @@ public class SpaceService {
     }
 
     private static void requireValidSubject(String subject) {
-        if (subject.isBlank() || subject.length() > MAX_SUBJECT_LENGTH) {
-            FieldProblem problem = new FieldProblem("/subject", SpaceError.INVALID_SUBJECT.getCode(), Map.of());
+        boolean invalid =
+                subject.isBlank() || subject.length() > MAX_SUBJECT_LENGTH || SpaceText.hasForbiddenCodePoint(subject);
+        if (invalid) {
+            FieldProblem problem = new FieldProblem(
+                    "/subject", SpaceError.INVALID_SUBJECT.getCode(), Map.of("max", MAX_SUBJECT_LENGTH));
             throw new ApiException(CommonError.VALIDATION_FAILED, List.of(problem));
         }
     }
