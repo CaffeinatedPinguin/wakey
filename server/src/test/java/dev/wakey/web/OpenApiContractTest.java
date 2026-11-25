@@ -101,6 +101,49 @@ class OpenApiContractTest extends SecurityIntegrationTest {
         assertThat(nextCursorType).contains("string", "null");
     }
 
+    @Test
+    void checkOperationsDocumentExactlyTheirOwnResponses() throws Exception {
+        // when
+        JsonNode paths = MAPPER.readTree(generatedContract()).path("paths");
+
+        // then
+        assertResponses(paths, "/api/v1/spaces/{slug}/checks", "get", "200", "400", "401", "404");
+        assertResponses(paths, "/api/v1/spaces/{slug}/checks/counts", "get", "200", "401", "404");
+        assertResponses(paths, "/api/v1/spaces/{slug}/checks/{id}", "get", "200", "401", "404");
+        assertResponses(paths, "/api/v1/spaces/{slug}/checks", "post", "201", "400", "401", "403", "404");
+        assertResponses(paths, "/api/v1/spaces/{slug}/checks/{id}", "put", "200", "400", "401", "403", "404", "409");
+        assertResponses(paths, "/api/v1/spaces/{slug}/checks/{id}/pause", "post", "200", "400", "401", "403", "404");
+        assertResponses(paths, "/api/v1/spaces/{slug}/checks/{id}/resume", "post", "200", "401", "403", "404");
+        assertResponses(paths, "/api/v1/spaces/{slug}/checks/{id}", "delete", "204", "401", "403", "404");
+    }
+
+    private static void assertResponses(JsonNode paths, String path, String method, String... expected) {
+        JsonNode operation = paths.path(path).path(method);
+        JsonNode responses = operation.path("responses");
+        List<String> codes = new ArrayList<>();
+        responses.propertyNames().forEach(codes::add);
+        assertThat(operation.isMissingNode()).isFalse();
+        assertThat(codes).containsExactlyInAnyOrder(expected);
+        assertMediaTypes(responses);
+    }
+
+    private static void assertMediaTypes(JsonNode responses) {
+        for (String code : List.of("200", "201")) {
+            assertMediaType(responses, code, "application/json");
+        }
+        for (String code : List.of("400", "401", "403", "404", "409")) {
+            assertMediaType(responses, code, "application/problem+json");
+        }
+    }
+
+    private static void assertMediaType(JsonNode responses, String code, String mediaType) {
+        JsonNode response = responses.path(code);
+        if (!response.isMissingNode()) {
+            JsonNode content = response.path("content");
+            assertThat(content.has(mediaType)).isTrue();
+        }
+    }
+
     private static List<String> valuesOf(JsonNode node) {
         List<String> values = new ArrayList<>();
         if (node.isArray()) {

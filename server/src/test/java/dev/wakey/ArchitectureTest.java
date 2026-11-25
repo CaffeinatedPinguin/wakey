@@ -39,7 +39,7 @@ class ArchitectureTest {
 
     private static Map<String, Set<String>> moduleDependencies() {
         Map<String, Set<String>> dependencies = new HashMap<>();
-        dependencies.put("api", Set.of("spaces", "web", "security"));
+        dependencies.put("api", Set.of("checks", "spaces", "web", "security"));
         dependencies.put("audit", Set.of());
         dependencies.put("checks", Set.of());
         dependencies.put("config", Set.of());
