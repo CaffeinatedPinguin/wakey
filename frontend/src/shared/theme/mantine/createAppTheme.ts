@@ -18,7 +18,7 @@ import { createControlVars, createVariantColorResolver } from './variant'
 import type { BrandAdjustment, BrandInput } from '../tokens/brand'
 import { composeTokens } from '../tokens/compose'
 import type { ThemeExtension } from '../tokens/extension'
-import type { TokenMap } from '../tokens/types'
+import type { ColorScheme, TokenMap } from '../tokens/types'
 
 export interface AppThemeOptions {
   readonly brand?: BrandInput
@@ -31,7 +31,7 @@ export interface AppTheme {
   readonly theme: MantineThemeOverride
   readonly cssVariablesResolver: CSSVariablesResolver
   /** Variables for a scheme, e.g. for Chart.js or tests. */
-  readonly getCssVariables: (scheme: 'light' | 'dark') => TokenMap
+  readonly getCssVariables: (scheme: ColorScheme) => TokenMap
   /** Brand corrections forced by contrast (an empty list means the colour was accepted). */
   readonly brandAdjustments: readonly BrandAdjustment[]
   /** Names of semantic colours handled by `color="…"`. */
@@ -48,9 +48,9 @@ export function createAppTheme(options: AppThemeOptions): AppTheme {
   const bridge = createBridge(semantic, tokens)
   const theme = buildMantineTheme({ tokens, semantic, labels, variantColorResolver, controlVars })
   const cssVariablesResolver = createCssVariablesResolver(tokens, bridge)
-  const getCssVariables = (scheme: 'light' | 'dark'): TokenMap => ({
+  const getCssVariables = (scheme: ColorScheme): TokenMap => ({
     ...tokens.shared,
-    ...(scheme === 'dark' ? tokens.dark : tokens.light),
+    ...tokens[scheme],
     ...bridge,
   })
   return {

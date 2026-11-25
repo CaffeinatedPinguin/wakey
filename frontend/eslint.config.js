@@ -86,6 +86,114 @@ const boundaryZones = [
 
 const testFiles = ['src/**/*.test.{ts,tsx}', 'src/test/**']
 
+const generatedFiles = ['src/shared/api/generated/**']
+
+// A closed set of strings is one `as const` object with a same-named type
+// (ADR 0007, "Zamknięte zbiory wartości"). Kept in a constant because the token
+// block below sets no-restricted-syntax again and would otherwise drop it.
+const closedSetMessage =
+  'Declare a closed set of strings once as an `as const` object with a same-named type (ADR 0007).'
+
+const closedSetRestrictions = [
+  {
+    // One report per union that lists at least one string literal; `literal.value`
+    // must be an attribute path, esquery does not match a two-step `:has(> A > B)`.
+    selector: 'TSUnionType:has(> TSLiteralType[literal.value=/^/])',
+    message: closedSetMessage,
+  },
+  {
+    selector:
+      "CallExpression[callee.object.name='z'][callee.property.name='enum'] > ArrayExpression",
+    message: closedSetMessage,
+  },
+  {
+    selector: 'TSEnumDeclaration',
+    message: closedSetMessage,
+  },
+]
+
+// Rules from the review of the spaces pull request (ADR 0007, "Reguły z review warstwy przestrzeni").
+// esquery ends a regex at the first `/`, so the API path pattern avoids slashes.
+const errorCodeMessage = 'Compare an error code with its generated constant, not a string literal.'
+
+const errorCodeRestrictions = [
+  {
+    selector:
+      "BinaryExpression[operator=/^[!=]==$/]:has(> MemberExpression[property.name='code']):has(> Literal[value=/^/])",
+    message: errorCodeMessage,
+  },
+  {
+    selector: "SwitchStatement[discriminant.property.name='code'] > SwitchCase[test.value=/^/]",
+    message: errorCodeMessage,
+  },
+]
+
+const apiPathRestrictions = [
+  {
+    selector: 'Literal[value=/^\\Wapi\\W/]',
+    message: 'Take API paths from the generated contract (contract.<operation>.path).',
+  },
+  {
+    selector: 'TemplateElement[value.raw=/^\\Wapi\\W/]',
+    message: 'Take API paths from the generated contract (contract.<operation>.path).',
+  },
+]
+
+const propsRestrictions = [
+  {
+    selector: 'TSInterfaceDeclaration[id.name=/Props$/] > TSInterfaceBody[body.length>8]',
+    message: 'A component takes at most 8 props; split it or let it read its own data.',
+  },
+  {
+    selector: 'TSTypeAliasDeclaration[id.name=/Props$/] > TSTypeLiteral[members.length>8]',
+    message: 'A component takes at most 8 props; split it or let it read its own data.',
+  },
+]
+
+// Only for application code (app, features, routes): no hand-made headers and no
+// untyped search params.
+const applicationRestrictions = [
+  {
+    selector: "CallExpression > ObjectExpression > Property[key.name='headers']",
+    message:
+      'An operation takes its input in the path, query or body; only shared/api sets headers.',
+  },
+  {
+    selector:
+      "CallExpression[callee.name='useSearch'] > ObjectExpression > Property[key.name='strict'][value.value=false]",
+    message: "Read search params typed: useSearch({ from }) or getRouteApi('<id>').useSearch().",
+  },
+]
+
+// Without the API path rule: the config module and its tests own the base path.
+const configRestrictions = [
+  ...closedSetRestrictions,
+  ...errorCodeRestrictions,
+  ...propsRestrictions,
+]
+
+const commonRestrictions = [...configRestrictions, ...apiPathRestrictions]
+
+const tokenMessage =
+  'Use theme tokens (var(--app-*)) or Mantine theme values instead of hex colours and px'
+
+// Colours, sizes and spacing in application code come from theme tokens; hex
+// colours and px values are rejected outside shared/theme.
+const tokenRestrictions = [
+  {
+    selector:
+      'Literal[value=/#(?:[0-9a-fA-F]{8}|[0-9a-fA-F]{6}|[0-9a-fA-F]{3,4})(?![0-9a-fA-F])|(^|[^0-9A-Za-z_])[0-9]+([.][0-9]+)?px/]',
+    message: tokenMessage,
+  },
+  {
+    selector:
+      'TemplateElement[value.raw=/#(?:[0-9a-fA-F]{8}|[0-9a-fA-F]{6}|[0-9a-fA-F]{3,4})(?![0-9a-fA-F])|(^|[^A-Za-z])px([^A-Za-z]|$)/]',
+    message: tokenMessage,
+  },
+]
+
+const applicationFiles = ['src/app/**', 'src/features/**', 'src/routes/**']
+
 const deferredWorkMessage =
   'Do not defer work with timers or microtasks. Keep state in TanStack Query and navigate with the router.'
 
@@ -164,25 +272,74 @@ export default defineConfig([
       'no-restricted-properties': ['error', ...deferredProperties],
     },
   },
+  // no-restricted-syntax is one rule: a later block replaces its list for the files
+  // it matches, so every block below repeats the lists that apply to its files.
   {
-    // Colours, sizes and spacing in application code come from theme tokens.
-    // Hex colours and px values are rejected outside shared/theme.
-    files: ['src/app/**', 'src/features/**', 'src/routes/**', 'src/shared/ui/**'],
+    files: ['src/**/*.{ts,tsx}'],
+    ignores: generatedFiles,
+    rules: {
+      'no-restricted-syntax': ['error', ...commonRestrictions],
+    },
+  },
+  {
+    files: ['src/shared/config/**'],
+    rules: {
+      'no-restricted-syntax': ['error', ...configRestrictions],
+    },
+  },
+  {
+    // Data fetching belongs to features; the shell only composes them.
+    files: ['src/app/shell/**'],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          paths: [
+            {
+              name: '@tanstack/react-query',
+              message: 'Query and mutate in a feature hook and import that hook from the feature.',
+            },
+          ],
+        },
+      ],
+    },
+  },
+  {
+    // Numbers in application code get a name; theme code and tests are exempt.
+    files: applicationFiles,
+    ignores: testFiles,
+    rules: {
+      '@typescript-eslint/no-magic-numbers': [
+        'error',
+        {
+          ignore: [-1, 0, 1],
+          ignoreArrayIndexes: true,
+          ignoreDefaultValues: true,
+          ignoreEnums: true,
+          ignoreNumericLiteralTypes: true,
+          ignoreReadonlyClassProperties: true,
+          ignoreTypeIndexes: true,
+          enforceConst: true,
+        },
+      ],
+    },
+  },
+  {
+    files: [...applicationFiles, 'src/shared/ui/**'],
+    ignores: generatedFiles,
+    rules: {
+      'no-restricted-syntax': ['error', ...commonRestrictions, ...tokenRestrictions],
+    },
+  },
+  {
+    files: applicationFiles,
+    ignores: [...generatedFiles, ...testFiles],
     rules: {
       'no-restricted-syntax': [
         'error',
-        {
-          selector:
-            'Literal[value=/#(?:[0-9a-fA-F]{8}|[0-9a-fA-F]{6}|[0-9a-fA-F]{3,4})(?![0-9a-fA-F])|(^|[^0-9A-Za-z_])[0-9]+([.][0-9]+)?px/]',
-          message:
-            'Use theme tokens (var(--app-*)) or Mantine theme values instead of hex colours and px',
-        },
-        {
-          selector:
-            'TemplateElement[value.raw=/#(?:[0-9a-fA-F]{8}|[0-9a-fA-F]{6}|[0-9a-fA-F]{3,4})(?![0-9a-fA-F])|(^|[^A-Za-z])px([^A-Za-z]|$)/]',
-          message:
-            'Use theme tokens (var(--app-*)) or Mantine theme values instead of hex colours and px',
-        },
+        ...commonRestrictions,
+        ...applicationRestrictions,
+        ...tokenRestrictions,
       ],
     },
   },
