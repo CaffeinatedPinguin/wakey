@@ -2,6 +2,7 @@ package dev.wakey.spaces.internal;
 
 import dev.wakey.spaces.InvalidSpaceException;
 import dev.wakey.spaces.PutResult;
+import dev.wakey.spaces.SlugTakenException;
 import dev.wakey.spaces.Space;
 import dev.wakey.spaces.SpaceAccessDeniedException;
 import dev.wakey.spaces.SpaceNotFoundException;
@@ -15,15 +16,13 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
-import org.springframework.dao.DuplicateKeyException;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.jdbc.core.simple.JdbcClient;
+import org.springframework.transaction.annotation.Transactional;
 
-@Slf4j
 @RequiredArgsConstructor
-final class JdbcSpaceService implements SpaceService {
+class JdbcSpaceService implements SpaceService {
 
     private static final int MAX_NAME_LENGTH = 100;
 
@@ -43,9 +42,11 @@ final class JdbcSpaceService implements SpaceService {
             WHERE s.slug = :slug
             """;
 
-    private static final String INSERT_SPACE_SQL = """
+    // postgres-only: ON CONFLICT (slug) DO NOTHING makes a concurrent create of the same slug safe.
+    private static final String INSERT_SPACE_IF_ABSENT_SQL = """
             INSERT INTO space (id, slug, name, version, created_at, updated_at)
             VALUES (:id, :slug, :name, 1, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+            ON CONFLICT (slug) DO NOTHING
             """;
 
     private static final String RENAME_SPACE_SQL = """
@@ -78,9 +79,11 @@ final class JdbcSpaceService implements SpaceService {
             WHERE space_id = :spaceId AND subject = :subject
             """;
 
-    private static final String INSERT_MEMBER_SQL = """
+    // postgres-only: ON CONFLICT (space_id, subject) DO NOTHING keeps an existing membership and its role.
+    private static final String INSERT_MEMBER_IF_ABSENT_SQL = """
             INSERT INTO space_member (space_id, subject, role)
             VALUES (:spaceId, :subject, :role)
+            ON CONFLICT (space_id, subject) DO NOTHING
             """;
 
     private static final String UPDATE_MEMBER_ROLE_SQL = """
@@ -101,27 +104,30 @@ final class JdbcSpaceService implements SpaceService {
     @Override
     public PutResult put(SpacePrincipal actor, String slug, String name) {
         requireAdmin(actor);
-        String checkedSlug = SpaceSlug.parse(slug).value();
+        String checkedSlug = SpaceSlug.requireValid(slug);
         String checkedName = requireValidName(name);
-        Optional<Space> existing = findSpace(checkedSlug);
-        return existing.map(space -> keepOrRename(space, checkedName))
-                .orElseGet(() -> createOrUpdate(checkedSlug, checkedName));
+        int inserted = insertSpaceIfAbsent(checkedSlug, checkedName);
+        if (inserted == 1) {
+            return new PutResult(findRequired(checkedSlug), true);
+        }
+        return keepOrRename(findRequired(checkedSlug), checkedName);
     }
 
     @Override
-    public Space get(SpacePrincipal actor, String slug) {
-        String checkedSlug = SpaceSlug.parse(slug).value();
-        Space space = findRequired(checkedSlug);
-        boolean visible = actor.admin() || isMember(space.id(), actor.subject());
-        if (!visible) {
-            throw new SpaceNotFoundException(checkedSlug);
+    public PutResult create(SpacePrincipal actor, String slug, String name) {
+        requireAdmin(actor);
+        String checkedSlug = SpaceSlug.requireValid(slug);
+        String checkedName = requireValidName(name);
+        int inserted = insertSpaceIfAbsent(checkedSlug, checkedName);
+        if (inserted == 0) {
+            throw new SlugTakenException(checkedSlug);
         }
-        return space;
+        return new PutResult(findRequired(checkedSlug), true);
     }
 
     @Override
     public SpaceView view(SpacePrincipal actor, String slug) {
-        String checkedSlug = SpaceSlug.parse(slug).value();
+        String checkedSlug = SpaceSlug.requireValid(slug);
         RowMapper<SpaceView> mapper = viewMapper(actor.admin());
         Optional<SpaceView> found = jdbc.sql(VIEW_SPACE_SQL)
                 .param("subject", actor.subject())
@@ -148,22 +154,15 @@ final class JdbcSpaceService implements SpaceService {
     @Override
     public void addMember(SpacePrincipal actor, String slug, String subject, SpaceRole role) {
         Space space = requireManageableSpace(actor, slug);
-        try {
-            jdbc.sql(INSERT_MEMBER_SQL)
-                    .param("spaceId", space.id())
-                    .param("subject", subject)
-                    .param("role", role.name())
-                    .update();
-        } catch (DuplicateKeyException exception) {
-            log.debug(
-                    "Subject {} is already a member of space {}; the role is unchanged",
-                    subject,
-                    space.slug(),
-                    exception);
-        }
+        jdbc.sql(INSERT_MEMBER_IF_ABSENT_SQL)
+                .param("spaceId", space.id())
+                .param("subject", subject)
+                .param("role", role.name())
+                .update();
     }
 
     @Override
+    @Transactional
     public void changeRole(SpacePrincipal actor, String slug, String subject, SpaceRole role) {
         Space space = requireManageableSpace(actor, slug);
         SpaceRole currentRole =
@@ -175,6 +174,7 @@ final class JdbcSpaceService implements SpaceService {
     }
 
     @Override
+    @Transactional
     public void removeMember(SpacePrincipal actor, String slug, String subject) {
         Space space = requireManageableSpace(actor, slug);
         int deleted = jdbc.sql(DELETE_MEMBER_SQL)
@@ -187,23 +187,12 @@ final class JdbcSpaceService implements SpaceService {
         sessions.invalidateAll(subject);
     }
 
-    private PutResult createOrUpdate(String slug, String name) {
-        Optional<Space> created = createIfAbsent(slug, name);
-        return created.map(space -> new PutResult(space, true)).orElseGet(() -> keepOrRename(findRequired(slug), name));
-    }
-
-    private Optional<Space> createIfAbsent(String slug, String name) {
-        try {
-            jdbc.sql(INSERT_SPACE_SQL)
-                    .param("id", UUID.randomUUID())
-                    .param("slug", slug)
-                    .param("name", name)
-                    .update();
-        } catch (DuplicateKeyException exception) {
-            log.debug("Space {} was created concurrently; the existing row wins", slug, exception);
-            return Optional.empty();
-        }
-        return findSpace(slug);
+    private int insertSpaceIfAbsent(String slug, String name) {
+        return jdbc.sql(INSERT_SPACE_IF_ABSENT_SQL)
+                .param("id", UUID.randomUUID())
+                .param("slug", slug)
+                .param("name", name)
+                .update();
     }
 
     private PutResult keepOrRename(Space existing, String name) {
@@ -220,7 +209,7 @@ final class JdbcSpaceService implements SpaceService {
     }
 
     private Space requireManageableSpace(SpacePrincipal actor, String slug) {
-        String checkedSlug = SpaceSlug.parse(slug).value();
+        String checkedSlug = SpaceSlug.requireValid(slug);
         Space space = findRequired(checkedSlug);
         if (!actor.admin()) {
             requireManager(space, actor);
@@ -266,10 +255,6 @@ final class JdbcSpaceService implements SpaceService {
 
     private Space findRequired(String slug) {
         return findSpace(slug).orElseThrow(() -> new SpaceNotFoundException(slug));
-    }
-
-    private boolean isMember(UUID spaceId, String subject) {
-        return findRole(spaceId, subject).isPresent();
     }
 
     private Optional<SpaceRole> findRole(UUID spaceId, String subject) {

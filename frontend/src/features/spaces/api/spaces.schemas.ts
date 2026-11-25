@@ -1,21 +1,16 @@
 import { z } from 'zod'
-import type {
-  GetSpaceResponse,
-  ListSpacesResponse,
-  PutSpaceResponse,
-} from '../../../shared/api/generated/types'
+import type { GetSpaceResponse, ListSpacesResponse } from '../../../shared/api/generated/types'
 
 export const spaceSchema = z.object({
-  slug: z.string(),
+  admin: z.boolean(),
   name: z.string(),
+  role: z.enum(['EDITOR', 'VIEWER']).nullable(),
+  slug: z.string(),
+  version: z.number().int(),
 }) satisfies z.ZodType<GetSpaceResponse>
 
-export type Space = z.infer<typeof spaceSchema>
-
-// The panel needs only the current page; richer fields from the contract stay
-// out of the view model.
+// Every field in the contract is required; nextCursor is explicitly nullable.
 export const spacesPageSchema = z.object({
   items: z.array(spaceSchema),
+  nextCursor: z.string().nullable(),
 }) satisfies z.ZodType<ListSpacesResponse>
-
-export const createdSpaceSchema = spaceSchema satisfies z.ZodType<PutSpaceResponse>

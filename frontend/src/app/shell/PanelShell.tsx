@@ -4,10 +4,10 @@ import type { ReactElement } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useMe } from '../../features/auth'
 import { CreateSpaceDialog, SpaceNotFoundView } from '../../features/spaces'
+import { MOBILE_BREAKPOINT, useIsMobile } from '../../shared/ui'
 import { MobilePanelNav } from './MobilePanelNav'
 import { PanelHeader } from './PanelHeader'
 import { PanelNavbar } from './PanelNavbar'
-import { MOBILE_BREAKPOINT, useIsMobile } from './useIsMobile'
 import { useSpaceController } from './useSpaceController'
 
 const shellLayout = {

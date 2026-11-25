@@ -17,27 +17,40 @@ const MOBILE_WIDTH = 375
 interface SpaceFixture {
   slug: string
   name: string
+  admin: boolean
+  role: 'EDITOR' | 'VIEWER' | null
+  version: number
 }
 
 interface ApiState {
   me: Me
   spaces: SpaceFixture[]
+  pageSize: number
   calls: string[]
   putRequests: string[]
+  putHeaders: string[]
   listRequests: number
   failFirstList: boolean
   createdName: string
 }
 
-const alpha: SpaceFixture = { slug: 'alpha', name: 'Alpha' }
-const beta: SpaceFixture = { slug: 'beta', name: 'Beta' }
+const alpha: SpaceFixture = {
+  slug: 'alpha',
+  name: 'Alpha',
+  admin: true,
+  role: null,
+  version: 1,
+}
+const beta: SpaceFixture = { slug: 'beta', name: 'Beta', admin: true, role: null, version: 1 }
 
 function createApiState(): ApiState {
   return {
     me: { ...signedInUser },
     spaces: [],
+    pageSize: 100,
     calls: [],
     putRequests: [],
+    putHeaders: [],
     listRequests: 0,
     failFirstList: false,
     createdName: '',
@@ -68,11 +81,15 @@ function handleGet(slug: string): MockReply {
   return { status: 200, data: space }
 }
 
-function handlePut(slug: string): MockReply {
+function handlePut(slug: string, headers: Record<string, string>): MockReply {
   api.calls.push(`put:${slug}`)
   api.putRequests.push(slug)
+  api.putHeaders.push(headers['if-none-match'] ?? '')
+  if (headers['if-none-match'] === '*' && api.spaces.some((item) => item.slug === slug)) {
+    return { status: 409, data: { code: 'slug_taken' } }
+  }
   const name = api.createdName.length > 0 ? api.createdName : slug
-  const space: SpaceFixture = { slug, name }
+  const space: SpaceFixture = { ...alpha, slug, name }
   if (!api.spaces.some((item) => item.slug === slug)) {
     api.spaces.push(space)
   }
@@ -84,15 +101,17 @@ function handleList(): MockReply {
   if (api.failFirstList && api.listRequests === 1) {
     return { status: 500, data: { code: 'internal_error' } }
   }
-  return { status: 200, data: { items: api.spaces } }
+  const items = api.spaces.slice(0, api.pageSize)
+  const nextCursor = api.spaces.length > api.pageSize ? 'next' : null
+  return { status: 200, data: { items, nextCursor } }
 }
 
-function handleSpace(slug: string, method: string): MockReply {
+function handleSpace(slug: string, method: string, headers: Record<string, string>): MockReply {
   if (method === 'get') {
     return handleGet(slug)
   }
   if (method === 'put') {
-    return handlePut(slug)
+    return handlePut(slug, headers)
   }
   return { status: 404, data: { code: 'not_found' } }
 }
@@ -108,7 +127,7 @@ function handleRequest(request: MockRequest): MockReply {
   if (slug === undefined) {
     return { status: 404, data: { code: 'not_found' } }
   }
-  return handleSpace(slug, request.method.toLowerCase())
+  return handleSpace(slug, request.method.toLowerCase(), request.headers)
 }
 
 function openSwitcher(): void {
@@ -131,10 +150,8 @@ describe('space switcher in the header', () => {
   it('the header shows the space switcher with the spaces from the API', async () => {
     api.spaces = [alpha, beta]
     renderApp('/')
-
     await screen.findByText('Przestrzeń: Alpha')
     openSwitcher()
-
     expect(await screen.findByRole('menuitem', { name: 'Alpha' })).toBeDefined()
     expect(screen.getByRole('menuitem', { name: 'Beta' })).toBeDefined()
   })
@@ -146,10 +163,8 @@ describe('space switcher in the header', () => {
     await waitFor(() => {
       expect(router.state.location.search).toEqual({ space: 'alpha' })
     })
-
     openSwitcher()
     fireEvent.click(await screen.findByRole('menuitem', { name: 'Beta' }))
-
     await waitFor(() => {
       expect(router.state.location.search).toEqual({ space: 'beta' })
     })
@@ -163,10 +178,8 @@ describe('space create permissions', () => {
     api.me = { ...signedInUser, admin: false }
     api.spaces = [alpha]
     renderApp('/')
-
     await screen.findByText('Przestrzeń: Alpha')
     openSwitcher()
-
     expect(await screen.findByRole('menuitem', { name: 'Alpha' })).toBeDefined()
     expect(screen.queryByText('Utwórz przestrzeń')).toBeNull()
   })
@@ -178,39 +191,37 @@ describe('space creation', () => {
     api.createdName = 'Beta'
     const { router } = renderApp('/')
     await screen.findByText('Przestrzeń: Alpha')
-
     openSwitcher()
     fireEvent.click(await screen.findByText('Utwórz przestrzeń'))
     fireEvent.change(await screen.findByLabelText('Nazwa'), { target: { value: 'Beta' } })
     fireEvent.click(screen.getByRole('button', { name: 'Utwórz' }))
-
     await waitFor(() => {
       expect(router.state.location.search).toEqual({ space: 'beta' })
     })
-    expect(api.calls).toEqual(['get:beta', 'put:beta'])
+    expect(api.putRequests).toEqual(['beta'])
+    expect(api.putHeaders).toEqual(['*'])
     expect(await screen.findByText('Przestrzeń: Beta')).toBeDefined()
     await waitFor(() => {
       expect(screen.queryByRole('button', { name: 'Utwórz' })).toBeNull()
     })
   })
 
-  it('a taken slug is reported on the slug field without a PUT', async () => {
+  it('creating a space sends one PUT with If-None-Match and reports a taken slug', async () => {
     api.spaces = [alpha]
     renderApp('/')
     await screen.findByText('Przestrzeń: Alpha')
-
     openSwitcher()
     fireEvent.click(await screen.findByText('Utwórz przestrzeń'))
     fireEvent.change(await screen.findByLabelText('Nazwa'), { target: { value: 'Alpha' } })
     fireEvent.click(screen.getByRole('button', { name: 'Utwórz' }))
-
     expect(await screen.findByText('Ten slug jest już zajęty.')).toBeDefined()
-    expect(api.putRequests).toEqual([])
-    expect(api.calls).toEqual(['get:alpha'])
+    expect(api.putRequests).toEqual(['alpha'])
+    expect(api.putHeaders).toEqual(['*'])
+    expect(api.calls.filter((call) => call.startsWith('put:'))).toEqual(['put:alpha'])
   })
 })
 
-describe('space states in the shell', () => {
+describe('space resolution', () => {
   it('an unknown space in the URL shows the not found view', async () => {
     api.spaces = [alpha]
     renderApp('/checks?space=missing')
@@ -223,6 +234,27 @@ describe('space states in the shell', () => {
     expect(link.getAttribute('href')).toBe('/checks?space=alpha')
   })
 
+  it('an unknown space is decided by the API and not by the first page of the list', async () => {
+    api.spaces = [alpha, beta]
+    api.pageSize = 1
+    renderApp('/checks?space=beta')
+
+    expect(await screen.findByRole('heading', { level: 1, name: 'Checki' })).toBeDefined()
+    expect(
+      screen.queryByRole('heading', { level: 1, name: 'Nie znaleziono przestrzeni' }),
+    ).toBeNull()
+
+    cleanup()
+    api.spaces = [alpha]
+    renderApp('/checks?space=missing')
+
+    expect(
+      await screen.findByRole('heading', { level: 1, name: 'Nie znaleziono przestrzeni' }),
+    ).toBeDefined()
+  })
+})
+
+describe('space shell on mobile', () => {
   it('on mobile the more sheet contains the space switcher', async () => {
     installViewport(MOBILE_WIDTH)
     api.spaces = [alpha, beta]
@@ -242,7 +274,6 @@ describe('space states in the shell', () => {
 describe('space list states', () => {
   it('an empty list shows the empty state', async () => {
     renderApp('/')
-
     await screen.findByText('Brak przestrzeni')
     openSwitcher()
 
@@ -256,7 +287,6 @@ describe('space list states', () => {
     api.spaces = [alpha]
     api.failFirstList = true
     renderApp('/')
-
     await screen.findByText('Błąd wczytywania')
     openSwitcher()
     expect(await screen.findByText('Nie udało się wczytać listy przestrzeni.')).toBeDefined()

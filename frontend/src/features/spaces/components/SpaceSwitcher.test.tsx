@@ -22,6 +22,8 @@ function renderSwitcher(overrides: Partial<SpaceSwitcherProps> = {}): SpaceSwitc
     currentSlug: 'produkcja',
     status: 'ready',
     canCreate: true,
+    hasMore: false,
+    layout: 'menu',
     onSelect: vi.fn(),
     onCreate: vi.fn(),
     onRetry: vi.fn(),
@@ -145,10 +147,28 @@ describe('space switcher error', () => {
   })
 })
 
+describe('space switcher pagination', () => {
+  it('the switcher offers to load more spaces when there is another page', async () => {
+    const onLoadMore = vi.fn()
+    renderSwitcher({ layout: 'menu', hasMore: true, onLoadMore })
+    openSwitcher()
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Wczytaj więcej' }))
+    expect(onLoadMore).toHaveBeenCalledTimes(1)
+
+    cleanup()
+    renderSwitcher({ layout: 'sheet', hasMore: true, onLoadMore })
+    openSwitcher()
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Wczytaj więcej' }))
+    expect(onLoadMore).toHaveBeenCalledTimes(2)
+  })
+})
+
 describe('space switcher mobile', () => {
   it('on mobile the switcher opens as a sheet with touch targets of 44 px', async () => {
     installViewport(MOBILE_WIDTH)
-    renderSwitcher()
+    renderSwitcher({ layout: 'sheet' })
     openSwitcher()
 
     const sheet = await screen.findByRole('dialog', { name: 'Przestrzeń' })

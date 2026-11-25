@@ -5,17 +5,24 @@ import type { ReactElement } from 'react'
 import { useTranslation } from 'react-i18next'
 import { DesktopContent, MobileContent } from './SwitcherContent'
 import type { SpaceSummary, SpacesStatus } from '../spaceTypes'
-import { currentName, sheetStyles, touchStyle, useMobileLayout } from './switcherStyles'
+import { currentName, sheetStyles, touchStyle } from './switcherStyles'
+
+export type SpaceSwitcherLayout = 'menu' | 'sheet'
 
 export interface SpaceSwitcherProps {
   spaces: readonly SpaceSummary[]
   currentSlug: string
   status: SpacesStatus
   canCreate: boolean
+  hasMore?: boolean
+  onLoadMore?: (() => void) | undefined
+  layout: SpaceSwitcherLayout
   onSelect: (slug: string) => void
   onCreate: () => void
   onRetry: () => void
 }
+
+export type SpaceSwitcherDataProps = Omit<SpaceSwitcherProps, 'layout'>
 
 interface TriggerTextProps {
   status: SpacesStatus
@@ -115,6 +122,5 @@ export function MobileSwitcher(props: SpaceSwitcherProps): ReactElement {
 }
 
 export function SpaceSwitcher(props: SpaceSwitcherProps): ReactElement {
-  const isMobile = useMobileLayout()
-  return isMobile ? <MobileSwitcher {...props} /> : <DesktopSwitcher {...props} />
+  return props.layout === 'menu' ? <DesktopSwitcher {...props} /> : <MobileSwitcher {...props} />
 }

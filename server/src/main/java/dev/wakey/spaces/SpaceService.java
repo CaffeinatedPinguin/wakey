@@ -12,8 +12,11 @@ public interface SpaceService {
      */
     PutResult put(SpacePrincipal actor, String slug, String name);
 
-    /** Reads a space the caller can see; admins see every space, members see their own, others get 404. */
-    Space get(SpacePrincipal actor, String slug);
+    /**
+     * Creates a space only when its slug is still free and fails with {@link SlugTakenException}
+     * otherwise. Only an application admin may call it; the name of an existing space is never changed.
+     */
+    PutResult create(SpacePrincipal actor, String slug, String name);
 
     /**
      * Reads one space together with the caller's role in it. Admins see every space, members see

@@ -1,21 +1,7 @@
 {
   "components" : {
     "schemas" : {
-      "CursorPageSpaceResponse" : {
-        "properties" : {
-          "items" : {
-            "items" : {
-              "$ref" : "#/components/schemas/SpaceResponse"
-            },
-            "type" : "array"
-          },
-          "nextCursor" : {
-            "type" : "string"
-          }
-        },
-        "type" : "object"
-      },
-      "MeResponse" : {
+      "CurrentUser" : {
         "properties" : {
           "admin" : {
             "description" : "Whether the user is an instance administrator",
@@ -26,6 +12,24 @@
             "type" : "string"
           }
         },
+        "required" : [ "admin", "subject" ],
+        "type" : "object"
+      },
+      "CursorPageSpaceResponse" : {
+        "properties" : {
+          "items" : {
+            "description" : "The items on this page",
+            "items" : {
+              "$ref" : "#/components/schemas/SpaceResponse"
+            },
+            "type" : "array"
+          },
+          "nextCursor" : {
+            "description" : "The cursor of the next page, or null on the last page",
+            "type" : [ "string", "null" ]
+          }
+        },
+        "required" : [ "items", "nextCursor" ],
         "type" : "object"
       },
       "ProblemDetail" : {
@@ -101,11 +105,12 @@
           "role" : {
             "description" : "The caller's membership role, or null for an Admin who is not a member",
             "enum" : [ "EDITOR", "VIEWER" ],
-            "type" : "string"
+            "type" : [ "string", "null" ]
           },
           "slug" : {
             "description" : "The stable space slug",
             "example" : "acme",
+            "pattern" : "^[a-z][a-z0-9-]{1,38}[a-z0-9]$",
             "type" : "string"
           },
           "version" : {
@@ -115,6 +120,7 @@
             "type" : "integer"
           }
         },
+        "required" : [ "admin", "name", "role", "slug", "version" ],
         "type" : "object"
       }
     }
@@ -133,7 +139,7 @@
             "content" : {
               "*/*" : {
                 "schema" : {
-                  "$ref" : "#/components/schemas/MeResponse"
+                  "$ref" : "#/components/schemas/CurrentUser"
                 }
               }
             },
@@ -167,7 +173,7 @@
         "responses" : {
           "200" : {
             "content" : {
-              "*/*" : {
+              "application/json" : {
                 "schema" : {
                   "$ref" : "#/components/schemas/CursorPageSpaceResponse"
                 }
@@ -183,9 +189,9 @@
                 }
               }
             },
-            "description" : "The request is invalid."
+            "description" : "The cursor is invalid."
           },
-          "403" : {
+          "401" : {
             "content" : {
               "application/problem+json" : {
                 "schema" : {
@@ -193,17 +199,7 @@
                 }
               }
             },
-            "description" : "The caller is not allowed to perform this action."
-          },
-          "404" : {
-            "content" : {
-              "application/problem+json" : {
-                "schema" : {
-                  "$ref" : "#/components/schemas/ProblemDetail"
-                }
-              }
-            },
-            "description" : "The requested space was not found."
+            "description" : "Authentication is required."
           }
         },
         "summary" : "List the spaces visible to the caller",
@@ -224,7 +220,7 @@
         "responses" : {
           "200" : {
             "content" : {
-              "*/*" : {
+              "application/json" : {
                 "schema" : {
                   "$ref" : "#/components/schemas/SpaceResponse"
                 }
@@ -240,9 +236,9 @@
                 }
               }
             },
-            "description" : "The request is invalid."
+            "description" : "The slug is invalid."
           },
-          "403" : {
+          "401" : {
             "content" : {
               "application/problem+json" : {
                 "schema" : {
@@ -250,7 +246,7 @@
                 }
               }
             },
-            "description" : "The caller is not allowed to perform this action."
+            "description" : "Authentication is required."
           },
           "404" : {
             "content" : {
@@ -260,18 +256,26 @@
                 }
               }
             },
-            "description" : "The requested space was not found."
+            "description" : "The space was not found."
           }
         },
         "summary" : "Read one space visible to the caller",
         "tags" : [ "spaces-controller" ]
       },
       "put" : {
+        "description" : "A rename is last-write-wins until the space carries a version or an If-Match precondition. Send If-None-Match: * to create the space only when the slug is free.",
         "operationId" : "putSpace",
         "parameters" : [ {
           "in" : "path",
           "name" : "slug",
           "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "in" : "header",
+          "name" : "If-None-Match",
+          "required" : false,
           "schema" : {
             "type" : "string"
           }
@@ -289,7 +293,7 @@
         "responses" : {
           "200" : {
             "content" : {
-              "*/*" : {
+              "application/json" : {
                 "schema" : {
                   "$ref" : "#/components/schemas/SpaceResponse"
                 }
@@ -299,7 +303,7 @@
           },
           "201" : {
             "content" : {
-              "*/*" : {
+              "application/json" : {
                 "schema" : {
                   "$ref" : "#/components/schemas/SpaceResponse"
                 }
@@ -317,6 +321,16 @@
             },
             "description" : "The request is invalid."
           },
+          "401" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description" : "Authentication is required."
+          },
           "403" : {
             "content" : {
               "application/problem+json" : {
@@ -325,9 +339,9 @@
                 }
               }
             },
-            "description" : "The caller is not allowed to perform this action."
+            "description" : "The caller is not allowed to create or rename spaces."
           },
-          "404" : {
+          "409" : {
             "content" : {
               "application/problem+json" : {
                 "schema" : {
@@ -335,7 +349,7 @@
                 }
               }
             },
-            "description" : "The requested space was not found."
+            "description" : "The space already exists and If-None-Match: * was sent."
           }
         },
         "summary" : "Create or rename a space idempotently",

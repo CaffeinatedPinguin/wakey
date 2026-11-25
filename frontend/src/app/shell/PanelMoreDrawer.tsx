@@ -5,7 +5,7 @@ import type { CSSProperties, ReactElement } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useLogout } from '../../features/auth'
 import { SpaceSwitcher } from '../../features/spaces'
-import type { SpaceSwitcherProps } from '../../features/spaces'
+import type { SpaceSwitcherDataProps } from '../../features/spaces'
 import { ColorSchemeToggle } from '../../shared/ui/ColorSchemeToggle'
 import { LanguageSwitch } from '../../shared/ui/LanguageSwitch'
 import { moreNavigation, navigationActiveOptions, navigationActiveStyle } from './panelNavigation'
@@ -13,7 +13,7 @@ import { moreNavigation, navigationActiveOptions, navigationActiveStyle } from '
 interface PanelMoreDrawerProps {
   opened: boolean
   onClose: () => void
-  switcher: SpaceSwitcherProps
+  switcher: SpaceSwitcherDataProps
 }
 
 interface MoreSheetLinksProps {
@@ -106,7 +106,7 @@ export function PanelMoreDrawer({ opened, onClose, switcher }: PanelMoreDrawerPr
           <Text size="sm" fw={500} mb={4}>
             {t('spaces.switcher.sheetTitle')}
           </Text>
-          <SpaceSwitcher {...switcher} />
+          <SpaceSwitcher {...switcher} layout="sheet" />
         </Box>
         <MoreSheetLinks onClose={onClose} />
         <MoreSheetPreferences />

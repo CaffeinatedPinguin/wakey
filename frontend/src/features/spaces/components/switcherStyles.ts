@@ -1,8 +1,5 @@
-import { useMediaQuery } from '@mantine/hooks'
 import type { CSSProperties } from 'react'
 import type { SpaceSummary } from '../spaceTypes'
-
-const MOBILE_QUERY = '(max-width: 47.99375em)'
 
 export const touchStyle: CSSProperties = { minHeight: 'var(--app-size-control-touch)' }
 
@@ -38,10 +35,6 @@ export const avatarStyle: CSSProperties = {
   background: 'var(--app-color-primary-bg)',
   color: 'var(--app-color-on-primary)',
   fontWeight: 600,
-}
-
-export function useMobileLayout(): boolean {
-  return useMediaQuery(MOBILE_QUERY, undefined, { getInitialValueInEffect: false })
 }
 
 export function currentName(

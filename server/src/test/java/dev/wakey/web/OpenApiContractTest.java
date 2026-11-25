@@ -5,9 +5,11 @@ import static org.springframework.security.test.web.servlet.request.SecurityMock
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.request;
 
+import dev.wakey.testsupport.ContractFile;
 import dev.wakey.testsupport.SecurityIntegrationTest;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
@@ -31,8 +33,6 @@ import tools.jackson.databind.json.JsonMapper;
 
 @TestPropertySource(properties = "springdoc.api-docs.enabled=true")
 class OpenApiContractTest extends SecurityIntegrationTest {
-
-    private static final String CONTRACT_FILE = "public.json";
 
     private static final String DOCS_PATH = "/v3/api-docs/public";
 
@@ -64,7 +64,7 @@ class OpenApiContractTest extends SecurityIntegrationTest {
     void generatedContractMatchesTheCommittedFile() throws Exception {
         // when
         String generated = generatedContract();
-        Path contract = contractPath();
+        Path contract = ContractFile.path();
 
         // then
         if (Boolean.getBoolean("wakey.openapi.update")) {
@@ -75,6 +75,42 @@ class OpenApiContractTest extends SecurityIntegrationTest {
         }
         String committed = Files.readString(contract);
         assertThat(generated).isEqualTo(committed);
+    }
+
+    @Test
+    void responsesMarkTheirRequiredFieldsInTheContract() throws Exception {
+        // given
+        JsonNode document = MAPPER.readTree(generatedContract());
+        JsonNode schemas = document.path("components").path("schemas");
+        JsonNode space = schemas.path("SpaceResponse");
+        JsonNode cursorPage = schemas.path("CursorPageSpaceResponse");
+
+        // when
+        JsonNode roleSchema = space.path("properties").path("role").path("type");
+        JsonNode nextCursorSchema =
+                cursorPage.path("properties").path("nextCursor").path("type");
+        List<String> spaceRequired = valuesOf(space.path("required"));
+        List<String> cursorPageRequired = valuesOf(cursorPage.path("required"));
+        List<String> roleType = valuesOf(roleSchema);
+        List<String> nextCursorType = valuesOf(nextCursorSchema);
+
+        // then
+        assertThat(spaceRequired).containsExactlyInAnyOrder("slug", "name", "version", "role", "admin");
+        assertThat(cursorPageRequired).containsExactlyInAnyOrder("items", "nextCursor");
+        assertThat(roleType).contains("string", "null");
+        assertThat(nextCursorType).contains("string", "null");
+    }
+
+    private static List<String> valuesOf(JsonNode node) {
+        List<String> values = new ArrayList<>();
+        if (node.isArray()) {
+            for (JsonNode item : node) {
+                values.add(item.asString());
+            }
+        } else if (!node.isMissingNode()) {
+            values.add(node.asString());
+        }
+        return values;
     }
 
     @Test
@@ -109,7 +145,7 @@ class OpenApiContractTest extends SecurityIntegrationTest {
     @Test
     void everyEndpointInTheContractRejectsMissingAuthentication() throws Exception {
         // given
-        String contract = Files.readString(contractPath());
+        String contract = Files.readString(ContractFile.path());
         JsonNode document = MAPPER.readTree(contract);
         JsonNode paths = document.path("paths");
         int checked = 0;
@@ -166,13 +202,5 @@ class OpenApiContractTest extends SecurityIntegrationTest {
         Object document = MAPPER.readValue(body, Object.class);
         String formatted = MAPPER.writerWithDefaultPrettyPrinter().writeValueAsString(document);
         return formatted.replace("\r\n", "\n") + "\n";
-    }
-
-    private static Path contractPath() {
-        Path moduleRelative = Path.of("..", "api", "openapi", CONTRACT_FILE);
-        if (Files.exists(moduleRelative)) {
-            return moduleRelative;
-        }
-        return Path.of("api", "openapi", CONTRACT_FILE);
     }
 }

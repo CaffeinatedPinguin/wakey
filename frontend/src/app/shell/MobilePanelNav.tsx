@@ -1,11 +1,11 @@
 import type { ReactElement } from 'react'
 import { useDisclosure } from '@mantine/hooks'
-import type { SpaceSwitcherProps } from '../../features/spaces'
+import type { SpaceSwitcherDataProps } from '../../features/spaces'
 import { PanelBottomBar } from './PanelBottomBar'
 import { PanelMoreDrawer } from './PanelMoreDrawer'
 
 interface MobilePanelNavProps {
-  switcher: SpaceSwitcherProps
+  switcher: SpaceSwitcherDataProps
 }
 
 // The state lives here, so leaving the mobile layout unmounts it and the sheet

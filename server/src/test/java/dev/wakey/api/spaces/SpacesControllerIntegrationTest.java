@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.oidcLogin;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 
 import dev.wakey.spaces.PutResult;
@@ -12,8 +13,6 @@ import dev.wakey.spaces.SpacePrincipal;
 import dev.wakey.spaces.SpaceRole;
 import dev.wakey.spaces.SpaceService;
 import dev.wakey.testsupport.SecurityIntegrationTest;
-import java.nio.file.Files;
-import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
@@ -285,24 +284,76 @@ class SpacesControllerIntegrationTest extends SecurityIntegrationTest {
     }
 
     @Test
-    void spacesEndpointsAreInTheCommittedContract() throws Exception {
+    void springMappedClientErrorsStayClientErrors() throws Exception {
         // given
-        Path contract = contractPath();
-        String document = Files.readString(contract);
-        JsonNode root = MAPPER.readTree(document);
-        JsonNode paths = root.path("paths");
-        JsonNode collection = paths.path(SPACES_PATH);
-        JsonNode item = paths.path(SPACES_PATH + "/{slug}");
+        String admin = uniqueSubject("mapped-errors");
+        MockHttpServletRequestBuilder badLimitRequest =
+                get(SPACES_PATH).param("limit", "abc").with(login(admin, true));
+        MockHttpServletRequestBuilder wrongMethodRequest =
+                post(SPACES_PATH).with(login(admin, true)).with(csrf());
 
         // when
-        String listId = collection.path("get").path("operationId").asString();
-        String getById = item.path("get").path("operationId").asString();
-        String putById = item.path("put").path("operationId").asString();
+        MvcResult badLimit = mockMvc().perform(badLimitRequest).andReturn();
+        MvcResult wrongMethod = mockMvc().perform(wrongMethodRequest).andReturn();
 
         // then
-        assertThat(listId).isEqualTo("listSpaces");
-        assertThat(getById).isEqualTo("getSpace");
-        assertThat(putById).isEqualTo("putSpace");
+        JsonNode badLimitBody = jsonOf(badLimit);
+        JsonNode wrongMethodBody = jsonOf(wrongMethod);
+        String badLimitCode = badLimitBody.path("code").asString();
+        String wrongMethodCode = wrongMethodBody.path("code").asString();
+        assertThat(statusOf(badLimit)).isEqualTo(400);
+        assertThat(contentTypeOf(badLimit)).isEqualTo(PROBLEM_JSON);
+        assertThat(badLimitCode).isEqualTo("bad_request");
+        assertThat(statusOf(wrongMethod)).isEqualTo(405);
+        assertThat(contentTypeOf(wrongMethod)).isEqualTo(PROBLEM_JSON);
+        assertThat(wrongMethodCode).isEqualTo("method_not_allowed");
+    }
+
+    @Test
+    void putWithIfNoneMatchStarRefusesAnExistingSlug() throws Exception {
+        // given
+        String admin = uniqueSubject("if-none-match");
+        String slug = uniqueSlug("existing");
+        putSpace(admin, true, slug, nameBody("Original name"), true);
+
+        // when
+        MockHttpServletRequestBuilder request = put(SPACES_PATH + "/" + slug)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(nameBody("Renamed"))
+                .header("If-None-Match", "*")
+                .with(login(admin, true))
+                .with(csrf());
+        MvcResult refused = mockMvc().perform(request).andReturn();
+        MockHttpServletRequestBuilder readRequest =
+                get(SPACES_PATH + "/" + slug).with(login(admin, true));
+        MvcResult read = mockMvc().perform(readRequest).andReturn();
+
+        // then
+        JsonNode refusedBody = jsonOf(refused);
+        JsonNode readBody = jsonOf(read);
+        String refusedCode = refusedBody.path("code").asString();
+        String readName = readBody.path("name").asString();
+        assertThat(statusOf(refused)).isEqualTo(409);
+        assertThat(contentTypeOf(refused)).isEqualTo(PROBLEM_JSON);
+        assertThat(refusedCode).isEqualTo("slug_taken");
+        assertThat(readName).isEqualTo("Original name");
+    }
+
+    @Test
+    void putWithoutTheHeaderStillRenames() throws Exception {
+        // given
+        String admin = uniqueSubject("no-if-none-match");
+        String slug = uniqueSlug("rename-without-header");
+        putSpace(admin, true, slug, nameBody("Old name"), true);
+
+        // when
+        MvcResult renamed = putSpace(admin, true, slug, nameBody("New name"), true);
+
+        // then
+        JsonNode body = jsonOf(renamed);
+        String renamedName = body.path("name").asString();
+        assertThat(statusOf(renamed)).isEqualTo(200);
+        assertThat(renamedName).isEqualTo("New name");
     }
 
     private MvcResult putSpace(String subject, boolean admin, String slug, String body, boolean withCsrf)
@@ -387,13 +438,5 @@ class SpacesControllerIntegrationTest extends SecurityIntegrationTest {
 
     private static String uniqueSubject(String prefix) {
         return prefix + "-" + UUID.randomUUID();
-    }
-
-    private static Path contractPath() {
-        Path moduleRelative = Path.of("..", "api", "openapi", "public.json");
-        if (Files.exists(moduleRelative)) {
-            return moduleRelative;
-        }
-        return Path.of("api", "openapi", "public.json");
     }
 }

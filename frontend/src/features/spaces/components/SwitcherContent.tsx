@@ -10,6 +10,8 @@ interface ListProps {
   currentSlug: string
   status: SpacesStatus
   canCreate: boolean
+  hasMore?: boolean
+  onLoadMore?: (() => void) | undefined
   onSelect: (slug: string) => void
   onCreate: () => void
   onRetry: () => void
@@ -73,6 +75,16 @@ export function EmptyContent({
   )
 }
 
+function LoadMoreButton({ onLoadMore }: { onLoadMore: () => void }): ReactElement {
+  const { t } = useTranslation()
+
+  return (
+    <Button variant="light" onClick={onLoadMore} style={touchStyle}>
+      {t('spaces.switcher.loadMore')}
+    </Button>
+  )
+}
+
 function DesktopListItem({
   space,
   currentSlug,
@@ -101,12 +113,41 @@ function DesktopListItem({
   )
 }
 
+interface DesktopFooterProps {
+  hasMore: boolean
+  onLoadMore?: (() => void) | undefined
+  canCreate: boolean
+  onCreate: () => void
+}
+
+function DesktopFooter({
+  hasMore,
+  onLoadMore,
+  canCreate,
+  onCreate,
+}: DesktopFooterProps): ReactElement {
+  const { t } = useTranslation()
+
+  return (
+    <>
+      {hasMore && onLoadMore !== undefined ? <LoadMoreButton onLoadMore={onLoadMore} /> : null}
+      {canCreate ? (
+        <>
+          <Menu.Divider />
+          <Menu.Item leftSection={<IconPlus size={16} />} onClick={onCreate}>
+            {t('spaces.switcher.create')}
+          </Menu.Item>
+        </>
+      ) : null}
+    </>
+  )
+}
+
 export function DesktopContent({
   currentSlug,
   close,
   ...list
 }: ListProps & { close: () => void }): ReactElement {
-  const { t } = useTranslation()
   if (list.status === 'loading') {
     return <LoadingContent />
   }
@@ -128,14 +169,12 @@ export function DesktopContent({
           close={close}
         />
       ))}
-      {list.canCreate ? (
-        <>
-          <Menu.Divider />
-          <Menu.Item leftSection={<IconPlus size={16} />} onClick={list.onCreate}>
-            {t('spaces.switcher.create')}
-          </Menu.Item>
-        </>
-      ) : null}
+      <DesktopFooter
+        hasMore={list.hasMore === true}
+        onLoadMore={list.onLoadMore}
+        canCreate={list.canCreate}
+        onCreate={list.onCreate}
+      />
     </>
   )
 }
@@ -199,6 +238,29 @@ function MobileCreateRow({
   )
 }
 
+interface MobileFooterProps {
+  hasMore: boolean
+  onLoadMore?: (() => void) | undefined
+  canCreate: boolean
+  onCreate: () => void
+  close: () => void
+}
+
+function MobileFooter({
+  hasMore,
+  onLoadMore,
+  canCreate,
+  onCreate,
+  close,
+}: MobileFooterProps): ReactElement {
+  return (
+    <>
+      {hasMore && onLoadMore !== undefined ? <LoadMoreButton onLoadMore={onLoadMore} /> : null}
+      {canCreate ? <MobileCreateRow onCreate={onCreate} close={close} /> : null}
+    </>
+  )
+}
+
 export function MobileContent({
   currentSlug,
   close,
@@ -225,7 +287,13 @@ export function MobileContent({
           close={close}
         />
       ))}
-      {list.canCreate ? <MobileCreateRow onCreate={list.onCreate} close={close} /> : null}
+      <MobileFooter
+        hasMore={list.hasMore === true}
+        onLoadMore={list.onLoadMore}
+        canCreate={list.canCreate}
+        onCreate={list.onCreate}
+        close={close}
+      />
     </Stack>
   )
 }

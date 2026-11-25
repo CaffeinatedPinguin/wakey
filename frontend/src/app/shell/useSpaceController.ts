@@ -1,5 +1,5 @@
 import { useDisclosure } from '@mantine/hooks'
-import type { UseMutationResult, UseQueryResult } from '@tanstack/react-query'
+import type { UseMutationResult } from '@tanstack/react-query'
 import { useNavigate, useRouterState, useSearch } from '@tanstack/react-router'
 import { useEffect } from 'react'
 import type {
@@ -8,68 +8,61 @@ import type {
   SpaceFormValues,
   SpaceSubmitError,
   SpaceSummary,
-  SpaceSwitcherProps,
+  SpaceSwitcherDataProps,
   SpacesStatus,
 } from '../../features/spaces'
 import {
-  isSpaceSlugTakenError,
+  isSlugTakenError,
   spaceFromSearch,
   useCreateSpace,
+  useSpace,
   useSpaces,
 } from '../../features/spaces'
+import { isNotFoundError } from '../../shared/api/client'
 
 export interface SpaceController {
-  switcher: SpaceSwitcherProps
+  switcher: SpaceSwitcherDataProps
   dialog: CreateSpaceDialogProps
   spaces: readonly SpaceSummary[]
   isUnknown: boolean
 }
 
-interface ControllerInput {
-  spaces: readonly SpaceSummary[]
-  currentSlug: string
-  status: SpacesStatus
-  canCreate: boolean
-  opened: boolean
-  submitting: boolean
-  submitError: SpaceSubmitError
-  isUnknown: boolean
-  onSelect: (slug: string) => void
-  onCreate: () => void
-  onRetry: () => void
-  onSubmit: (values: SpaceFormValues) => void
-  onClose: () => void
+type SpacesQuery = ReturnType<typeof useSpaces>
+
+function flattenSpaces(query: SpacesQuery): SpaceSummary[] {
+  return query.data?.pages.flatMap((page) => page.items) ?? []
 }
 
-function spacesStatus(query: UseQueryResult<SpaceSummary[]>): SpacesStatus {
+function spacesStatus(query: SpacesQuery): SpacesStatus {
   if (query.isPending) {
     return 'loading'
   }
   if (query.isError) {
     return 'error'
   }
-  return query.data.length === 0 ? 'empty' : 'ready'
+  return flattenSpaces(query).length === 0 ? 'empty' : 'ready'
 }
 
 function submitErrorOf(error: Error | null): SpaceSubmitError {
   if (error === null) {
     return null
   }
-  return isSpaceSlugTakenError(error) ? 'slug_taken' : 'generic'
+  return isSlugTakenError(error) ? 'slug_taken' : 'generic'
 }
 
-function isUnknownSpace(
-  requestedSlug: string,
-  spaces: readonly SpaceSummary[],
-  status: SpacesStatus,
-): boolean {
-  if (status === 'empty') {
-    return true
+function useSpacesState() {
+  const query = useSpaces()
+  const search = useSearch({ strict: false })
+  const requestedSlug = spaceFromSearch(search)
+  const detail = useSpace(requestedSlug)
+  const spaces = flattenSpaces(query)
+  return {
+    query,
+    spaces,
+    status: spacesStatus(query),
+    requestedSlug,
+    isUnknown: detail.isError && isNotFoundError(detail.error),
   }
-  if (status !== 'ready') {
-    return false
-  }
-  return !spaces.some((space) => space.slug === requestedSlug)
 }
 
 type SpaceNavigate = ReturnType<typeof useNavigate>
@@ -107,60 +100,43 @@ function submitSpace(
   }
 }
 
-function toController(input: ControllerInput): SpaceController {
-  return {
-    switcher: {
-      spaces: input.spaces,
-      currentSlug: input.currentSlug,
-      status: input.status,
-      canCreate: input.canCreate,
-      onSelect: input.onSelect,
-      onCreate: input.onCreate,
-      onRetry: input.onRetry,
-    },
-    dialog: {
-      opened: input.opened,
-      submitting: input.submitting,
-      submitError: input.submitError,
-      onSubmit: input.onSubmit,
-      onClose: input.onClose,
-    },
-    spaces: input.spaces,
-    isUnknown: input.isUnknown,
-  }
-}
-
 export function useSpaceController(canCreate: boolean): SpaceController {
-  const spacesQuery = useSpaces()
+  const { query, spaces, status, requestedSlug, isUnknown } = useSpacesState()
   const create = useCreateSpace()
-  const search = useSearch({ strict: false })
   const pathname = useRouterState({ select: (state) => state.location.pathname })
   const navigate = useNavigate()
   const [opened, { open, close }] = useDisclosure(false)
-  const spaces = spacesQuery.data ?? []
-  const requestedSlug = spaceFromSearch(search)
   const firstSlug = spaces[0]?.slug
-  const status = spacesStatus(spacesQuery)
+  const currentSlug = requestedSlug ?? firstSlug ?? ''
   useDefaultSpace(navigate, pathname, requestedSlug, firstSlug)
   const selectSpace = (slug: string): void => {
     void navigate({ to: pathname, search: (previous) => ({ ...previous, space: slug }) })
   }
   const submit = submitSpace(create, close, selectSpace)
-  return toController({
-    spaces,
-    currentSlug: requestedSlug ?? firstSlug ?? '',
-    status,
-    canCreate,
-    opened,
-    submitting: create.isPending,
-    submitError: submitErrorOf(create.error),
-    isUnknown: requestedSlug !== undefined && isUnknownSpace(requestedSlug, spaces, status),
-    onSelect: selectSpace,
-    onCreate: open,
-    onRetry: () => {
-      void spacesQuery.refetch()
+  return {
+    switcher: {
+      spaces,
+      currentSlug,
+      status,
+      canCreate,
+      hasMore: query.hasNextPage,
+      onLoadMore: () => {
+        void query.fetchNextPage()
+      },
+      onSelect: selectSpace,
+      onCreate: open,
+      onRetry: () => {
+        void query.refetch()
+      },
     },
-    onSubmit: submit,
-    onClose: close,
-  })
+    dialog: {
+      opened,
+      submitting: create.isPending,
+      submitError: submitErrorOf(create.error),
+      onSubmit: submit,
+      onClose: close,
+    },
+    spaces,
+    isUnknown,
+  }
 }

@@ -45,7 +45,10 @@ export interface paths {
         };
         /** Read one space visible to the caller */
         get: operations["getSpace"];
-        /** Create or rename a space idempotently */
+        /**
+         * Create or rename a space idempotently
+         * @description A rename is last-write-wins until the space carries a version or an If-Match precondition. Send If-None-Match: * to create the space only when the slug is free.
+         */
         put: operations["putSpace"];
         post?: never;
         delete?: never;
@@ -58,15 +61,17 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
-        CursorPageSpaceResponse: {
-            items?: components["schemas"]["SpaceResponse"][];
-            nextCursor?: string;
-        };
-        MeResponse: {
+        CurrentUser: {
             /** @description Whether the user is an instance administrator */
-            admin?: boolean;
+            admin: boolean;
             /** @description The OIDC subject of the authenticated user */
-            subject?: string;
+            subject: string;
+        };
+        CursorPageSpaceResponse: {
+            /** @description The items on this page */
+            items: components["schemas"]["SpaceResponse"][];
+            /** @description The cursor of the next page, or null on the last page */
+            nextCursor: string | null;
         };
         ProblemDetail: {
             code?: string;
@@ -97,28 +102,28 @@ export interface components {
         /** @description A space as seen by the caller */
         SpaceResponse: {
             /** @description Whether the caller is an application administrator */
-            admin?: boolean;
+            admin: boolean;
             /**
              * @description The display name
              * @example Acme
              */
-            name?: string;
+            name: string;
             /**
              * @description The caller's membership role, or null for an Admin who is not a member
-             * @enum {string}
+             * @enum {string|null}
              */
-            role?: "EDITOR" | "VIEWER";
+            role: "EDITOR" | "VIEWER" | null;
             /**
              * @description The stable space slug
              * @example acme
              */
-            slug?: string;
+            slug: string;
             /**
              * Format: int64
              * @description The version growing whenever the name changes
              * @example 1
              */
-            version?: number;
+            version: number;
         };
     };
     responses: never;
@@ -144,7 +149,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "*/*": components["schemas"]["MeResponse"];
+                    "*/*": components["schemas"]["CurrentUser"];
                 };
             };
         };
@@ -167,10 +172,10 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "*/*": components["schemas"]["CursorPageSpaceResponse"];
+                    "application/json": components["schemas"]["CursorPageSpaceResponse"];
                 };
             };
-            /** @description The request is invalid. */
+            /** @description The cursor is invalid. */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -179,17 +184,8 @@ export interface operations {
                     "application/problem+json": components["schemas"]["ProblemDetail"];
                 };
             };
-            /** @description The caller is not allowed to perform this action. */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/problem+json": components["schemas"]["ProblemDetail"];
-                };
-            };
-            /** @description The requested space was not found. */
-            404: {
+            /** @description Authentication is required. */
+            401: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -216,10 +212,10 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "*/*": components["schemas"]["SpaceResponse"];
+                    "application/json": components["schemas"]["SpaceResponse"];
                 };
             };
-            /** @description The request is invalid. */
+            /** @description The slug is invalid. */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -228,8 +224,8 @@ export interface operations {
                     "application/problem+json": components["schemas"]["ProblemDetail"];
                 };
             };
-            /** @description The caller is not allowed to perform this action. */
-            403: {
+            /** @description Authentication is required. */
+            401: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -237,7 +233,7 @@ export interface operations {
                     "application/problem+json": components["schemas"]["ProblemDetail"];
                 };
             };
-            /** @description The requested space was not found. */
+            /** @description The space was not found. */
             404: {
                 headers: {
                     [name: string]: unknown;
@@ -251,7 +247,9 @@ export interface operations {
     putSpace: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                "If-None-Match"?: string;
+            };
             path: {
                 slug: string;
             };
@@ -269,7 +267,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "*/*": components["schemas"]["SpaceResponse"];
+                    "application/json": components["schemas"]["SpaceResponse"];
                 };
             };
             /** @description The space was created. */
@@ -278,7 +276,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "*/*": components["schemas"]["SpaceResponse"];
+                    "application/json": components["schemas"]["SpaceResponse"];
                 };
             };
             /** @description The request is invalid. */
@@ -290,7 +288,16 @@ export interface operations {
                     "application/problem+json": components["schemas"]["ProblemDetail"];
                 };
             };
-            /** @description The caller is not allowed to perform this action. */
+            /** @description Authentication is required. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description The caller is not allowed to create or rename spaces. */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -299,8 +306,8 @@ export interface operations {
                     "application/problem+json": components["schemas"]["ProblemDetail"];
                 };
             };
-            /** @description The requested space was not found. */
-            404: {
+            /** @description The space already exists and If-None-Match: * was sent. */
+            409: {
                 headers: {
                     [name: string]: unknown;
                 };
