@@ -7,10 +7,13 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 
 import dev.wakey.testsupport.SecurityIntegrationTest;
 import dev.wakey.web.CommonError;
+import java.util.LinkedHashSet;
 import java.util.Objects;
+import java.util.Set;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MvcResult;
+import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
 import tools.jackson.databind.json.JsonMapper;
@@ -54,5 +57,37 @@ class ProblemResponseSecurityTest extends SecurityIntegrationTest {
         assertThat(status).isEqualTo(403);
         assertThat(contentType).isEqualTo(MediaType.APPLICATION_PROBLEM_JSON_VALUE);
         assertThat(code).isEqualTo(CommonError.FORBIDDEN.getCode());
+    }
+
+    @Test
+    void securityProblemsUseTheSameShapeAsMvcProblems() throws Exception {
+        // given
+        MockHttpServletRequestBuilder unauthenticatedRequest = get("/api/v1/me");
+        MockHttpServletRequestBuilder missingResourceRequest =
+                get("/api/v1/does-not-exist").with(oidcLogin());
+
+        // when
+        MvcResult unauthenticated = mockMvc().perform(unauthenticatedRequest).andReturn();
+        MvcResult missingResource = mockMvc().perform(missingResourceRequest).andReturn();
+
+        // then
+        int unauthenticatedStatus = unauthenticated.getResponse().getStatus();
+        int missingResourceStatus = missingResource.getResponse().getStatus();
+        Set<String> securityFields = fieldNamesOf(unauthenticated);
+        Set<String> mvcFields = fieldNamesOf(missingResource);
+        assertThat(unauthenticatedStatus).isEqualTo(401);
+        assertThat(missingResourceStatus).isEqualTo(404);
+        assertThat(securityFields).containsExactlyInAnyOrderElementsOf(mvcFields);
+        assertThat(securityFields).contains("type", "title", "status", "detail", "code", "errors");
+    }
+
+    private static Set<String> fieldNamesOf(MvcResult result) throws Exception {
+        String responseBody = result.getResponse().getContentAsString();
+        JsonNode body = MAPPER.readTree(responseBody);
+        Set<String> fields = new LinkedHashSet<>();
+        for (String name : body.propertyNames()) {
+            fields.add(name);
+        }
+        return fields;
     }
 }

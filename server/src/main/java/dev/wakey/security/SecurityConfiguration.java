@@ -9,9 +9,7 @@ import org.springframework.core.annotation.Order;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.oauth2.client.registration.ClientRegistrationRepository;
-import org.springframework.security.web.AuthenticationEntryPoint;
 import org.springframework.security.web.SecurityFilterChain;
-import org.springframework.security.web.access.AccessDeniedHandler;
 import org.springframework.security.web.context.SecurityContextHolderFilter;
 import org.springframework.security.web.servlet.util.matcher.PathPatternRequestMatcher;
 import org.springframework.security.web.util.matcher.RequestMatcher;
@@ -22,9 +20,14 @@ class SecurityConfiguration {
 
     private static final RequestMatcher API_REQUESTS = PathPatternRequestMatcher.pathPattern(ApiPaths.API_V1_ALL);
 
-    private static final AuthenticationEntryPoint UNAUTHORIZED = new UnauthorizedRequestLog();
+    private final UnauthorizedRequestLog unauthorized;
 
-    private static final AccessDeniedHandler FORBIDDEN = new ForbiddenRequestLog();
+    private final ForbiddenRequestLog forbidden;
+
+    SecurityConfiguration(UnauthorizedRequestLog unauthorized, ForbiddenRequestLog forbidden) {
+        this.unauthorized = unauthorized;
+        this.forbidden = forbidden;
+    }
 
     @Bean
     @Order(1)
@@ -37,7 +40,7 @@ class SecurityConfiguration {
                 .csrf(csrf -> csrf.disable())
                 .requestCache(cache -> cache.disable())
                 .exceptionHandling(exceptions ->
-                        exceptions.authenticationEntryPoint(UNAUTHORIZED).accessDeniedHandler(FORBIDDEN))
+                        exceptions.authenticationEntryPoint(unauthorized).accessDeniedHandler(forbidden))
                 .headers(SecurityHeaders::applyTo);
         return http.build();
     }
@@ -60,8 +63,8 @@ class SecurityConfiguration {
                 .csrf(csrf -> csrf.spa())
                 .requestCache(cache -> cache.disable())
                 .exceptionHandling(exceptions -> exceptions
-                        .defaultAuthenticationEntryPointFor(UNAUTHORIZED, API_REQUESTS)
-                        .accessDeniedHandler(FORBIDDEN))
+                        .defaultAuthenticationEntryPointFor(unauthorized, API_REQUESTS)
+                        .accessDeniedHandler(forbidden))
                 .logout(LogoutConfiguration::configure)
                 .headers(SecurityHeaders::applyTo);
         SessionMaxAgeFilter maxAgeFilter = new SessionMaxAgeFilter(clock, properties.sessionMaxAge());
@@ -81,7 +84,7 @@ class SecurityConfiguration {
                         .anyRequest()
                         .denyAll())
                 .exceptionHandling(exceptions ->
-                        exceptions.authenticationEntryPoint(UNAUTHORIZED).accessDeniedHandler(FORBIDDEN))
+                        exceptions.authenticationEntryPoint(unauthorized).accessDeniedHandler(forbidden))
                 .headers(SecurityHeaders::applyTo);
         return http.build();
     }

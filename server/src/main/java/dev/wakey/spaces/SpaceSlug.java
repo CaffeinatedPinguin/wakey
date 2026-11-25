@@ -23,9 +23,12 @@ public final class SpaceSlug {
 
     private SpaceSlug() {}
 
+    public static boolean isValid(String candidate) {
+        return COMPILED.matcher(candidate).matches();
+    }
+
     public static String requireValid(String candidate) {
-        boolean valid = COMPILED.matcher(candidate).matches();
-        if (!valid) {
+        if (!isValid(candidate)) {
             FieldProblem problem = new FieldProblem("/slug", SpaceError.INVALID_SLUG.getCode(), Map.of());
             throw new ApiException(CommonError.VALIDATION_FAILED, List.of(problem));
         }

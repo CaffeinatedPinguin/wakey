@@ -44,7 +44,12 @@ class SecurityFilterChainTest extends SecurityIntegrationTest {
     @ParameterizedTest
     @ValueSource(strings = {"/agent/v1/checks", "/ping/token", "/public/v1/status"})
     void statelessEndpointsAreRejectedWithoutAuthentication(String path) throws Exception {
-        mockMvc().perform(get(path)).andExpect(UNAUTHORIZED);
+        // when
+        MvcResult result = mockMvc().perform(get(path)).andReturn();
+
+        // then
+        int status = result.getResponse().getStatus();
+        assertThat(status).isEqualTo(401);
     }
 
     @Test

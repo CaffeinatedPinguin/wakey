@@ -5,7 +5,6 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import org.springframework.http.HttpStatusCode;
 import org.springframework.http.ProblemDetail;
 
 /** The single factory for the RFC 9457 Problem Details shape: type, code and field errors. */
@@ -20,13 +19,18 @@ public final class ProblemDetails {
     }
 
     public static ProblemDetail of(ErrorCode error, List<FieldProblem> errors) {
-        return problem(error.getStatus(), error.getDetail(), error.getCode(), errors);
+        ProblemDetail problem = ProblemDetail.forStatus(error.getStatus());
+        return apply(problem, error, errors);
     }
 
-    private static ProblemDetail problem(HttpStatusCode status, String detail, String code, List<FieldProblem> errors) {
-        ProblemDetail problem = ProblemDetail.forStatusAndDetail(status, detail);
+    public static ProblemDetail apply(ProblemDetail problem, ErrorCode error) {
+        return apply(problem, error, List.of());
+    }
+
+    private static ProblemDetail apply(ProblemDetail problem, ErrorCode error, List<FieldProblem> errors) {
         problem.setType(TYPE);
-        problem.setProperty("code", code);
+        problem.setDetail(error.getDetail());
+        problem.setProperty("code", error.getCode());
         problem.setProperty("errors", entries(errors));
         return problem;
     }

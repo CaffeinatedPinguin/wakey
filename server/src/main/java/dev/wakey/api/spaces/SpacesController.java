@@ -1,7 +1,10 @@
 package dev.wakey.api.spaces;
 
 import dev.wakey.spaces.SpaceService;
+import dev.wakey.spaces.SpaceSlug;
+import dev.wakey.web.ApiException;
 import dev.wakey.web.ApiProperties;
+import dev.wakey.web.CommonError;
 import dev.wakey.web.CursorCodec;
 import dev.wakey.web.CursorPage;
 import io.swagger.v3.oas.annotations.Operation;
@@ -66,8 +69,7 @@ final class SpacesController {
             return new CursorPage<>(items, null);
         }
         var last = current.get(current.size() - EXTRA_ROW);
-        String id = last.id().toString();
-        String nextCursor = CursorCodec.encode(last.slug(), id);
+        String nextCursor = CursorCodec.encode(last.slug());
         return new CursorPage<>(items, nextCursor);
     }
 
@@ -103,6 +105,10 @@ final class SpacesController {
     }
 
     private static String sortValue(String encoded) {
-        return CursorCodec.decode(encoded).sortValue();
+        String sortValue = CursorCodec.decode(encoded);
+        if (!SpaceSlug.isValid(sortValue)) {
+            throw new ApiException(CommonError.INVALID_CURSOR);
+        }
+        return sortValue;
     }
 }

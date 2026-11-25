@@ -1,6 +1,5 @@
 package dev.wakey.web;
 
-import java.util.List;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
 import org.springframework.http.HttpHeaders;
@@ -28,9 +27,7 @@ public class ApiExceptionHandler extends ResponseEntityExceptionHandler {
             @Nullable Object body, HttpHeaders headers, HttpStatusCode status, WebRequest request) {
         ProblemDetail problem = body instanceof ProblemDetail detail ? detail : ProblemDetail.forStatus(status);
         CommonError error = CommonError.forStatus(status);
-        problem.setDetail(error.getDetail());
-        problem.setProperty("code", error.getCode());
-        problem.setProperty("errors", List.of());
+        ProblemDetails.apply(problem, error);
         return super.createResponseEntity(problem, headers, status, request);
     }
 
@@ -55,13 +52,13 @@ public class ApiExceptionHandler extends ResponseEntityExceptionHandler {
     }
 
     @ExceptionHandler(AccessDeniedException.class)
-    void accessDenied(AccessDeniedException exception) {
-        throw exception;
+    ProblemDetail forbidden() {
+        return ProblemDetails.of(CommonError.FORBIDDEN);
     }
 
     @ExceptionHandler(AuthenticationException.class)
-    void authentication(AuthenticationException exception) {
-        throw exception;
+    ProblemDetail unauthenticated() {
+        return ProblemDetails.of(CommonError.UNAUTHENTICATED);
     }
 
     @ExceptionHandler(Exception.class)

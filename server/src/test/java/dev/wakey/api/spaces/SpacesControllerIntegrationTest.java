@@ -15,6 +15,7 @@ import dev.wakey.spaces.SpaceRole;
 import dev.wakey.spaces.SpaceService;
 import dev.wakey.testsupport.SecurityIntegrationTest;
 import dev.wakey.web.CommonError;
+import dev.wakey.web.CursorCodec;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
@@ -224,6 +225,23 @@ class SpacesControllerIntegrationTest extends SecurityIntegrationTest {
         assertThat(allSlugs).isSorted();
         assertThat(allSlugs).doesNotHaveDuplicates();
         assertThat(allSlugs).containsAll(created);
+    }
+
+    @Test
+    void aCursorWithAnInvalidSlugIsRejected() throws Exception {
+        // given
+        String admin = uniqueSubject("admin-bad-cursor");
+        String cursor = CursorCodec.encode("Not A Slug");
+
+        // when
+        MvcResult result = page(admin, 2, Optional.of(cursor));
+
+        // then
+        JsonNode body = jsonOf(result);
+        String code = body.path("code").asString();
+        assertThat(statusOf(result)).isEqualTo(400);
+        assertThat(contentTypeOf(result)).isEqualTo(PROBLEM_JSON);
+        assertThat(code).isEqualTo(CommonError.INVALID_CURSOR.getCode());
     }
 
     @Test
