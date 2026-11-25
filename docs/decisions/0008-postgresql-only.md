@@ -45,6 +45,7 @@ ma opisaną ścieżkę.
 | Typ `BYTEA` dla atrybutów sesji | `server/src/main/resources/db/changelog/changes/0003-spring-session.xml` | Zmienić typ na odpowiednik binarny nowej bazy (np. `BLOB`) i usunąć znacznik. |
 | Konfiguracja limitów sesji | `server/src/main/resources/application.yml` | Przenieść `wakey.database.*` do konfiguracji nowej bazy i usunąć znacznik. |
 | Natywne typy `UUID` i `TIMESTAMPTZ` w tabelach przestrzeni | `server/src/main/resources/db/changelog/changes/0004-spaces.xml` | Zmienić kolumny na typ binarny i znacznik czasu z offsetem nowej bazy i usunąć znacznik. |
+| Natywne typy `UUID` i `TIMESTAMPTZ` w tabeli audytu | `server/src/main/resources/db/changelog/changes/0005-audit.xml` | Zmienić kolumny na typ binarny i znacznik czasu z offsetem nowej bazy i usunąć znacznik. |
 
 ## Migracja na inną bazę
 
