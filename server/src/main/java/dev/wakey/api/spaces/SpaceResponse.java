@@ -6,7 +6,7 @@ import dev.wakey.spaces.SpaceView;
 import io.swagger.v3.oas.annotations.media.Schema;
 import org.jspecify.annotations.Nullable;
 
-/** A space as seen by the caller, with the caller's membership role and application Admin flag. */
+/** A space as seen by the caller, with the caller's membership role. */
 @Schema(description = "A space as seen by the caller")
 public record SpaceResponse(
         @Schema(
@@ -30,14 +30,11 @@ public record SpaceResponse(
                 requiredMode = Schema.RequiredMode.REQUIRED,
                 nullable = true)
         @Nullable
-        SpaceRole role,
+        SpaceRole role) {
 
-        @Schema(
-                description = "Whether the caller is an application administrator",
-                requiredMode = Schema.RequiredMode.REQUIRED)
-        boolean admin) {
+    static final String SLUG_PATTERN = SpaceSlug.PATTERN;
 
     static SpaceResponse from(SpaceView view) {
-        return new SpaceResponse(view.slug(), view.name(), view.version(), view.role(), view.admin());
+        return new SpaceResponse(view.slug(), view.name(), view.version(), view.role());
     }
 }

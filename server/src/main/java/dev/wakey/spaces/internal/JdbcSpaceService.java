@@ -5,11 +5,13 @@ import dev.wakey.spaces.PutResult;
 import dev.wakey.spaces.SlugTakenException;
 import dev.wakey.spaces.Space;
 import dev.wakey.spaces.SpaceAccessDeniedException;
+import dev.wakey.spaces.SpaceName;
 import dev.wakey.spaces.SpaceNotFoundException;
 import dev.wakey.spaces.SpacePrincipal;
 import dev.wakey.spaces.SpaceRole;
 import dev.wakey.spaces.SpaceService;
 import dev.wakey.spaces.SpaceSlug;
+import dev.wakey.spaces.SpaceVersionConflictException;
 import dev.wakey.spaces.SpaceView;
 import dev.wakey.spaces.UserSessions;
 import java.time.Clock;
@@ -25,7 +27,7 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 class JdbcSpaceService implements SpaceService {
 
-    private static final int MAX_NAME_LENGTH = 100;
+    private static final int MAX_SUBJECT_LENGTH = 100;
 
     private static final String FIND_SPACE_SQL = """
             SELECT id, slug, name, plan_name, version
@@ -57,6 +59,12 @@ class JdbcSpaceService implements SpaceService {
             UPDATE space
             SET plan_name = :planName, version = version + 1, updated_at = CURRENT_TIMESTAMP
             WHERE slug = :slug
+            """;
+
+    private static final String RENAME_SPACE_IF_VERSION_SQL = """
+            UPDATE space
+            SET name = :name, version = version + 1, updated_at = CURRENT_TIMESTAMP
+            WHERE slug = :slug AND version = :version
             """;
 
     private static final String LIST_ALL_SPACES_SQL = """
@@ -108,22 +116,22 @@ class JdbcSpaceService implements SpaceService {
     private final Clock clock;
 
     @Override
-    public PutResult put(SpacePrincipal actor, String slug, String name) {
+    public PutResult put(SpacePrincipal actor, String slug, String name, @Nullable Long expectedVersion) {
         requireAdmin(actor);
         String checkedSlug = SpaceSlug.requireValid(slug);
-        String checkedName = requireValidName(name);
+        String checkedName = SpaceName.requireValid(name);
         int inserted = insertSpaceIfAbsent(checkedSlug, checkedName);
         if (inserted == 1) {
             return new PutResult(findRequired(checkedSlug), true);
         }
-        return keepOrRename(findRequired(checkedSlug), checkedName);
+        return keepOrRename(findRequired(checkedSlug), checkedName, expectedVersion);
     }
 
     @Override
     public PutResult create(SpacePrincipal actor, String slug, String name) {
         requireAdmin(actor);
         String checkedSlug = SpaceSlug.requireValid(slug);
-        String checkedName = requireValidName(name);
+        String checkedName = SpaceName.requireValid(name);
         int inserted = insertSpaceIfAbsent(checkedSlug, checkedName);
         if (inserted == 0) {
             throw new SlugTakenException(checkedSlug);
@@ -150,15 +158,15 @@ class JdbcSpaceService implements SpaceService {
     @Override
     public List<SpaceView> listVisible(SpacePrincipal actor, @Nullable String afterSlug, int limit) {
         String cursor = afterSlug == null ? "" : afterSlug;
-        int rowLimit = Math.max(1, limit);
         if (actor.admin()) {
-            return listSpaces(LIST_ALL_SPACES_SQL, actor, cursor, rowLimit);
+            return listSpaces(LIST_ALL_SPACES_SQL, actor, cursor, limit);
         }
-        return listSpaces(LIST_MEMBER_SPACES_SQL, actor, cursor, rowLimit);
+        return listSpaces(LIST_MEMBER_SPACES_SQL, actor, cursor, limit);
     }
 
     @Override
     public void addMember(SpacePrincipal actor, String slug, String subject, SpaceRole role) {
+        requireValidSubject(subject);
         Space space = requireManageableSpace(actor, slug);
         OffsetDateTime since = OffsetDateTime.now(clock);
         jdbc.sql(INSERT_MEMBER_IF_ABSENT_SQL)
@@ -172,6 +180,7 @@ class JdbcSpaceService implements SpaceService {
     @Override
     @Transactional
     public void changeRole(SpacePrincipal actor, String slug, String subject, SpaceRole role) {
+        requireValidSubject(subject);
         Space space = requireManageableSpace(actor, slug);
         SpaceRole currentRole =
                 findRole(space.id(), subject).orElseThrow(() -> new SpaceNotFoundException(space.slug()));
@@ -184,6 +193,7 @@ class JdbcSpaceService implements SpaceService {
     @Override
     @Transactional
     public void removeMember(SpacePrincipal actor, String slug, String subject) {
+        requireValidSubject(subject);
         Space space = requireManageableSpace(actor, slug);
         int deleted = jdbc.sql(DELETE_MEMBER_SQL)
                 .param("spaceId", space.id())
@@ -219,17 +229,35 @@ class JdbcSpaceService implements SpaceService {
                 .update();
     }
 
-    private PutResult keepOrRename(Space existing, String name) {
+    private PutResult keepOrRename(Space existing, String name, @Nullable Long expectedVersion) {
         if (existing.name().equals(name)) {
+            requireMatchingVersion(existing, expectedVersion);
             return new PutResult(existing, false);
         }
-        Space renamed = rename(existing.slug(), name);
+        Space renamed = rename(existing.slug(), name, expectedVersion);
         return new PutResult(renamed, false);
     }
 
-    private Space rename(String slug, String name) {
-        jdbc.sql(RENAME_SPACE_SQL).param("name", name).param("slug", slug).update();
+    private Space rename(String slug, String name, @Nullable Long expectedVersion) {
+        if (expectedVersion == null) {
+            jdbc.sql(RENAME_SPACE_SQL).param("name", name).param("slug", slug).update();
+        } else {
+            int updated = jdbc.sql(RENAME_SPACE_IF_VERSION_SQL)
+                    .param("name", name)
+                    .param("slug", slug)
+                    .param("version", expectedVersion)
+                    .update();
+            if (updated == 0) {
+                requireMatchingVersion(findRequired(slug), expectedVersion);
+            }
+        }
         return findRequired(slug);
+    }
+
+    private static void requireMatchingVersion(Space existing, @Nullable Long expectedVersion) {
+        if (expectedVersion != null && existing.version() != expectedVersion) {
+            throw new SpaceVersionConflictException(existing.slug());
+        }
     }
 
     private Space requireManageableSpace(SpacePrincipal actor, String slug) {
@@ -297,11 +325,10 @@ class JdbcSpaceService implements SpaceService {
         }
     }
 
-    private static String requireValidName(String name) {
-        String trimmed = name.trim();
-        if (trimmed.isEmpty() || trimmed.length() > MAX_NAME_LENGTH) {
-            throw new InvalidSpaceException("name", "invalid_name", "A space name must have 1-100 characters");
+    private static void requireValidSubject(String subject) {
+        if (subject.isBlank() || subject.length() > MAX_SUBJECT_LENGTH) {
+            throw new InvalidSpaceException(
+                    "subject", "invalid_subject", "A member subject must have 1-100 characters");
         }
-        return trimmed;
     }
 }

@@ -5,13 +5,14 @@ import type { ReactElement } from 'react'
 import { useTranslation } from 'react-i18next'
 import { DesktopContent, MobileContent } from './SwitcherContent'
 import type { SpaceSummary, SpacesStatus } from '../spaceTypes'
-import { currentName, sheetStyles, touchStyle } from './switcherStyles'
+import { currentName as nameFromList, sheetStyles, touchStyle } from './switcherStyles'
 
 export type SpaceSwitcherLayout = 'menu' | 'sheet'
 
 export interface SpaceSwitcherProps {
   spaces: readonly SpaceSummary[]
   currentSlug: string
+  currentName?: string | undefined
   status: SpacesStatus
   canCreate: boolean
   hasMore?: boolean
@@ -75,7 +76,7 @@ export function DesktopSwitcher(props: SpaceSwitcherProps): ReactElement {
         >
           <TriggerText
             status={props.status}
-            name={currentName(props.spaces, props.currentSlug)}
+            name={props.currentName ?? nameFromList(props.spaces, props.currentSlug)}
             compact={false}
           />
         </Button>
@@ -103,7 +104,7 @@ export function MobileSwitcher(props: SpaceSwitcherProps): ReactElement {
       >
         <TriggerText
           status={props.status}
-          name={currentName(props.spaces, props.currentSlug)}
+          name={props.currentName ?? nameFromList(props.spaces, props.currentSlug)}
           compact
         />
       </Button>

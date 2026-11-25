@@ -141,11 +141,9 @@ class SpacesControllerIntegrationTest extends SecurityIntegrationTest {
         JsonNode readBody = jsonOf(read);
         String readSlug = readBody.path("slug").asString();
         String role = readBody.path("role").asString();
-        boolean admin = readBody.path("admin").asBoolean();
         assertThat(statusOf(read)).isEqualTo(200);
         assertThat(readSlug).isEqualTo(slug);
         assertThat(role).isEqualTo("VIEWER");
-        assertThat(admin).isFalse();
         assertThat(statusOf(write)).isEqualTo(403);
     }
 
@@ -356,6 +354,151 @@ class SpacesControllerIntegrationTest extends SecurityIntegrationTest {
         assertThat(renamedName).isEqualTo("New name");
     }
 
+    @Test
+    void renamingWithAStaleIfMatchIsAConflict() throws Exception {
+        // given
+        String admin = uniqueSubject("stale-if-match");
+        String slug = uniqueSlug("stale-if-match");
+        MvcResult created = putSpace(admin, true, slug, nameBody("Original name"), true);
+        long createdVersion = jsonOf(created).path("version").asLong();
+
+        // when
+        MvcResult stale = putWithHeader(admin, slug, nameBody("Stale name"), "If-Match", quoted(createdVersion - 1));
+        MockHttpServletRequestBuilder readRequest =
+                get(SPACES_PATH + "/" + slug).with(login(admin, true));
+        MvcResult read = mockMvc().perform(readRequest).andReturn();
+
+        // then
+        JsonNode staleBody = jsonOf(stale);
+        String staleCode = staleBody.path("code").asString();
+        String storedName = jsonOf(read).path("name").asString();
+        assertThat(statusOf(stale)).isEqualTo(409);
+        assertThat(staleCode).isEqualTo("version_conflict");
+        assertThat(storedName).isEqualTo("Original name");
+    }
+
+    @Test
+    void renamingWithTheCurrentVersionSucceeds() throws Exception {
+        // given
+        String admin = uniqueSubject("current-if-match");
+        String slug = uniqueSlug("current-if-match");
+        MvcResult created = putSpace(admin, true, slug, nameBody("Original name"), true);
+        long createdVersion = jsonOf(created).path("version").asLong();
+
+        // when
+        MvcResult renamed = putWithHeader(admin, slug, nameBody("Renamed name"), "If-Match", quoted(createdVersion));
+
+        // then
+        JsonNode body = jsonOf(renamed);
+        String renamedName = body.path("name").asString();
+        long renamedVersion = body.path("version").asLong();
+        assertThat(statusOf(renamed)).isEqualTo(200);
+        assertThat(renamedName).isEqualTo("Renamed name");
+        assertThat(renamedVersion).isEqualTo(createdVersion + 1);
+    }
+
+    @Test
+    void anIfNoneMatchOtherThanStarIsRejected() throws Exception {
+        // given
+        String admin = uniqueSubject("bad-if-none-match");
+        String slug = uniqueSlug("bad-if-none-match");
+
+        // when
+        MvcResult rejected = putWithHeader(admin, slug, nameBody("Rejected"), "If-None-Match", "\"1\"");
+
+        // then
+        JsonNode body = jsonOf(rejected);
+        String code = body.path("code").asString();
+        assertThat(statusOf(rejected)).isEqualTo(400);
+        assertThat(code).isEqualTo("invalid_precondition");
+    }
+
+    @Test
+    void aNameWithControlOrBidiCharactersIsRejected() throws Exception {
+        // given
+        String admin = uniqueSubject("bidi-name");
+        String slug = uniqueSlug("bidi-name");
+
+        // when
+        MvcResult rejected = putSpace(admin, true, slug, "{\"name\":\"Bad\\u202ename\"}", true);
+
+        // then
+        JsonNode body = jsonOf(rejected);
+        JsonNode firstError = body.path("errors").path(0);
+        String code = body.path("code").asString();
+        String pointer = firstError.path("pointer").asString();
+        String fieldCode = firstError.path("code").asString();
+        assertThat(statusOf(rejected)).isEqualTo(400);
+        assertThat(code).isEqualTo("validation_failed");
+        assertThat(pointer).isEqualTo("/name");
+        assertThat(fieldCode).isEqualTo("invalid_name");
+    }
+
+    @Test
+    void aNameWithANulCharacterIsAValidationErrorNot500() throws Exception {
+        // given
+        String admin = uniqueSubject("nul-name");
+        String slug = uniqueSlug("nul-name");
+
+        // when
+        MvcResult rejected = putSpace(admin, true, slug, "{\"name\":\"Nul\\u0000name\"}", true);
+
+        // then
+        JsonNode body = jsonOf(rejected);
+        JsonNode firstError = body.path("errors").path(0);
+        String code = body.path("code").asString();
+        String fieldCode = firstError.path("code").asString();
+        assertThat(statusOf(rejected)).isEqualTo(400);
+        assertThat(code).isEqualTo("validation_failed");
+        assertThat(fieldCode).isEqualTo("invalid_name");
+    }
+
+    @Test
+    void aCreatedSpaceHasALocationHeader() throws Exception {
+        // given
+        String admin = uniqueSubject("location-admin");
+        String slug = uniqueSlug("location");
+
+        // when
+        MvcResult created = putSpace(admin, true, slug, nameBody("Located space"), true);
+
+        // then
+        String location = created.getResponse().getHeader("Location");
+        assertThat(statusOf(created)).isEqualTo(201);
+        assertThat(location).isEqualTo(SPACES_PATH + "/" + slug);
+    }
+
+    @Test
+    void spaceResponseHasNoAdminField() throws Exception {
+        // given
+        String admin = uniqueSubject("no-admin-field");
+        String slug = uniqueSlug("no-admin-field");
+        putSpace(admin, true, slug, nameBody("Visible space"), true);
+
+        // when
+        MockHttpServletRequestBuilder readRequest =
+                get(SPACES_PATH + "/" + slug).with(login(admin, true));
+        MvcResult read = mockMvc().perform(readRequest).andReturn();
+
+        // then
+        JsonNode body = jsonOf(read);
+        assertThat(statusOf(read)).isEqualTo(200);
+        assertThat(body.has("admin")).isFalse();
+        String responseSlug = body.path("slug").asString();
+        assertThat(responseSlug).isEqualTo(slug);
+    }
+
+    private MvcResult putWithHeader(String subject, String slug, String body, String header, String value)
+            throws Exception {
+        var request = put(SPACES_PATH + "/" + slug)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(body)
+                .header(header, value)
+                .with(login(subject, true))
+                .with(csrf());
+        return mockMvc().perform(request).andReturn();
+    }
+
     private MvcResult putSpace(String subject, boolean admin, String slug, String body, boolean withCsrf)
             throws Exception {
         var request = put(SPACES_PATH + "/" + slug)
@@ -399,6 +542,10 @@ class SpacesControllerIntegrationTest extends SecurityIntegrationTest {
 
     private static String nameBody(String name) {
         return "{\"name\":\"" + name + "\"}";
+    }
+
+    private static String quoted(long version) {
+        return "\"" + version + "\"";
     }
 
     private static int statusOf(MvcResult result) {

@@ -1,9 +1,10 @@
 import { Alert, Button, Group, Modal, Stack, TextInput } from '@mantine/core'
 import { useForm } from '@mantine/form'
 import type { UseFormReturnType } from '@mantine/form'
-import type { ChangeEvent, ReactElement } from 'react'
+import type { ChangeEvent, ReactElement, ReactNode } from 'react'
 import { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import type { SpaceFieldErrors } from '../spaceTypes'
 import { isValidSlug, slugFromName } from '../slug'
 
 export interface SpaceFormValues {
@@ -17,6 +18,7 @@ export interface CreateSpaceDialogProps {
   opened: boolean
   submitting: boolean
   submitError: SpaceSubmitError
+  fieldErrors?: SpaceFieldErrors | undefined
   onSubmit: (values: SpaceFormValues) => void
   onClose: () => void
 }
@@ -24,13 +26,15 @@ export interface CreateSpaceDialogProps {
 interface SpaceFormProps {
   submitting: boolean
   submitError: SpaceSubmitError
+  fieldErrors?: SpaceFieldErrors | undefined
   onSubmit: (values: SpaceFormValues) => void
   onClose: () => void
 }
 
 interface SpaceFormController {
   form: UseFormReturnType<SpaceFormValues>
-  slugError: string | undefined
+  nameError: ReactNode
+  slugFieldError: ReactNode
   submit: (values: SpaceFormValues) => void
   onNameChange: (event: ChangeEvent<HTMLInputElement>) => void
   onSlugChange: (event: ChangeEvent<HTMLInputElement>) => void
@@ -54,19 +58,55 @@ function validateSpace(
   return errors
 }
 
+function hasFailure(props: SpaceFormProps): boolean {
+  return (
+    props.submitError !== null ||
+    props.fieldErrors?.name === true ||
+    props.fieldErrors?.slug === true
+  )
+}
+
+function slugErrorOf(props: SpaceFormProps, t: (key: string) => string): string | undefined {
+  return props.submitError === 'slug_taken' ? t('spaces.create.errors.slugTaken') : undefined
+}
+
+function fieldErrorText(
+  active: boolean | undefined,
+  key: string,
+  translate: (key: string) => string,
+): string | undefined {
+  return active === true ? translate(key) : undefined
+}
+
+function fieldErrorsOf(
+  props: SpaceFormProps,
+  form: UseFormReturnType<SpaceFormValues>,
+  t: (key: string) => string,
+): { nameError: ReactNode; slugFieldError: ReactNode } {
+  const nameError =
+    form.errors.name ??
+    fieldErrorText(props.fieldErrors?.name, 'spaces.create.errors.nameInvalid', t)
+  const slugFieldError =
+    form.errors.slug ??
+    fieldErrorText(props.fieldErrors?.slug, 'spaces.create.errors.slugInvalid', t) ??
+    slugErrorOf(props, t)
+  return { nameError, slugFieldError }
+}
+
 function useSpaceForm(props: SpaceFormProps): SpaceFormController {
   const { t } = useTranslation()
   const [slugEdited, setSlugEdited] = useState(false)
   const submitted = useRef(false)
+  const failed = hasFailure(props)
   const form = useForm<SpaceFormValues>({
     initialValues: { name: '', slug: '' },
     validate: (values) => validateSpace(values, t),
   })
   useEffect(() => {
-    if (props.submitError !== null) {
+    if (failed) {
       submitted.current = false
     }
-  }, [props.submitError])
+  }, [failed])
 
   function onNameChange(event: ChangeEvent<HTMLInputElement>): void {
     const value = event.currentTarget.value
@@ -89,15 +129,29 @@ function useSpaceForm(props: SpaceFormProps): SpaceFormController {
     submitted.current = true
     props.onSubmit({ name: values.name.trim(), slug: values.slug })
   }
+  const { nameError, slugFieldError } = fieldErrorsOf(props, form, t)
+  return { form, nameError, slugFieldError, submit, onNameChange, onSlugChange }
+}
 
-  const slugError =
-    props.submitError === 'slug_taken' ? t('spaces.create.errors.slugTaken') : undefined
-  return { form, slugError, submit, onNameChange, onSlugChange }
+function SpaceDialogActions({ submitting }: { submitting: boolean }): ReactElement {
+  const { t } = useTranslation()
+
+  return (
+    <Group justify="flex-end">
+      <Button variant="default" type="reset">
+        {t('spaces.create.cancel')}
+      </Button>
+      <Button type="submit" loading={submitting}>
+        {t('spaces.create.submit')}
+      </Button>
+    </Group>
+  )
 }
 
 function CreateSpaceForm(props: SpaceFormProps): ReactElement {
   const { t } = useTranslation()
-  const { form, slugError, submit, onNameChange, onSlugChange } = useSpaceForm(props)
+  const { form, nameError, slugFieldError, submit, onNameChange, onSlugChange } =
+    useSpaceForm(props)
 
   return (
     <form
@@ -114,23 +168,17 @@ function CreateSpaceForm(props: SpaceFormProps): ReactElement {
         <TextInput
           label={t('spaces.create.name')}
           {...form.getInputProps('name')}
+          error={nameError}
           onChange={onNameChange}
         />
         <TextInput
           label={t('spaces.create.slug')}
           description={t('spaces.create.slugHint')}
           {...form.getInputProps('slug')}
-          error={form.errors.slug ?? slugError}
+          error={slugFieldError}
           onChange={onSlugChange}
         />
-        <Group justify="flex-end">
-          <Button variant="default" type="reset">
-            {t('spaces.create.cancel')}
-          </Button>
-          <Button type="submit" loading={props.submitting}>
-            {t('spaces.create.submit')}
-          </Button>
-        </Group>
+        <SpaceDialogActions submitting={props.submitting} />
       </Stack>
     </form>
   )
@@ -144,6 +192,7 @@ export function CreateSpaceDialog(props: CreateSpaceDialogProps): ReactElement {
       <CreateSpaceForm
         submitting={props.submitting}
         submitError={props.submitError}
+        fieldErrors={props.fieldErrors}
         onSubmit={props.onSubmit}
         onClose={props.onClose}
       />

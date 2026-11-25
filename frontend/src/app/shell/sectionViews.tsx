@@ -2,6 +2,7 @@ import { Button, Stack } from '@mantine/core'
 import { Link, useSearch } from '@tanstack/react-router'
 import type { ReactElement } from 'react'
 import { useTranslation } from 'react-i18next'
+import { useMe } from '../../features/auth'
 import { SettingsPage } from '../../features/settings'
 import { spaceFromSearch, useSpace } from '../../features/spaces'
 import { PageFrame } from '../../shared/ui/PageFrame'
@@ -23,6 +24,7 @@ export function SettingsSectionView(): ReactElement {
   // The settings page reuses the one space request of the shell, so its schema
   // and its query key stay in one place.
   const space = useSpace(spaceSlug)
+  const me = useMe()
 
   return (
     <PageFrame title={t('common.nav.settings')}>
@@ -30,7 +32,12 @@ export function SettingsSectionView(): ReactElement {
         <Button component={Link} to="/" variant="subtle">
           {t('common.section.backToOverview')}
         </Button>
-        <SettingsPage spaceSlug={spaceSlug} access={space.data} accessLoading={space.isPending} />
+        <SettingsPage
+          spaceSlug={spaceSlug}
+          access={space.data}
+          accessLoading={space.isPending}
+          isAdmin={me.data.admin}
+        />
       </Stack>
     </PageFrame>
   )

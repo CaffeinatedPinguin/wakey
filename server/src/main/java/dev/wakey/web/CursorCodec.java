@@ -2,7 +2,6 @@ package dev.wakey.web;
 
 import java.nio.charset.StandardCharsets;
 import java.util.Base64;
-import java.util.Map;
 import org.springframework.http.HttpStatus;
 
 /**
@@ -34,14 +33,15 @@ public final class CursorCodec {
         try {
             bytes = DECODER.decode(cursor);
         } catch (IllegalArgumentException exception) {
-            throw new ApiProblemException(HttpStatus.BAD_REQUEST, "invalid_cursor", Map.of(), exception);
+            throw new ApiProblemException(
+                    HttpStatus.BAD_REQUEST, "invalid_cursor", "The cursor is invalid.", exception);
         }
         String payload = new String(bytes, StandardCharsets.UTF_8);
         String separator = String.valueOf(SEPARATOR);
         String[] parts = payload.split(separator, -1);
         boolean valid = parts.length == EXPECTED_PARTS && FORMAT_VERSION.equals(parts[0]);
         if (!valid) {
-            throw new ApiProblemException(HttpStatus.BAD_REQUEST, "invalid_cursor");
+            throw new ApiProblemException(HttpStatus.BAD_REQUEST, "invalid_cursor", "The cursor is invalid.");
         }
         return new CursorPosition(parts[1], parts[2]);
     }

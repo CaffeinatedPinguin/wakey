@@ -35,8 +35,20 @@ afterEach(async () => {
 })
 
 describe('create space dialog slug', () => {
+  it('the slug hint states the whole rule', () => {
+    renderDialog()
+    expect(
+      screen.getByText(
+        '3–40 znaków: małe litery, cyfry i myślniki; zaczyna się literą i nie kończy się myślnikiem.',
+      ),
+    ).toBeDefined()
+  })
+
   it('the slug follows the name until it is edited by hand', () => {
     renderDialog()
+
+    fireEvent.change(nameInput(), { target: { value: '123 Corp' } })
+    expect(slugInput().value).toBe('')
 
     fireEvent.change(nameInput(), { target: { value: 'Mój Serwer' } })
     expect(slugInput().value).toBe('moj-serwer')
@@ -55,7 +67,9 @@ describe('create space dialog slug', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Utwórz' }))
 
     expect(
-      await screen.findByText('Slug musi mieć 3–40 znaków: małe litery, cyfry i myślniki.'),
+      await screen.findByText(
+        'Slug musi mieć 3–40 znaków: małe litery, cyfry i myślniki, zaczynać się literą i nie kończyć myślnikiem.',
+      ),
     ).toBeDefined()
     expect(onSubmit).not.toHaveBeenCalled()
   })

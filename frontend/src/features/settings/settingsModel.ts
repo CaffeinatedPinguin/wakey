@@ -119,11 +119,11 @@ export function overriddenSettingKeys(settings: readonly SpaceSetting[]): string
   return settings.filter((setting) => setting.source === 'SPACE').map((setting) => setting.key)
 }
 
-export function canEditSpace(access: SpaceAccess | undefined): boolean {
+export function canEditSpace(access: SpaceAccess | undefined, isAdmin: boolean): boolean {
   if (access === undefined) {
     return false
   }
-  return access.admin || access.role === 'EDITOR'
+  return isAdmin || access.role === 'EDITOR'
 }
 
 function boundText(key: string, bound: unknown): string | undefined {

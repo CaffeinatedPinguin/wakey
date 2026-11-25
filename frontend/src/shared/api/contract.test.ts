@@ -26,7 +26,6 @@ describe('generated API surface', () => {
 
     expectTypeOf<GetMeResponse>().toEqualTypeOf<{ admin: boolean; subject: string }>()
     expectTypeOf<GetSpaceResponse>().toEqualTypeOf<{
-      admin: boolean
       name: string
       role: 'EDITOR' | 'VIEWER' | null
       slug: string
@@ -40,7 +39,6 @@ describe('generated API surface', () => {
     }>()
     expectTypeOf<PutSpaceRequest>().toEqualTypeOf<{ name: string }>()
     expectTypeOf<PutSpaceResponse>().toEqualTypeOf<{
-      admin: boolean
       name: string
       role: 'EDITOR' | 'VIEWER' | null
       slug: string

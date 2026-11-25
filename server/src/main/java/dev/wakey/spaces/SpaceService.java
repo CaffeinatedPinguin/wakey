@@ -10,7 +10,15 @@ public interface SpaceService {
      * Creates a space or renames it by slug. Only an application admin may call it, and a repeat
      * with the same name changes nothing while a different name bumps the version.
      */
-    PutResult put(SpacePrincipal actor, String slug, String name);
+    default PutResult put(SpacePrincipal actor, String slug, String name) {
+        return put(actor, slug, name, null);
+    }
+
+    /**
+     * Creates a space or renames it by slug, and when {@code expectedVersion} is present renames only
+     * the version the caller read; a stale version fails with {@link SpaceVersionConflictException}.
+     */
+    PutResult put(SpacePrincipal actor, String slug, String name, @Nullable Long expectedVersion);
 
     /**
      * Creates a space only when its slug is still free and fails with {@link SlugTakenException}

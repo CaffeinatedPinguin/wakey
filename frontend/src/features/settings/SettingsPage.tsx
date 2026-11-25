@@ -20,6 +20,7 @@ import type { SettingFieldError, SettingFieldErrors, SettingsStatus } from './ty
 export interface SettingsPageProps {
   spaceSlug: string | undefined
   access: SpaceAccess | undefined
+  isAdmin: boolean
   accessLoading: boolean
 }
 
@@ -93,6 +94,7 @@ export function SettingsPage({
   spaceSlug,
   access,
   accessLoading,
+  isAdmin,
 }: SettingsPageProps): ReactElement {
   const { t } = useTranslation()
   const settings = useSpaceSettings(spaceSlug)
@@ -105,7 +107,7 @@ export function SettingsPage({
       embedded
       groups={groups}
       status={settingsStatus(settings, accessLoading)}
-      canEdit={canEditSpace(access)}
+      canEdit={canEditSpace(access, isAdmin)}
       fieldErrors={actions.fieldErrors}
       onChange={actions.onChange}
       onRestore={actions.onRestore}

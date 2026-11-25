@@ -18,6 +18,6 @@ export const spaceSettingsSchema = z.array(
 ) satisfies z.ZodType<GetSpaceSettingsResponse>
 
 // The caller's access level for one space, taken from the shared space detail.
-export type SpaceAccess = Pick<GetSpaceResponse, 'admin' | 'role'>
+export type SpaceAccess = Pick<GetSpaceResponse, 'role'>
 
 export type SpaceSetting = z.infer<typeof spaceSettingSchema>

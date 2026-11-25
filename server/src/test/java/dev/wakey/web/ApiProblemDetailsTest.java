@@ -5,7 +5,9 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Size;
 import java.util.Objects;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpStatus;
@@ -77,8 +79,45 @@ class ApiProblemDetailsTest {
     }
 
     @Test
-    void missingResourceIsProblemNotFound() throws Exception {
+    void validationErrorsCarryTheConstraintParams() throws Exception {
         // given
+        MockMvc mvc = mvcFor(new BoundedController());
+        MockHttpServletRequestBuilder request = post("/api/v1/bounded-items")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"code\":\"x\",\"count\":0}");
+
+        // when
+        MvcResult result = mvc.perform(request).andReturn();
+
+        // then
+        int status = result.getResponse().getStatus();
+        String responseBody = result.getResponse().getContentAsString();
+        JsonNode errors = MAPPER.readTree(responseBody).path("errors");
+        JsonNode codeError = errorAt(errors, "/code");
+        JsonNode countError = errorAt(errors, "/count");
+        JsonNode codeParams = codeError.path("params");
+        JsonNode countParams = countError.path("params");
+        int min = codeParams.path("min").asInt();
+        int max = codeParams.path("max").asInt();
+        int value = countParams.path("value").asInt();
+        assertThat(status).isEqualTo(400);
+        assertThat(min).isEqualTo(2);
+        assertThat(max).isEqualTo(5);
+        assertThat(value).isEqualTo(1);
+    }
+
+    private static JsonNode errorAt(JsonNode errors, String pointer) {
+        for (JsonNode error : errors) {
+            String errorPointer = error.path("pointer").asString();
+            if (pointer.equals(errorPointer)) {
+                return error;
+            }
+        }
+        throw new AssertionError("Missing error for " + pointer);
+    }
+
+    @Test
+    void missingResourceIsProblemNotFound() throws Exception { // given
         MockMvc mvc = mvcFor(new MissingController());
 
         // when
@@ -103,6 +142,18 @@ class ApiProblemDetailsTest {
     }
 
     record CreateRequest(@NotBlank String name) {}
+
+    record BoundedRequest(
+            @Size(min = 2, max = 5) String code, @Min(1) int count) {}
+
+    @RestController
+    static final class BoundedController {
+
+        @PostMapping("/api/v1/bounded-items")
+        void create(@Valid @RequestBody BoundedRequest request) {
+            // The request is only validated; a valid body has nothing to do here.
+        }
+    }
 
     @RestController
     static final class ValidationController {

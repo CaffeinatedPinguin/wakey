@@ -1,11 +1,17 @@
 package dev.wakey.web;
 
+import java.lang.annotation.Annotation;
+import java.lang.reflect.Field;
+import java.lang.reflect.Method;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 import lombok.extern.slf4j.Slf4j;
+import org.jspecify.annotations.Nullable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ProblemDetail;
@@ -36,11 +42,14 @@ public class ApiExceptionHandler {
 
     private static final String INTERNAL_ERROR_DETAIL = "An unexpected error occurred.";
 
+    private static final Set<String> CONSTRAINT_PARAMS = Set.of("min", "max", "value");
+
     @ExceptionHandler(MethodArgumentNotValidException.class)
     ProblemDetail validationFailed(MethodArgumentNotValidException exception) {
         List<Map<String, Object>> errors = new ArrayList<>();
+        Object target = exception.getBindingResult().getTarget();
         for (FieldError fieldError : exception.getBindingResult().getFieldErrors()) {
-            errors.add(fieldError(fieldError));
+            errors.add(fieldError(fieldError, target));
         }
         ProblemDetail problem =
                 Problems.of(HttpStatus.BAD_REQUEST, "validation_failed", "The request contains invalid fields.");
@@ -59,7 +68,7 @@ public class ApiExceptionHandler {
 
     @ExceptionHandler(ApiProblemException.class)
     ResponseEntity<ProblemDetail> apiProblem(ApiProblemException exception) {
-        ProblemDetail problem = Problems.of(exception.getStatus(), exception.getCode(), detailFor(exception));
+        ProblemDetail problem = Problems.of(exception.getStatus(), exception.getCode(), exception.getDetail());
         if (!exception.getErrors().isEmpty()) {
             Problems.withErrors(problem, exception.getErrors());
         }
@@ -110,9 +119,71 @@ public class ApiExceptionHandler {
                 .body(problem);
     }
 
-    private static Map<String, Object> fieldError(FieldError error) {
+    private static Map<String, Object> fieldError(FieldError error, @Nullable Object target) {
         String code = Objects.requireNonNullElse(error.getCode(), "invalid");
-        return Problems.error(pointerOf(error), snakeCase(code));
+        return Problems.error(pointerOf(error), snakeCase(code), paramsOf(error, target));
+    }
+
+    private static Map<String, Object> paramsOf(FieldError error, @Nullable Object target) {
+        Annotation annotation = constraintAnnotation(error, target);
+        if (annotation == null) {
+            return Map.of();
+        }
+        Map<String, Object> params = new LinkedHashMap<>();
+        for (Method attribute : annotation.annotationType().getDeclaredMethods()) {
+            if (CONSTRAINT_PARAMS.contains(attribute.getName())) {
+                putAttribute(params, attribute, annotation);
+            }
+        }
+        return params;
+    }
+
+    private static void putAttribute(Map<String, Object> params, Method attribute, Annotation annotation) {
+        try {
+            params.put(attribute.getName(), attribute.invoke(annotation));
+        } catch (ReflectiveOperationException exception) {
+            log.debug("could not read constraint attribute {}", attribute.getName(), exception);
+        }
+    }
+
+    private static @Nullable Annotation constraintAnnotation(FieldError error, @Nullable Object target) {
+        Annotation found = null;
+        String code = error.getCode();
+        if (target != null && code != null) {
+            try {
+                Class<?> targetClass = target.getClass();
+                String fieldName = attributeName(error.getField());
+                Field field = targetClass.getDeclaredField(fieldName);
+                found = matchingAnnotation(field, code);
+            } catch (NoSuchFieldException exception) {
+                log.debug("no field for validation error on {}", error.getField(), exception);
+            }
+        }
+        return found;
+    }
+
+    private static @Nullable Annotation matchingAnnotation(Field field, String code) {
+        Annotation match = null;
+        for (Annotation annotation : field.getAnnotations()) {
+            String annotationName = annotation.annotationType().getSimpleName();
+            if (annotationName.equals(code)) {
+                match = annotation;
+            }
+        }
+        return match;
+    }
+
+    private static String attributeName(String fieldPath) {
+        int end = fieldPath.length();
+        int dot = fieldPath.indexOf('.');
+        int bracket = fieldPath.indexOf('[');
+        if (dot >= 0) {
+            end = Math.min(end, dot);
+        }
+        if (bracket >= 0) {
+            end = Math.min(end, bracket);
+        }
+        return fieldPath.substring(0, end);
     }
 
     private static String pointerOf(FieldError error) {
@@ -147,17 +218,6 @@ public class ApiExceptionHandler {
             case NOT_ACCEPTABLE -> "The requested media type cannot be produced.";
             case UNSUPPORTED_MEDIA_TYPE -> "The request media type is not supported.";
             default -> status.is5xxServerError() ? INTERNAL_ERROR_DETAIL : BAD_REQUEST_DETAIL;
-        };
-    }
-
-    private static String detailFor(ApiProblemException exception) {
-        return switch (exception.getCode()) {
-            case NOT_FOUND -> NOT_FOUND_DETAIL;
-            case "forbidden" -> "Access is denied.";
-            case "slug_taken" -> "A space with that slug already exists.";
-            case "validation_failed" -> "The request contains invalid fields.";
-            case "conflict" -> "The resource conflicts with the current state.";
-            default -> "The request could not be completed.";
         };
     }
 }

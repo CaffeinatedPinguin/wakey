@@ -28,8 +28,6 @@ final class ForbiddenRequestLog implements AccessDeniedHandler {
 
     private static final String INSUFFICIENT_SCOPE_CHALLENGE = "Bearer error=\"insufficient_scope\"";
 
-    private static final String PROBLEM_JSON = "application/problem+json";
-
     @Override
     public void handle(HttpServletRequest request, HttpServletResponse response, AccessDeniedException exception)
             throws IOException {
@@ -37,7 +35,6 @@ final class ForbiddenRequestLog implements AccessDeniedHandler {
         if (response.isCommitted()) {
             return;
         }
-        response.setContentType(PROBLEM_JSON);
         ProblemDetailsWriter.write(response, HttpStatus.FORBIDDEN, "forbidden", "Access is denied.");
     }
 
@@ -48,7 +45,6 @@ final class ForbiddenRequestLog implements AccessDeniedHandler {
             return;
         }
         response.setHeader(HttpHeaders.WWW_AUTHENTICATE, INSUFFICIENT_SCOPE_CHALLENGE);
-        response.setContentType(PROBLEM_JSON);
         ProblemDetailsWriter.write(response, HttpStatus.FORBIDDEN, "insufficient_scope", INSUFFICIENT_SCOPE_DETAIL);
     }
 

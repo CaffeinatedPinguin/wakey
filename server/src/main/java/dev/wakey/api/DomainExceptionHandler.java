@@ -10,6 +10,7 @@ import dev.wakey.spaces.InvalidSpaceException;
 import dev.wakey.spaces.SlugTakenException;
 import dev.wakey.spaces.SpaceAccessDeniedException;
 import dev.wakey.spaces.SpaceNotFoundException;
+import dev.wakey.spaces.SpaceVersionConflictException;
 import dev.wakey.tokens.InvalidTokenException;
 import dev.wakey.web.Problems;
 import java.util.List;
@@ -45,6 +46,8 @@ public class DomainExceptionHandler {
 
     private static final String SLUG_TAKEN_DETAIL = "A space with that slug already exists.";
 
+    private static final String SPACE_VERSION_CONFLICT_DETAIL = "The space changed since the supplied version.";
+
     private static final String DEFAULT_DETAIL = "The request could not be completed.";
 
     @ExceptionHandler({SpaceNotFoundException.class, CheckNotFoundException.class})
@@ -65,6 +68,11 @@ public class DomainExceptionHandler {
     @ExceptionHandler(CheckVersionConflictException.class)
     ResponseEntity<ProblemDetail> versionConflict() {
         return problemResponse(HttpStatus.CONFLICT, "version_conflict", DEFAULT_DETAIL);
+    }
+
+    @ExceptionHandler(SpaceVersionConflictException.class)
+    ResponseEntity<ProblemDetail> spaceVersionConflict() {
+        return problemResponse(HttpStatus.CONFLICT, "version_conflict", SPACE_VERSION_CONFLICT_DETAIL);
     }
 
     @ExceptionHandler(InvalidCheckException.class)

@@ -2,9 +2,10 @@ package dev.wakey.web;
 
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
-import java.util.Map;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
+import org.springframework.http.ProblemDetail;
+import org.springframework.http.converter.json.ProblemDetailJacksonMixin;
 import tools.jackson.databind.ObjectMapper;
 import tools.jackson.databind.json.JsonMapper;
 
@@ -14,14 +15,16 @@ import tools.jackson.databind.json.JsonMapper;
  */
 public final class ProblemDetailsWriter {
 
-    private static final ObjectMapper MAPPER = JsonMapper.builder().build();
+    private static final ObjectMapper MAPPER = JsonMapper.builder()
+            .addMixIn(ProblemDetail.class, ProblemDetailJacksonMixin.class)
+            .build();
 
     private ProblemDetailsWriter() {}
 
     public static void write(HttpServletResponse response, HttpStatus status, String code, String detail)
             throws IOException {
-        Map<String, Object> body = Problems.body(status, code, detail);
-        byte[] bytes = MAPPER.writeValueAsBytes(body);
+        ProblemDetail problem = Problems.of(status, code, detail);
+        byte[] bytes = MAPPER.writeValueAsBytes(problem);
         response.setStatus(status.value());
         response.setContentType(MediaType.APPLICATION_PROBLEM_JSON_VALUE);
         response.getOutputStream().write(bytes);

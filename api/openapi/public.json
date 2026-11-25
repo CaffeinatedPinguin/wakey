@@ -364,7 +364,7 @@
             "description" : "The display name, 1-100 characters after trimming",
             "example" : "Acme",
             "maxLength" : 100,
-            "minLength" : 0,
+            "minLength" : 1,
             "type" : "string"
           }
         },
@@ -388,10 +388,6 @@
       "SpaceResponse" : {
         "description" : "A space as seen by the caller",
         "properties" : {
-          "admin" : {
-            "description" : "Whether the caller is an application administrator",
-            "type" : "boolean"
-          },
           "name" : {
             "description" : "The display name",
             "example" : "Acme",
@@ -415,7 +411,7 @@
             "type" : "integer"
           }
         },
-        "required" : [ "admin", "name", "role", "slug", "version" ],
+        "required" : [ "name", "role", "slug", "version" ],
         "type" : "object"
       },
       "SpaceSettingResponse" : {
@@ -593,13 +589,23 @@
         "responses" : {
           "200" : {
             "content" : {
-              "*/*" : {
+              "application/json" : {
                 "schema" : {
                   "$ref" : "#/components/schemas/CurrentUser"
                 }
               }
             },
             "description" : "OK"
+          },
+          "401" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description" : "Authentication is required."
           }
         },
         "summary" : "Return the authenticated user",
@@ -610,12 +616,15 @@
       "get" : {
         "operationId" : "listSpaces",
         "parameters" : [ {
+          "description" : "The page size, at least 1; values above the instance maximum are capped.",
           "in" : "query",
           "name" : "limit",
           "required" : false,
           "schema" : {
             "default" : 20,
             "format" : "int32",
+            "maximum" : 100,
+            "minimum" : 1,
             "type" : "integer"
           }
         }, {
@@ -645,7 +654,7 @@
                 }
               }
             },
-            "description" : "The cursor is invalid."
+            "description" : "The cursor or the limit is invalid."
           },
           "401" : {
             "content" : {
@@ -670,6 +679,7 @@
           "name" : "slug",
           "required" : true,
           "schema" : {
+            "pattern" : "^[a-z][a-z0-9-]{1,38}[a-z0-9]$",
             "type" : "string"
           }
         } ],
@@ -719,18 +729,28 @@
         "tags" : [ "spaces-controller" ]
       },
       "put" : {
-        "description" : "A rename is last-write-wins until the space carries a version or an If-Match precondition. Send If-None-Match: * to create the space only when the slug is free.",
+        "description" : "A rename is last-write-wins unless an If-Match precondition is sent. Send If-None-Match: * to create the space only when the slug is free, and If-Match: \"<version>\" to rename only the version the caller read.",
         "operationId" : "putSpace",
         "parameters" : [ {
           "in" : "path",
           "name" : "slug",
           "required" : true,
           "schema" : {
+            "pattern" : "^[a-z][a-z0-9-]{1,38}[a-z0-9]$",
             "type" : "string"
           }
         }, {
+          "description" : "Send * to create the space only when the slug is free.",
           "in" : "header",
           "name" : "If-None-Match",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "description" : "The quoted space version to rename, for example \"1\".",
+          "in" : "header",
+          "name" : "If-Match",
           "required" : false,
           "schema" : {
             "type" : "string"
@@ -775,7 +795,7 @@
                 }
               }
             },
-            "description" : "The request is invalid."
+            "description" : "The request is invalid or a precondition header is malformed."
           },
           "401" : {
             "content" : {
@@ -805,7 +825,7 @@
                 }
               }
             },
-            "description" : "The space already exists and If-None-Match: * was sent."
+            "description" : "The slug is taken or the If-Match version is stale."
           }
         },
         "summary" : "Create or rename a space idempotently",
