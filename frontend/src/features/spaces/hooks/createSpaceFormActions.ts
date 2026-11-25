@@ -30,9 +30,9 @@ export function createHandlers(
   return { onNameChange, onSlugChange }
 }
 
-export function createClose(create: CreateSpaceMutation, onClose: () => void): () => void {
+export function createClose(resetForm: () => void, onClose: () => void): () => void {
   return () => {
-    create.reset()
+    resetForm()
     onClose()
   }
 }

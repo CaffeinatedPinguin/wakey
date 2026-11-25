@@ -27,7 +27,7 @@ function expectApiError(value: unknown): ApiError {
   return value
 }
 
-describe('problem details mapping', () => {
+describe('API error mapping', () => {
   it('a problem+json error becomes an ApiError with code and field errors', async () => {
     installMockApi(() => ({
       status: 400,

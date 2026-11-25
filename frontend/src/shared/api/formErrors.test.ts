@@ -55,6 +55,45 @@ describe('applyApiError field errors', () => {
     expect(message).toBeNull()
     expect(result.current.errors.slug).toBe(pl('errors.slug_taken'))
   })
+
+  it('only pointers that match a form field reach the fields', () => {
+    const { result } = renderForm()
+    const error = new ApiError({
+      status: 400,
+      code: ErrorCode.VALIDATION_FAILED,
+      errors: [
+        { pointer: '/slug', code: ErrorCode.SLUG_TAKEN, params: {} },
+        { pointer: '/missing', code: ErrorCode.INVALID_NAME, params: { max: 100 } },
+      ],
+    })
+    let message: string | null | undefined
+
+    act(() => {
+      message = applyApiError(result.current, error, pl)
+    })
+
+    expect(message).toBeNull()
+    expect(result.current.errors).toEqual({ slug: pl('errors.slug_taken') })
+  })
+})
+
+describe('applyApiError unmatched pointers', () => {
+  it('a server error whose pointer matches no field shows the form message', () => {
+    const { result } = renderForm()
+    const error = new ApiError({
+      status: 400,
+      code: ErrorCode.VALIDATION_FAILED,
+      errors: [{ pointer: '/missing', code: ErrorCode.INVALID_NAME, params: { max: 100 } }],
+    })
+    let message: string | null | undefined
+
+    act(() => {
+      message = applyApiError(result.current, error, pl)
+    })
+
+    expect(message).toBe(pl('errors.validation_failed'))
+    expect(result.current.errors).toEqual({})
+  })
 })
 
 describe('applyApiError form messages', () => {

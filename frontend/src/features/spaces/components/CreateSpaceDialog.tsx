@@ -52,7 +52,7 @@ export function CreateSpaceDialog({
   onCreated,
 }: CreateSpaceDialogProps): ReactElement {
   const { t } = useTranslation()
-  const spaceForm = useCreateSpaceForm({ opened, onClose, onCreated })
+  const spaceForm = useCreateSpaceForm({ onClose, onCreated })
   const { form } = spaceForm
 
   return (

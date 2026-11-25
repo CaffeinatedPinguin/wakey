@@ -1,5 +1,6 @@
 export { SpaceNotFoundView } from './components/SpaceNotFoundView'
 export { SpaceSwitcher } from './components/SpaceSwitcher'
+export { SpaceSwitcherLayout } from './spaceTypes'
 export { useCurrentSpace } from './hooks/useCurrentSpace'
 export { useDefaultSpaceRedirect } from './hooks/useDefaultSpaceRedirect'
 export { validateSpaceSearch } from './search'

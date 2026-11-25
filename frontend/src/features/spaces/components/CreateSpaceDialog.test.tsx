@@ -6,12 +6,13 @@ import { AppThemeProvider } from '../../../app/App'
 import i18n from '../../../app/i18n'
 import { ErrorCode } from '../../../shared/api/generated/enums'
 import { installMockApi } from '../../../test/mockApi'
-import type { MockRequest } from '../../../test/mockApi'
+import type { MockReply, MockRequest } from '../../../test/mockApi'
 import { CreateSpaceDialog } from './CreateSpaceDialog'
 import type { CreateSpaceDialogProps } from './CreateSpaceDialog'
 
 function renderDialog(overrides: Partial<CreateSpaceDialogProps> = {}): {
   onCreated: ReturnType<typeof vi.fn>
+  rerender: (opened: boolean) => void
 } {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
@@ -23,13 +24,20 @@ function renderDialog(overrides: Partial<CreateSpaceDialogProps> = {}): {
     onCreated,
     ...overrides,
   }
-  const dialog: ReactElement = <CreateSpaceDialog {...props} />
-  render(
+  const tree = (opened: boolean): ReactElement => (
     <AppThemeProvider env="test">
-      <QueryClientProvider client={queryClient}>{dialog}</QueryClientProvider>
-    </AppThemeProvider>,
+      <QueryClientProvider client={queryClient}>
+        <CreateSpaceDialog {...props} opened={opened} />
+      </QueryClientProvider>
+    </AppThemeProvider>
   )
-  return { onCreated: props.onCreated as ReturnType<typeof vi.fn> }
+  const { rerender } = render(tree(true))
+  return {
+    onCreated: props.onCreated as ReturnType<typeof vi.fn>,
+    rerender: (opened) => {
+      rerender(tree(opened))
+    },
+  }
 }
 
 function nameInput(): HTMLInputElement {
@@ -90,6 +98,59 @@ describe('create space dialog slug', () => {
   })
 })
 
+describe('create space dialog reset', () => {
+  it('reopening the create dialog starts with an empty form', async () => {
+    const { rerender } = renderDialog()
+    fireEvent.change(nameInput(), { target: { value: 'Produkcja' } })
+    expect(slugInput().value).toBe('produkcja')
+
+    fireEvent.click(screen.getByRole('button', { name: 'Anuluj' }))
+    rerender(false)
+    rerender(true)
+
+    const name = await screen.findByLabelText<HTMLInputElement>('Nazwa')
+    expect(name.value).toBe('')
+    expect(screen.getByLabelText<HTMLInputElement>('Slug').value).toBe('')
+  })
+
+  it('the slug follows the name again after the dialog is reopened', async () => {
+    const { rerender } = renderDialog()
+    fireEvent.change(nameInput(), { target: { value: 'Produkcja' } })
+    fireEvent.change(slugInput(), { target: { value: 'wlasny-slug' } })
+    fireEvent.change(nameInput(), { target: { value: 'Inna nazwa' } })
+    expect(slugInput().value).toBe('wlasny-slug')
+
+    fireEvent.click(screen.getByRole('button', { name: 'Anuluj' }))
+    rerender(false)
+    rerender(true)
+    fireEvent.change(await screen.findByLabelText('Nazwa'), { target: { value: 'Nowa nazwa' } })
+
+    expect(screen.getByLabelText<HTMLInputElement>('Slug').value).toBe('nowa-nazwa')
+  })
+})
+
+describe('create space dialog reset after creation', () => {
+  it('after creating a space the dialog opens empty again', async () => {
+    installMockApi(() => ({
+      status: 201,
+      data: { slug: 'produkcja', name: 'Produkcja', role: null, version: 1 },
+    }))
+    const { onCreated, rerender } = renderDialog()
+    fireEvent.change(nameInput(), { target: { value: 'Produkcja' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Utwórz' }))
+    await waitFor(() => {
+      expect(onCreated).toHaveBeenCalledWith('produkcja')
+    })
+
+    rerender(false)
+    rerender(true)
+
+    const name = await screen.findByLabelText<HTMLInputElement>('Nazwa')
+    expect(name.value).toBe('')
+    expect(screen.getByLabelText<HTMLInputElement>('Slug').value).toBe('')
+  })
+})
+
 describe('create space dialog server errors', () => {
   it('a taken slug from the server is shown on the slug field', async () => {
     installMockApi(() => ({
@@ -104,6 +165,49 @@ describe('create space dialog server errors', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Utwórz' }))
 
+    expect(await screen.findByText('Ten slug jest już zajęty.')).toBeDefined()
+  })
+
+  it('a server error whose pointer matches no field shows the form message', async () => {
+    installMockApi(() => ({
+      status: 400,
+      data: {
+        code: ErrorCode.VALIDATION_FAILED,
+        errors: [{ pointer: '/missing', code: ErrorCode.INVALID_NAME }],
+      },
+    }))
+    renderDialog()
+    fireEvent.change(nameInput(), { target: { value: 'Alpha' } })
+
+    fireEvent.click(screen.getByRole('button', { name: 'Utwórz' }))
+
+    expect(await screen.findByText('Dane formularza są nieprawidłowe.')).toBeDefined()
+    expect(screen.queryByText('Nazwa musi mieć 1–100 znaków bez znaków sterujących.')).toBeNull()
+  })
+})
+
+describe('create space dialog form message', () => {
+  it('a new submit clears the previous form message', async () => {
+    let reply: MockReply = { status: 500, data: { code: ErrorCode.INTERNAL_ERROR } }
+    installMockApi(() => reply)
+    renderDialog()
+    fireEvent.change(nameInput(), { target: { value: 'Alpha' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Utwórz' }))
+    expect(await screen.findByText('Błąd serwera. Spróbuj ponownie.')).toBeDefined()
+
+    reply = {
+      status: 400,
+      data: {
+        code: ErrorCode.VALIDATION_FAILED,
+        errors: [{ pointer: '/slug', code: ErrorCode.SLUG_TAKEN }],
+      },
+    }
+    fireEvent.change(nameInput(), { target: { value: 'Beta' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Utwórz' }))
+
+    await waitFor(() => {
+      expect(screen.queryByText('Błąd serwera. Spróbuj ponownie.')).toBeNull()
+    })
     expect(await screen.findByText('Ten slug jest już zajęty.')).toBeDefined()
   })
 })

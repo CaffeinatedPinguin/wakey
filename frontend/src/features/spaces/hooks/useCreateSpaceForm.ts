@@ -1,7 +1,7 @@
 import { useForm } from '@mantine/form'
 import type { UseFormReturnType } from '@mantine/form'
 import type { ChangeEvent } from 'react'
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { applyApiError } from '../../../shared/api/formErrors'
 import { CREATE_SPACE_REQUEST_NAME_MAX_LENGTH } from '../../../shared/api/generated/limits'
@@ -11,7 +11,6 @@ import type { SpaceFormValues } from '../spaceTypes'
 import { createClose, createHandlers, createSubmit } from './createSpaceFormActions'
 
 export interface UseCreateSpaceFormOptions {
-  opened: boolean
   onClose: () => void
   onCreated: (slug: string) => void
 }
@@ -46,7 +45,6 @@ function validateSpace(
 }
 
 export function useCreateSpaceForm({
-  opened,
   onClose,
   onCreated,
 }: UseCreateSpaceFormOptions): CreateSpaceForm {
@@ -58,21 +56,22 @@ export function useCreateSpaceForm({
     initialValues: { name: '', slug: '' },
     validate: (values) => validateSpace(values, t),
   })
-  const reset = create.reset
-  useEffect(() => {
-    if (opened) {
-      reset()
-    }
-  }, [opened, reset])
-  const handlers = createHandlers(form, slugEdited, setSlugEdited)
-  const closeForm = createClose(create, onClose)
-  const close = (): void => {
+  const resetForm = (): void => {
+    create.reset()
+    form.reset()
     form.clearErrors()
+    setSlugEdited(false)
     setFormError(null)
-    closeForm()
   }
+  const handlers = createHandlers(form, slugEdited, setSlugEdited)
+  const close = createClose(resetForm, onClose)
   const onError = (error: unknown): void => {
     setFormError(applyApiError(form, error, t))
+  }
+  const submitValues = createSubmit(create, close, onCreated, onError)
+  const submit = (values: SpaceFormValues): void => {
+    setFormError(null)
+    submitValues(values)
   }
 
   return {
@@ -80,7 +79,7 @@ export function useCreateSpaceForm({
     formError,
     isPending: create.isPending,
     close,
-    submit: createSubmit(create, close, onCreated, onError),
+    submit,
     ...handlers,
   }
 }

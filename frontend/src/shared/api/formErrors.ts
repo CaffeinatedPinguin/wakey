@@ -9,6 +9,7 @@ export type FieldErrorMessages = Record<string, string>
 // The part of a form the shared error mapping needs. Mantine's form fits it.
 export interface ApiErrorForm {
   setErrors: (errors: FieldErrorMessages) => void
+  getValues: () => object
 }
 
 // A JSON Pointer from the contract (`/slug`, `/a/b`) becomes the form path
@@ -24,17 +25,24 @@ function translateCode(t: TFunction, code: string, params: Record<string, unknow
 
 // Shows a server error on the form: `errors[]` goes to the fields it points at
 // and the function returns null, because the fields carry the whole message.
-// Without field errors the translated top-level code becomes the form message;
-// a code without a translation falls back to the generic text.
+// A pointer to no form field must not swallow the error, so the translated
+// top-level code becomes the form message instead; a code without a translation
+// falls back to the generic text.
 export function applyApiError(form: ApiErrorForm, error: unknown, t: TFunction): string | null {
   const apiError = toApiError(error)
   if (apiError.errors.length === 0) {
     return translateCode(t, apiError.code, {})
   }
+  const formPaths = new Set(Object.keys(form.getValues()))
   const fieldErrors: FieldErrorMessages = {}
   for (const fieldError of apiError.errors) {
     const path = pointerToPath(fieldError.pointer)
-    fieldErrors[path] = translateCode(t, fieldError.code, fieldError.params)
+    if (formPaths.has(path)) {
+      fieldErrors[path] = translateCode(t, fieldError.code, fieldError.params)
+    }
+  }
+  if (Object.keys(fieldErrors).length === 0) {
+    return translateCode(t, apiError.code, {})
   }
   form.setErrors(fieldErrors)
   return null

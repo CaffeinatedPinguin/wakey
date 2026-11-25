@@ -25,7 +25,7 @@ function errorCodeOf(value: string): ApiErrorCode {
 // RFC 9457 Problem Details as the server sends them (ADR 0006): the standard
 // fields plus the `code` and `errors[]` extensions. The schema is checked
 // against the generated contract type, so a field drift breaks compilation.
-export const problemFieldSchema = z.object({
+export const apiFieldErrorSchema = z.object({
   pointer: z.string(),
   code: z.string(),
   params: z.record(z.string(), z.unknown()).default({}),
@@ -40,15 +40,15 @@ export const problemDetailSchema = z.object({
   status: z.number().int().default(0),
   detail: z.string().default(''),
   code: z.string().default(ClientErrorCode.UNKNOWN),
-  errors: z.array(problemFieldSchema).default([]),
+  errors: z.array(apiFieldErrorSchema).default([]),
 }) satisfies z.ZodType<Omit<ProblemDetail, 'code'> & { code: string }>
 
-export type ProblemField = z.infer<typeof problemFieldSchema>
+export type ApiFieldError = z.infer<typeof apiFieldErrorSchema>
 
 export interface ApiErrorInit {
   status?: number | undefined
   code: ApiErrorCode
-  errors?: ProblemField[] | undefined
+  errors?: ApiFieldError[] | undefined
   detail?: string | undefined
 }
 
@@ -57,7 +57,7 @@ export interface ApiErrorInit {
 export class ApiError extends Error {
   readonly status: number | undefined
   readonly code: ApiErrorCode
-  readonly errors: ProblemField[]
+  readonly errors: ApiFieldError[]
   readonly detail: string | undefined
 
   constructor({ status, code, errors = [], detail }: ApiErrorInit) {
@@ -88,7 +88,7 @@ export function isNotFoundError(error: unknown): boolean {
   return statusOf(error) === 404
 }
 
-function parseProblem(body: unknown): z.infer<typeof problemDetailSchema> | undefined {
+function parseErrorBody(body: unknown): z.infer<typeof problemDetailSchema> | undefined {
   const result = problemDetailSchema.safeParse(body)
   return result.success ? result.data : undefined
 }
@@ -106,7 +106,7 @@ export function toApiError(error: unknown): ApiError {
   if (error.response === undefined) {
     return new ApiError({ code: ClientErrorCode.NETWORK })
   }
-  const problem = parseProblem(error.response.data)
+  const problem = parseErrorBody(error.response.data)
   return new ApiError({
     status: error.response.status,
     code: errorCodeOf(problem?.code ?? ClientErrorCode.UNKNOWN),
