@@ -46,6 +46,7 @@ class ArchitectureTest {
         dependencies.put("messaging", Set.of());
         dependencies.put("ratelimit", Set.of());
         dependencies.put("retry", Set.of());
+        dependencies.put("settings", Set.of());
         dependencies.put("spaces", Set.of());
         dependencies.put("web", Set.of());
         dependencies.put("security", Set.of("web"));

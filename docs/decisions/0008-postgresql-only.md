@@ -46,6 +46,7 @@ ma opisaną ścieżkę.
 | Konfiguracja limitów sesji | `server/src/main/resources/application.yml` | Przenieść `wakey.database.*` do konfiguracji nowej bazy i usunąć znacznik. |
 | Natywne typy `UUID` i `TIMESTAMPTZ` w tabelach przestrzeni | `server/src/main/resources/db/changelog/changes/0004-spaces.xml` | Zmienić kolumny na typ binarny i znacznik czasu z offsetem nowej bazy i usunąć znacznik. |
 | Natywne typy `UUID` i `TIMESTAMPTZ` w tabeli audytu | `server/src/main/resources/db/changelog/changes/0005-audit.xml` | Zmienić kolumny na typ binarny i znacznik czasu z offsetem nowej bazy i usunąć znacznik. |
+| Natywne typy `UUID` i `TIMESTAMPTZ` w tabeli ustawień przestrzeni | `server/src/main/resources/db/changelog/changes/0007-space-settings.xml` | Zmienić kolumny na typ binarny i znacznik czasu z offsetem nowej bazy i usunąć znacznik. |
 
 ## Migracja na inną bazę
 
