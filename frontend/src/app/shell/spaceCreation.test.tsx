@@ -1,6 +1,8 @@
 import { cleanup, fireEvent, screen, waitFor } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import type { Me } from '../../features/auth'
+import { ErrorCode } from '../../shared/api/generated/enums'
+import type { SpaceRole } from '../../shared/api/generated/enums'
 import { appConfig } from '../../shared/config'
 import { signedInUser } from '../../test/data'
 import { installMockApi } from '../../test/mockApi'
@@ -16,7 +18,7 @@ const DESKTOP_WIDTH = 1024
 interface SpaceFixture {
   slug: string
   name: string
-  role: 'EDITOR' | 'VIEWER' | null
+  role: SpaceRole | null
   version: number
 }
 
@@ -62,7 +64,7 @@ function handleList(): MockReply {
 function handleGet(slug: string): MockReply {
   const space = api.spaces.find((item) => item.slug === slug)
   if (space === undefined) {
-    return { status: 404, data: { code: 'not_found' } }
+    return { status: 404, data: { code: ErrorCode.NOT_FOUND } }
   }
   return { status: 200, data: space }
 }
@@ -80,7 +82,13 @@ function handleCreate(method: string, body: string): MockReply {
     return api.createError
   }
   if (api.spaces.some((item) => item.slug === payload.slug)) {
-    return { status: 409, data: { code: 'slug_taken' } }
+    return {
+      status: 409,
+      data: {
+        code: ErrorCode.SLUG_TAKEN,
+        errors: [{ pointer: '/slug', code: ErrorCode.SLUG_TAKEN }],
+      },
+    }
   }
   const space: SpaceFixture = { slug: payload.slug, name: payload.name, role: null, version: 1 }
   api.spaces.push(space)
@@ -99,7 +107,7 @@ function handleRequest(request: MockRequest): MockReply {
   }
   const slug = spaceSlug(request.url)
   if (slug === undefined) {
-    return { status: 404, data: { code: 'not_found' } }
+    return { status: 404, data: { code: ErrorCode.NOT_FOUND } }
   }
   return handleGet(slug)
 }
@@ -207,14 +215,12 @@ describe('create space dialog errors', () => {
 describe('create space dialog reopening', () => {
   it('reopening the create dialog starts without the previous error', async () => {
     api.spaces = [alpha]
-    api.createError = { status: 500, data: { code: 'internal_error' } }
+    api.createError = { status: 500, data: { code: ErrorCode.INTERNAL_ERROR } }
     renderApp('/')
     await screen.findByText('Przestrzeń: Alpha')
     await openCreateDialog('Beta')
     fireEvent.click(screen.getByRole('button', { name: 'Utwórz' }))
-    expect(
-      await screen.findByText('Nie udało się utworzyć przestrzeni. Spróbuj ponownie.'),
-    ).toBeDefined()
+    expect(await screen.findByText('Błąd serwera. Spróbuj ponownie.')).toBeDefined()
 
     fireEvent.click(screen.getByRole('button', { name: 'Zamknij' }))
     await waitFor(() => {
@@ -222,7 +228,7 @@ describe('create space dialog reopening', () => {
     })
     await openCreateDialog('Beta')
 
-    expect(screen.queryByText('Nie udało się utworzyć przestrzeni. Spróbuj ponownie.')).toBeNull()
+    expect(screen.queryByText('Błąd serwera. Spróbuj ponownie.')).toBeNull()
   })
 })
 
@@ -232,10 +238,10 @@ describe('create space dialog server validation', () => {
     api.createError = {
       status: 400,
       data: {
-        code: 'validation_failed',
+        code: ErrorCode.VALIDATION_FAILED,
         errors: [
-          { code: 'invalid_name', pointer: '/name' },
-          { code: 'invalid_slug', pointer: '/slug' },
+          { code: ErrorCode.INVALID_NAME, pointer: '/name', params: { max: 100 } },
+          { code: ErrorCode.INVALID_SLUG, pointer: '/slug' },
         ],
       },
     }
@@ -247,7 +253,9 @@ describe('create space dialog server validation', () => {
     fireEvent.change(screen.getByLabelText('Slug'), { target: { value: 'inna-nazwa' } })
     fireEvent.click(screen.getByRole('button', { name: 'Utwórz' }))
 
-    expect(await screen.findByText('Nazwa jest nieprawidłowa.')).toBeDefined()
+    expect(
+      await screen.findByText('Nazwa musi mieć 1–100 znaków bez znaków sterujących.'),
+    ).toBeDefined()
     expect(
       screen.getByText(
         'Slug musi mieć 3–40 znaków: małe litery, cyfry i myślniki, zaczynać się literą i nie kończyć myślnikiem.',

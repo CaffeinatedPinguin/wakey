@@ -5,6 +5,8 @@ import { useTranslation } from 'react-i18next'
 import { CenteredPage } from '../../../shared/ui/CenteredPage'
 import { LoginButton } from './LoginButton'
 
+const ALERT_ICON_SIZE = 18
+
 interface LoginScreenProps {
   failed: boolean
 }
@@ -17,7 +19,7 @@ export function LoginScreen({ failed }: LoginScreenProps): ReactElement {
       <Title order={1}>wakey</Title>
       <Text>{t('auth.login.heading')}</Text>
       {failed ? (
-        <Alert color="warning" icon={<IconAlertTriangle size={18} />}>
+        <Alert color="warning" icon={<IconAlertTriangle size={ALERT_ICON_SIZE} />}>
           {t('auth.login.failed')}
         </Alert>
       ) : null}

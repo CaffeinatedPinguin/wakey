@@ -5,25 +5,18 @@ import type { ReactElement } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useCurrentSpace } from '../hooks/useCurrentSpace'
 import { useSpaceList } from '../hooks/useSpaceList'
-import type { SpaceSummary, SpacesStatus } from '../spaceTypes'
+import { SpaceSwitcherLayout, SpacesStatus } from '../spaceTypes'
+import type { SpaceListActions, SpaceListState } from '../spaceTypes'
 import { CreateSpaceDialog } from './CreateSpaceDialog'
 import { DesktopContent, MobileContent } from './SwitcherContent'
 import { SwitcherTrigger } from './SwitcherTrigger'
 import { currentName as nameFromList, sheetStyles, touchStyle } from './switcherStyles'
 
-export type SpaceSwitcherLayout = 'menu' | 'sheet'
+const SWITCHER_ICON_SIZE = 16
 
 export interface SwitcherListProps {
-  spaces: readonly SpaceSummary[]
-  currentSlug: string
-  currentName?: string | undefined
-  status: SpacesStatus
-  canCreate: boolean
-  hasMore?: boolean
-  onLoadMore?: (() => void) | undefined
-  onSelect: (slug: string) => void
-  onCreate: () => void
-  onRetry: () => void
+  list: SpaceListState
+  actions: SpaceListActions
 }
 
 export interface SpaceSwitcherProps {
@@ -31,7 +24,7 @@ export interface SpaceSwitcherProps {
   canCreate: boolean
 }
 
-export function DesktopSwitcher(props: SwitcherListProps): ReactElement {
+export function DesktopSwitcher({ list, actions }: SwitcherListProps): ReactElement {
   const { t } = useTranslation()
   const [opened, { open, close }] = useDisclosure(false)
 
@@ -52,24 +45,24 @@ export function DesktopSwitcher(props: SwitcherListProps): ReactElement {
         <Button
           variant="default"
           aria-label={t('spaces.switcher.label')}
-          aria-busy={props.status === 'loading' || undefined}
-          rightSection={<IconChevronDown size={16} />}
+          aria-busy={list.status === SpacesStatus.LOADING || undefined}
+          rightSection={<IconChevronDown size={SWITCHER_ICON_SIZE} />}
         >
           <SwitcherTrigger
-            status={props.status}
-            name={props.currentName ?? nameFromList(props.spaces, props.currentSlug)}
+            status={list.status}
+            name={list.currentName ?? nameFromList(list.spaces, list.currentSlug)}
             compact={false}
           />
         </Button>
       </Menu.Target>
       <Menu.Dropdown>
-        <DesktopContent {...props} close={close} />
+        <DesktopContent list={list} actions={actions} close={close} />
       </Menu.Dropdown>
     </Menu>
   )
 }
 
-export function MobileSwitcher(props: SwitcherListProps): ReactElement {
+export function MobileSwitcher({ list, actions }: SwitcherListProps): ReactElement {
   const { t } = useTranslation()
   const [opened, { open, close }] = useDisclosure(false)
 
@@ -78,14 +71,14 @@ export function MobileSwitcher(props: SwitcherListProps): ReactElement {
       <Button
         variant="default"
         aria-label={t('spaces.switcher.label')}
-        aria-busy={props.status === 'loading' || undefined}
-        rightSection={<IconChevronDown size={16} />}
+        aria-busy={list.status === SpacesStatus.LOADING || undefined}
+        rightSection={<IconChevronDown size={SWITCHER_ICON_SIZE} />}
         style={{ ...touchStyle, flex: 1, minWidth: 0 }}
         onClick={open}
       >
         <SwitcherTrigger
-          status={props.status}
-          name={props.currentName ?? nameFromList(props.spaces, props.currentSlug)}
+          status={list.status}
+          name={list.currentName ?? nameFromList(list.spaces, list.currentSlug)}
           compact
         />
       </Button>
@@ -97,7 +90,7 @@ export function MobileSwitcher(props: SwitcherListProps): ReactElement {
         title={t('spaces.switcher.sheetTitle')}
         styles={sheetStyles}
       >
-        <MobileContent {...props} close={close} />
+        <MobileContent list={list} actions={actions} close={close} />
       </Drawer>
     </>
   )
@@ -108,13 +101,15 @@ export function SpaceSwitcher({ layout, canCreate }: SpaceSwitcherProps): ReactE
   const current = useCurrentSpace()
   const [opened, { open, close }] = useDisclosure(false)
   const currentName = nameFromList(list.spaces, current.slug) ?? current.space?.name
-  const listProps: SwitcherListProps = {
+  const listState: SpaceListState = {
     spaces: list.spaces,
     currentSlug: current.slug,
     currentName,
     status: list.status,
     canCreate,
     hasMore: list.hasMore,
+  }
+  const actions: SpaceListActions = {
     onLoadMore: list.loadMore,
     onSelect: current.select,
     onCreate: open,
@@ -123,7 +118,11 @@ export function SpaceSwitcher({ layout, canCreate }: SpaceSwitcherProps): ReactE
 
   return (
     <>
-      {layout === 'menu' ? <DesktopSwitcher {...listProps} /> : <MobileSwitcher {...listProps} />}
+      {layout === SpaceSwitcherLayout.MENU ? (
+        <DesktopSwitcher list={listState} actions={actions} />
+      ) : (
+        <MobileSwitcher list={listState} actions={actions} />
+      )}
       <CreateSpaceDialog opened={opened} onClose={close} onCreated={current.select} />
     </>
   )

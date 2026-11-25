@@ -3,10 +3,8 @@ package dev.wakey.web;
 import io.swagger.v3.oas.models.Components;
 import io.swagger.v3.oas.models.OpenAPI;
 import io.swagger.v3.oas.models.info.Info;
-import io.swagger.v3.oas.models.media.Schema;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 import org.springdoc.core.models.GroupedOpenApi;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
@@ -27,11 +25,9 @@ public class ApiConfiguration {
 
     private static final String PROBLEM_DETAIL_REF = "#/components/schemas/" + PROBLEM_DETAIL_SCHEMA;
 
-    private static final String SPACE_ROLE_SCHEMA = "SpaceRole";
-
     @Bean
-    GroupedOpenApi publicApi(ApiProperties apiProperties, List<ErrorCodes> errorCodeGroups) {
-        List<String> codes = errorCodeValues(errorCodeGroups);
+    GroupedOpenApi publicApi(ApiProperties apiProperties, List<ErrorCodeSet> errorCodeSets) {
+        List<String> codes = errorCodeValues(errorCodeSets);
         return GroupedOpenApi.builder()
                 .group(GROUP)
                 .pathsToMatch(ApiPaths.API_V1_ALL)
@@ -48,28 +44,17 @@ public class ApiConfiguration {
             components = new Components();
         }
         components.addSchemas(PROBLEM_DETAIL_SCHEMA, ProblemDetailSchema.schema(codes));
-        markSpaceRoleNullable(components);
         openApi.setComponents(components);
         OpenApiPageLimit.document(openApi.getPaths(), apiProperties.maxPageSize());
     }
 
-    private static void markSpaceRoleNullable(Components components) {
-        Map<String, Schema> schemas = components.getSchemas();
-        if (schemas != null) {
-            Schema<?> role = schemas.get(SPACE_ROLE_SCHEMA);
-            if (role != null) {
-                role.addType("null");
-            }
-        }
-    }
-
-    private static List<String> errorCodeValues(List<ErrorCodes> errorCodeGroups) {
+    private static List<String> errorCodeValues(List<ErrorCodeSet> errorCodeSets) {
         List<String> codes = new ArrayList<>();
         for (CommonError error : CommonError.values()) {
             codes.add(error.getCode());
         }
-        for (ErrorCodes group : errorCodeGroups) {
-            for (ErrorCode error : group.codes()) {
+        for (ErrorCodeSet errorCodeSet : errorCodeSets) {
+            for (ErrorCode error : errorCodeSet.codes()) {
                 codes.add(error.getCode());
             }
         }

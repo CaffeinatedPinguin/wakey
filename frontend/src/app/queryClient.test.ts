@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import { ErrorCode } from '../shared/api/generated/enums'
 import { serverClient } from '../shared/api/instances'
 import { installMockApi } from '../test/mockApi'
 import { createQueryClient } from './queryClient'
@@ -8,7 +9,7 @@ describe('query retry policy', () => {
     let requests = 0
     installMockApi(() => {
       requests += 1
-      return { status: 401, data: { code: 'unauthorized' } }
+      return { status: 401, data: { code: ErrorCode.UNAUTHENTICATED } }
     })
     const queryClient = createQueryClient()
 

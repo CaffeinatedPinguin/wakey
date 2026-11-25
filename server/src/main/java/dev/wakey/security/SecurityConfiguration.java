@@ -2,6 +2,7 @@ package dev.wakey.security;
 
 import dev.wakey.web.ApiPaths;
 import java.time.Clock;
+import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -16,6 +17,7 @@ import org.springframework.security.web.util.matcher.RequestMatcher;
 
 /** The three filter chains and the request logging shared by every surface. */
 @Configuration(proxyBeanMethods = false)
+@RequiredArgsConstructor
 class SecurityConfiguration {
 
     private static final RequestMatcher API_REQUESTS = PathPatternRequestMatcher.pathPattern(ApiPaths.API_V1_ALL);
@@ -23,11 +25,6 @@ class SecurityConfiguration {
     private final UnauthorizedRequestLog unauthorized;
 
     private final ForbiddenRequestLog forbidden;
-
-    SecurityConfiguration(UnauthorizedRequestLog unauthorized, ForbiddenRequestLog forbidden) {
-        this.unauthorized = unauthorized;
-        this.forbidden = forbidden;
-    }
 
     @Bean
     @Order(1)

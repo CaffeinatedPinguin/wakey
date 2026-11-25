@@ -68,17 +68,17 @@ export interface components {
              */
             slug: string;
         };
-        CurrentUser: {
-            /** @description Whether the user is an instance administrator */
-            admin: boolean;
-            /** @description The OIDC subject of the authenticated user */
-            subject: string;
-        };
         CursorPageSpaceResponse: {
             /** @description The items on this page */
             items: components["schemas"]["SpaceResponse"][];
             /** @description The cursor of the next page, or null on the last page */
             nextCursor: string | null;
+        };
+        MeResponse: {
+            /** @description Whether the user is an instance administrator */
+            admin: boolean;
+            /** @description The OIDC subject of the authenticated user */
+            subject: string;
         };
         ProblemDetail: {
             /** @enum {string} */
@@ -160,7 +160,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["CurrentUser"];
+                    "application/json": components["schemas"]["MeResponse"];
                 };
             };
             /** @description Authentication is required. */

@@ -1,4 +1,4 @@
-package dev.wakey.api.spaces;
+package dev.wakey.spaces.web;
 
 import dev.wakey.spaces.SpaceRole;
 import dev.wakey.spaces.SpaceSlug;
@@ -33,8 +33,6 @@ public record SpaceResponse(
                 nullable = true)
         @Nullable
         SpaceRole role) {
-
-    static final String SLUG_PATTERN = SpaceSlug.PATTERN;
 
     static SpaceResponse from(SpaceView view) {
         return new SpaceResponse(view.slug(), view.name(), view.version(), view.role());

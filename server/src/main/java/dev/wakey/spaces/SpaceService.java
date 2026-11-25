@@ -1,5 +1,6 @@
 package dev.wakey.spaces;
 
+import dev.wakey.security.CurrentUser;
 import dev.wakey.spaces.internal.SpaceEntity;
 import dev.wakey.spaces.internal.SpaceStore;
 import dev.wakey.web.ApiException;
@@ -22,12 +23,14 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 public class SpaceService {
 
+    public static final int MAX_SUBJECT_LENGTH = 100;
+
     private final SpaceStore store;
 
     private final UserSessions sessions;
 
     /** Creates a space or renames it by slug without a version check. */
-    public PutResult put(SpacePrincipal actor, String slug, String name) {
+    public PutResult put(CurrentUser actor, String slug, String name) {
         return put(actor, slug, name, null);
     }
 
@@ -35,7 +38,7 @@ public class SpaceService {
      * Creates a space or renames it by slug. A repeat with the same name changes nothing while a
      * different name bumps the version; a stale {@code expectedVersion} is a conflict.
      */
-    public PutResult put(SpacePrincipal actor, String slug, String name, @Nullable Long expectedVersion) {
+    public PutResult put(CurrentUser actor, String slug, String name, @Nullable Long expectedVersion) {
         requireAdmin(actor);
         String checkedSlug = SpaceSlug.requireValid(slug);
         String checkedName = SpaceName.requireValid(name);
@@ -53,7 +56,7 @@ public class SpaceService {
     }
 
     /** Creates a space only when its slug is still free; an existing name is never changed. */
-    public PutResult create(SpacePrincipal actor, String slug, String name) {
+    public PutResult create(CurrentUser actor, String slug, String name) {
         requireAdmin(actor);
         String checkedSlug = SpaceSlug.requireValid(slug);
         String checkedName = SpaceName.requireValid(name);
@@ -66,7 +69,7 @@ public class SpaceService {
     }
 
     /** Reads one space together with the caller's role; a non-member non-admin gets 404. */
-    public SpaceView view(SpacePrincipal actor, String slug) {
+    public SpaceView view(CurrentUser actor, String slug) {
         String checkedSlug = SpaceSlug.requireValid(slug);
         SpaceEntity space = requireSpace(checkedSlug);
         Optional<SpaceRole> role = store.findRole(space.id(), actor.subject());
@@ -78,7 +81,7 @@ public class SpaceService {
     }
 
     /** Lists the spaces the caller can see, ordered by slug and resuming after the given slug. */
-    public List<SpaceView> listVisible(SpacePrincipal actor, @Nullable String afterSlug, int limit) {
+    public List<SpaceView> listVisible(CurrentUser actor, @Nullable String afterSlug, int limit) {
         String cursor = afterSlug == null ? "" : afterSlug;
         if (actor.admin()) {
             return store.listAll(actor.subject(), cursor, limit);
@@ -87,7 +90,7 @@ public class SpaceService {
     }
 
     /** Adds a member to a space the caller manages; an existing membership keeps its role. */
-    public void addMember(SpacePrincipal actor, String slug, String subject, SpaceRole role) {
+    public void addMember(CurrentUser actor, String slug, String subject, SpaceRole role) {
         requireValidSubject(subject);
         SpaceEntity space = requireManageableSpace(actor, slug);
         store.addMember(space.id(), subject, role);
@@ -95,7 +98,7 @@ public class SpaceService {
 
     /** Changes a member's role and invalidates that user's sessions when the role really changes. */
     @Transactional
-    public void changeRole(SpacePrincipal actor, String slug, String subject, SpaceRole role) {
+    public void changeRole(CurrentUser actor, String slug, String subject, SpaceRole role) {
         requireValidSubject(subject);
         SpaceEntity space = requireManageableSpace(actor, slug);
         Optional<SpaceRole> current = store.findRole(space.id(), subject);
@@ -108,7 +111,7 @@ public class SpaceService {
 
     /** Removes a member and invalidates that user's sessions. */
     @Transactional
-    public void removeMember(SpacePrincipal actor, String slug, String subject) {
+    public void removeMember(CurrentUser actor, String slug, String subject) {
         requireValidSubject(subject);
         SpaceEntity space = requireManageableSpace(actor, slug);
         if (!store.removeMember(space.id(), subject)) {
@@ -140,7 +143,7 @@ public class SpaceService {
         }
     }
 
-    private SpaceEntity requireManageableSpace(SpacePrincipal actor, String slug) {
+    private SpaceEntity requireManageableSpace(CurrentUser actor, String slug) {
         String checkedSlug = SpaceSlug.requireValid(slug);
         SpaceEntity space = requireSpace(checkedSlug);
         if (!actor.admin()) {
@@ -168,14 +171,14 @@ public class SpaceService {
         return new ApiException(SpaceError.SLUG_TAKEN, List.of(problem));
     }
 
-    private static void requireAdmin(SpacePrincipal actor) {
+    private static void requireAdmin(CurrentUser actor) {
         if (!actor.admin()) {
             throw new ApiException(CommonError.FORBIDDEN);
         }
     }
 
     private static void requireValidSubject(String subject) {
-        if (subject.isBlank() || subject.length() > SpacePrincipal.MAX_SUBJECT_LENGTH) {
+        if (subject.isBlank() || subject.length() > MAX_SUBJECT_LENGTH) {
             FieldProblem problem = new FieldProblem("/subject", SpaceError.INVALID_SUBJECT.getCode(), Map.of());
             throw new ApiException(CommonError.VALIDATION_FAILED, List.of(problem));
         }

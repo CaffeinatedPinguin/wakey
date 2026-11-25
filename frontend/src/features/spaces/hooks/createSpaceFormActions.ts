@@ -41,6 +41,7 @@ export function createSubmit(
   create: CreateSpaceMutation,
   close: () => void,
   onCreated: (slug: string) => void,
+  onError: (error: unknown) => void,
 ): (values: SpaceFormValues) => void {
   return (values) => {
     if (create.isPending) {
@@ -53,6 +54,7 @@ export function createSubmit(
           close()
           onCreated(space.slug)
         },
+        onError,
       },
     )
   }

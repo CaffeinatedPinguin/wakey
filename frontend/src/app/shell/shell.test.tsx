@@ -5,6 +5,7 @@ import { installMockApi } from '../../test/mockApi'
 import type { MockReply, MockRequest } from '../../test/mockApi'
 import { renderApp } from '../../test/renderApp'
 import { installViewport } from '../../test/viewport'
+import { ErrorCode } from '../../shared/api/generated/enums'
 import { appConfig } from '../../shared/config'
 import { StatusBadge } from '../../shared/ui/StatusBadge'
 import { StatusState } from '../../shared/ui'
@@ -26,7 +27,7 @@ function handleRequest(request: MockRequest): MockReply {
     logoutRequestCount += 1
     return { status: 204 }
   }
-  return { status: 404, data: { code: 'not_found' } }
+  return { status: 404, data: { code: ErrorCode.NOT_FOUND } }
 }
 
 beforeEach(() => {

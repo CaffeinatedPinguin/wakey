@@ -3,6 +3,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { MockInstance } from 'vitest'
 import type { AppRouter } from '../../app/router'
 import type { Me } from '../../features/auth'
+import { ErrorCode } from '../../shared/api/generated/enums'
+import type { SpaceRole } from '../../shared/api/generated/enums'
 import { appConfig } from '../../shared/config'
 import { signedInUser } from '../../test/data'
 import { installMockApi } from '../../test/mockApi'
@@ -19,7 +21,7 @@ const MOBILE_WIDTH = 375
 interface SpaceFixture {
   slug: string
   name: string
-  role: 'EDITOR' | 'VIEWER' | null
+  role: SpaceRole | null
   version: number
 }
 
@@ -62,7 +64,7 @@ function spaceSlug(url: string): string | undefined {
 function handleList(): MockReply {
   api.listRequests += 1
   if (api.failFirstList && api.listRequests === 1) {
-    return { status: 500, data: { code: 'internal_error' } }
+    return { status: 500, data: { code: ErrorCode.INTERNAL_ERROR } }
   }
   const items = api.spaces.slice(0, api.pageSize)
   const nextCursor = api.spaces.length > api.pageSize ? 'next' : null
@@ -72,7 +74,7 @@ function handleList(): MockReply {
 function handleGet(slug: string): MockReply {
   const space = api.spaces.find((item) => item.slug === slug)
   if (space === undefined) {
-    return { status: 404, data: { code: 'not_found' } }
+    return { status: 404, data: { code: ErrorCode.NOT_FOUND } }
   }
   return { status: 200, data: space }
 }
@@ -86,7 +88,7 @@ function handleRequest(request: MockRequest): MockReply {
   }
   const slug = spaceSlug(request.url)
   if (slug === undefined) {
-    return { status: 404, data: { code: 'not_found' } }
+    return { status: 404, data: { code: ErrorCode.NOT_FOUND } }
   }
   return handleGet(slug)
 }

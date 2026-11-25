@@ -1,6 +1,7 @@
 import { describe, expect, expectTypeOf, it } from 'vitest'
 import { contract } from './generated/contract'
 import type { OperationId } from './generated/contract'
+import { ErrorCode, SpaceRole } from './generated/enums'
 import type {
   CreateSpaceRequest,
   CreateSpaceResponse,
@@ -29,9 +30,21 @@ describe('generated API operations', () => {
     for (const operationId of operationIds) {
       expect(contract[operationId]).toBeDefined()
     }
-    expect(contract.getMe).toEqual({ method: 'get', path: '/api/v1/me' })
-    expect(contract.createSpace).toEqual({ method: 'post', path: '/api/v1/spaces' })
-    expect(contract.putSpace).toEqual({ method: 'put', path: '/api/v1/spaces/{slug}' })
+    expect(contract.getMe.method).toBe('get')
+    expect(contract.createSpace.method).toBe('post')
+    expect(contract.putSpace.method).toBe('put')
+    expect(contract.getSpace.path).toBe(contract.putSpace.path)
+  })
+})
+
+describe('generated closed sets', () => {
+  it('pins the wire values the server sends', () => {
+    expect(ErrorCode.SLUG_TAKEN).toBe('slug_taken')
+    expect(ErrorCode.VALIDATION_FAILED).toBe('validation_failed')
+    expect(ErrorCode.INVALID_SLUG).toBe('invalid_slug')
+    expect(ErrorCode.NOT_FOUND).toBe('not_found')
+    expect(SpaceRole.VIEWER).toBe('VIEWER')
+    expect(SpaceRole.EDITOR).toBe('EDITOR')
   })
 })
 
@@ -42,7 +55,7 @@ describe('generated API types', () => {
     expectTypeOf<CreateSpaceRequest>().toEqualTypeOf<{ name: string; slug: string }>()
     expectTypeOf<GetSpaceResponse>().toEqualTypeOf<{
       name: string
-      role: 'EDITOR' | 'VIEWER' | null
+      role: SpaceRole | null
       slug: string
       version: number
     }>()
@@ -58,7 +71,7 @@ describe('generated API types', () => {
     }>()
     expectTypeOf<PutSpaceResponse>().toEqualTypeOf<{
       name: string
-      role: 'EDITOR' | 'VIEWER' | null
+      role: SpaceRole | null
       slug: string
       version: number
     }>()

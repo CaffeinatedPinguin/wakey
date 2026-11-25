@@ -1,17 +1,14 @@
 import { useForm } from '@mantine/form'
 import type { UseFormReturnType } from '@mantine/form'
-import type { ChangeEvent, ReactNode } from 'react'
+import type { ChangeEvent } from 'react'
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { spaceFieldErrors } from '../api/spaces.api'
+import { applyApiError } from '../../../shared/api/formErrors'
+import { CREATE_SPACE_REQUEST_NAME_MAX_LENGTH } from '../../../shared/api/generated/limits'
 import { useCreateSpace } from '../api/spaces.queries'
 import { isValidSlug } from '../slug'
-import type { SpaceFormValues, SpaceSubmitError } from '../spaceTypes'
+import type { SpaceFormValues } from '../spaceTypes'
 import { createClose, createHandlers, createSubmit } from './createSpaceFormActions'
-import { errorsOf, submitErrorOf } from './createSpaceErrors'
-
-// replaced by the contract constant in the client task
-const NAME_MAX_LENGTH = 100
 
 export interface UseCreateSpaceFormOptions {
   opened: boolean
@@ -21,9 +18,7 @@ export interface UseCreateSpaceFormOptions {
 
 export interface CreateSpaceForm {
   form: UseFormReturnType<SpaceFormValues>
-  nameError: ReactNode
-  slugError: ReactNode
-  submitError: SpaceSubmitError
+  formError: string | null
   isPending: boolean
   close: () => void
   submit: (values: SpaceFormValues) => void
@@ -37,10 +32,11 @@ function validateSpace(
 ): Record<string, string> {
   const errors: Record<string, string> = {}
   const name = values.name.trim()
-  if (name.length === 0) {
+  const nameLength = Array.from(name).length
+  if (nameLength === 0) {
     errors.name = t('spaces.create.errors.nameRequired')
   }
-  if (name.length > NAME_MAX_LENGTH) {
+  if (nameLength > CREATE_SPACE_REQUEST_NAME_MAX_LENGTH) {
     errors.name = t('spaces.create.errors.nameTooLong')
   }
   if (!isValidSlug(values.slug)) {
@@ -57,6 +53,7 @@ export function useCreateSpaceForm({
   const { t } = useTranslation()
   const create = useCreateSpace()
   const [slugEdited, setSlugEdited] = useState(false)
+  const [formError, setFormError] = useState<string | null>(null)
   const form = useForm<SpaceFormValues>({
     initialValues: { name: '', slug: '' },
     validate: (values) => validateSpace(values, t),
@@ -67,20 +64,23 @@ export function useCreateSpaceForm({
       reset()
     }
   }, [opened, reset])
-  const fieldErrors = spaceFieldErrors(create.error)
-  const submitError = submitErrorOf(create.error, fieldErrors)
-  const { nameError, slugError } = errorsOf(form, fieldErrors, submitError, t)
   const handlers = createHandlers(form, slugEdited, setSlugEdited)
-  const close = createClose(create, onClose)
+  const closeForm = createClose(create, onClose)
+  const close = (): void => {
+    form.clearErrors()
+    setFormError(null)
+    closeForm()
+  }
+  const onError = (error: unknown): void => {
+    setFormError(applyApiError(form, error, t))
+  }
 
   return {
     form,
-    nameError,
-    slugError,
-    submitError,
+    formError,
     isPending: create.isPending,
     close,
-    submit: createSubmit(create, close, onCreated),
+    submit: createSubmit(create, close, onCreated, onError),
     ...handlers,
   }
 }

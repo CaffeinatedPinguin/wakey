@@ -1,4 +1,4 @@
-package dev.wakey.api.spaces;
+package dev.wakey.spaces.web;
 
 import dev.wakey.spaces.SpaceName;
 import io.swagger.v3.oas.annotations.media.Schema;

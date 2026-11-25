@@ -1,4 +1,4 @@
-package dev.wakey.api.spaces;
+package dev.wakey.spaces.web;
 
 import java.lang.annotation.Documented;
 import java.lang.annotation.ElementType;

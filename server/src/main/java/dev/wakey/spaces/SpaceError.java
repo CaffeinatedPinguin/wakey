@@ -24,8 +24,7 @@ public enum SpaceError implements ErrorCode {
                     + SpaceSlug.MAX_LENGTH
                     + " lowercase letters, digits or hyphens, start with a letter and end with a letter or digit."),
     INVALID_SUBJECT(
-            HttpStatus.BAD_REQUEST,
-            "A member subject must have 1-" + SpacePrincipal.MAX_SUBJECT_LENGTH + " characters.");
+            HttpStatus.BAD_REQUEST, "A member subject must have 1-" + SpaceService.MAX_SUBJECT_LENGTH + " characters.");
 
     private final HttpStatus status;
 

@@ -30,6 +30,26 @@ export const commonResources = {
         maintenance: 'Prace planowe',
       },
     },
+    errors: {
+      bad_request: 'Nieprawidłowe żądanie.',
+      forbidden: 'Brak uprawnień do tej operacji.',
+      internal_error: 'Błąd serwera. Spróbuj ponownie.',
+      invalid_body: 'Treść żądania jest nieprawidłowa.',
+      invalid_cursor: 'Nieprawidłowy kursor stronicowania.',
+      invalid_name: 'Nazwa musi mieć 1–{{max}} znaków bez znaków sterujących.',
+      invalid_slug:
+        'Slug musi mieć 3–40 znaków: małe litery, cyfry i myślniki, zaczynać się literą i nie kończyć myślnikiem.',
+      invalid_subject: 'Nieprawidłowy podmiot.',
+      method_not_allowed: 'Ta metoda nie jest dozwolona.',
+      not_acceptable: 'Brak akceptowalnego formatu odpowiedzi.',
+      not_found: 'Nie znaleziono zasobu.',
+      slug_taken: 'Ten slug jest już zajęty.',
+      unauthenticated: 'Zaloguj się, aby kontynuować.',
+      unsupported_media_type: 'Nieobsługiwany format danych.',
+      validation_failed: 'Dane formularza są nieprawidłowe.',
+      version_conflict: 'Ktoś zmienił ten element. Odśwież i spróbuj ponownie.',
+      generic: 'Coś poszło nie tak. Spróbuj ponownie.',
+    },
     spaces: {
       switcher: {
         label: 'Przełącz przestrzeń',
@@ -57,11 +77,8 @@ export const commonResources = {
         errors: {
           nameRequired: 'Podaj nazwę.',
           nameTooLong: 'Nazwa może mieć najwyżej 100 znaków.',
-          nameInvalid: 'Nazwa jest nieprawidłowa.',
           slugInvalid:
             'Slug musi mieć 3–40 znaków: małe litery, cyfry i myślniki, zaczynać się literą i nie kończyć myślnikiem.',
-          slugTaken: 'Ten slug jest już zajęty.',
-          generic: 'Nie udało się utworzyć przestrzeni. Spróbuj ponownie.',
         },
       },
       notFound: {
@@ -104,6 +121,26 @@ export const commonResources = {
         maintenance: 'Maintenance',
       },
     },
+    errors: {
+      bad_request: 'The request is invalid.',
+      forbidden: 'You do not have permission to do that.',
+      internal_error: 'The server failed. Please try again.',
+      invalid_body: 'The request body is invalid.',
+      invalid_cursor: 'The pagination cursor is invalid.',
+      invalid_name: 'The name must be 1–{{max}} characters without control characters.',
+      invalid_slug:
+        'The slug must be 3–40 characters: lowercase letters, digits and hyphens, start with a letter and not end with a hyphen.',
+      invalid_subject: 'The subject is invalid.',
+      method_not_allowed: 'This method is not allowed.',
+      not_acceptable: 'No acceptable response format.',
+      not_found: 'The resource was not found.',
+      slug_taken: 'This slug is already taken.',
+      unauthenticated: 'Sign in to continue.',
+      unsupported_media_type: 'This media type is not supported.',
+      validation_failed: 'The form data is invalid.',
+      version_conflict: 'Someone changed this item. Refresh and try again.',
+      generic: 'Something went wrong. Please try again.',
+    },
     spaces: {
       switcher: {
         label: 'Switch space',
@@ -131,11 +168,8 @@ export const commonResources = {
         errors: {
           nameRequired: 'Enter a name.',
           nameTooLong: 'The name may be at most 100 characters long.',
-          nameInvalid: 'The name is invalid.',
           slugInvalid:
             'The slug must be 3–40 characters: lowercase letters, digits and hyphens, start with a letter and not end with a hyphen.',
-          slugTaken: 'This slug is already taken.',
-          generic: 'Could not create the space. Please try again.',
         },
       },
       notFound: {

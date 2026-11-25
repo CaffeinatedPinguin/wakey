@@ -3,16 +3,37 @@ export interface SpaceSummary {
   name: string
 }
 
-export interface SpaceFieldErrors {
-  name: boolean
-  slug: boolean
-}
-
 export interface SpaceFormValues {
   name: string
   slug: string
 }
 
-export type SpaceSubmitError = 'slug_taken' | 'generic' | null
+export const SpacesStatus = {
+  LOADING: 'loading',
+  READY: 'ready',
+  EMPTY: 'empty',
+  ERROR: 'error',
+} as const
+export type SpacesStatus = (typeof SpacesStatus)[keyof typeof SpacesStatus]
 
-export type SpacesStatus = 'loading' | 'ready' | 'empty' | 'error'
+export interface SpaceListState {
+  spaces: readonly SpaceSummary[]
+  currentSlug: string
+  currentName?: string | undefined
+  status: SpacesStatus
+  canCreate: boolean
+  hasMore?: boolean
+}
+
+export interface SpaceListActions {
+  onLoadMore?: (() => void) | undefined
+  onSelect: (slug: string) => void
+  onCreate: () => void
+  onRetry: () => void
+}
+
+export const SpaceSwitcherLayout = {
+  MENU: 'menu',
+  SHEET: 'sheet',
+} as const
+export type SpaceSwitcherLayout = (typeof SpaceSwitcherLayout)[keyof typeof SpaceSwitcherLayout]

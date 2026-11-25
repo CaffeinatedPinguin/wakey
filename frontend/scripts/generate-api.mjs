@@ -145,6 +145,111 @@ async function generateSchema(document) {
   return `${HEADER}${printed.replace(/\s+$/, '')}\n`
 }
 
+function upperSnake(value) {
+  return value
+    .replace(/([a-z0-9])([A-Z])/g, '$1_$2')
+    .replace(/[^A-Za-z0-9]+/g, '_')
+    .replace(/^_+|_+$/g, '')
+    .toUpperCase()
+}
+
+function quote(value) {
+  return `'${value.replaceAll('\\', '\\\\').replaceAll("'", "\\'")}'`
+}
+
+function stringEnumValues(schema) {
+  if (schema === null || typeof schema !== 'object' || !Array.isArray(schema.enum)) {
+    return undefined
+  }
+  const types = Array.isArray(schema.type) ? schema.type : [schema.type]
+  if (!types.includes('string') || !schema.enum.every((value) => typeof value === 'string')) {
+    return undefined
+  }
+  return [...schema.enum].sort()
+}
+
+function problemCodeValues(document) {
+  const schemas = document.components?.schemas ?? {}
+  return stringEnumValues(schemas.ProblemDetail?.properties?.code)
+}
+
+function generateEnums(document) {
+  const schemas = document.components?.schemas ?? {}
+  const enums = []
+  const problemCodes = problemCodeValues(document)
+  if (problemCodes !== undefined) {
+    enums.push({ name: 'ErrorCode', values: problemCodes })
+  }
+  for (const [name, schema] of Object.entries(schemas)) {
+    const values = stringEnumValues(schema)
+    if (values !== undefined) {
+      enums.push({ name, values })
+    }
+  }
+  enums.sort((left, right) => (left.name < right.name ? -1 : left.name > right.name ? 1 : 0))
+  const blocks = enums.map(({ name, values }) =>
+    [
+      `export const ${name} = {`,
+      ...values.map((value) => `  ${upperSnake(value)}: ${quote(value)},`),
+      '} as const',
+      '',
+      `export type ${name} = (typeof ${name})[keyof typeof ${name}]`,
+    ].join('\n'),
+  )
+  return `${HEADER}${blocks.join('\n\n')}\n`
+}
+
+function requestSchemaNames(operations) {
+  const names = new Set()
+  for (const { operation } of operations) {
+    const content = operation.requestBody?.content
+    if (content === null || typeof content !== 'object') {
+      continue
+    }
+    for (const media of Object.values(content)) {
+      const reference = media?.schema?.$ref
+      if (typeof reference === 'string') {
+        names.add(reference.slice(reference.lastIndexOf('/') + 1))
+      }
+    }
+  }
+  return names
+}
+
+function limitEntries(document, operations) {
+  const schemas = document.components?.schemas ?? {}
+  const entries = []
+  for (const schemaName of [...requestSchemaNames(operations)].sort()) {
+    const properties = schemas[schemaName]?.properties
+    if (properties === null || typeof properties !== 'object') {
+      continue
+    }
+    for (const propertyName of Object.keys(properties).sort()) {
+      const property = properties[propertyName]
+      const prefix = `${upperSnake(schemaName)}_${upperSnake(propertyName)}`
+      if (typeof property?.maxLength === 'number') {
+        entries.push({ name: `${prefix}_MAX_LENGTH`, value: String(property.maxLength) })
+      }
+      if (typeof property?.pattern === 'string') {
+        entries.push({ name: `${prefix}_PATTERN`, value: quote(property.pattern) })
+      }
+    }
+  }
+  return entries.sort((left, right) =>
+    left.name < right.name ? -1 : left.name > right.name ? 1 : 0,
+  )
+}
+
+function generateLimits(document, operations) {
+  const lines = limitEntries(document, operations).map(
+    ({ name, value }) => `export const ${name} = ${value}`,
+  )
+  if (lines.length === 0) {
+    return HEADER
+  }
+  return `${HEADER}${lines.join('\n')}\n`
+}
+
 async function generateAll(contractPath) {
   const raw = await readFile(contractPath, 'utf8')
   const document = JSON.parse(raw)
@@ -152,6 +257,8 @@ async function generateAll(contractPath) {
   const hasProblemDetail = document.components?.schemas?.ProblemDetail !== undefined
   return {
     'contract.ts': generateContract(operations),
+    'enums.ts': generateEnums(document),
+    'limits.ts': generateLimits(document, operations),
     'schema.ts': await generateSchema(document),
     'types.ts': generateTypes(document, operations, hasProblemDetail),
   }

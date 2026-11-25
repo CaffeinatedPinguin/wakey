@@ -20,20 +20,6 @@
         "required" : [ "name", "slug" ],
         "type" : "object"
       },
-      "CurrentUser" : {
-        "properties" : {
-          "admin" : {
-            "description" : "Whether the user is an instance administrator",
-            "type" : "boolean"
-          },
-          "subject" : {
-            "description" : "The OIDC subject of the authenticated user",
-            "type" : "string"
-          }
-        },
-        "required" : [ "admin", "subject" ],
-        "type" : "object"
-      },
       "CursorPageSpaceResponse" : {
         "properties" : {
           "items" : {
@@ -49,6 +35,20 @@
           }
         },
         "required" : [ "items", "nextCursor" ],
+        "type" : "object"
+      },
+      "MeResponse" : {
+        "properties" : {
+          "admin" : {
+            "description" : "Whether the user is an instance administrator",
+            "type" : "boolean"
+          },
+          "subject" : {
+            "description" : "The OIDC subject of the authenticated user",
+            "type" : "string"
+          }
+        },
+        "required" : [ "admin", "subject" ],
         "type" : "object"
       },
       "ProblemDetail" : {
@@ -165,7 +165,7 @@
             "content" : {
               "application/json" : {
                 "schema" : {
-                  "$ref" : "#/components/schemas/CurrentUser"
+                  "$ref" : "#/components/schemas/MeResponse"
                 }
               }
             },

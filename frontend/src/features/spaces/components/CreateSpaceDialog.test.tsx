@@ -4,6 +4,7 @@ import type { ReactElement } from 'react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { AppThemeProvider } from '../../../app/App'
 import i18n from '../../../app/i18n'
+import { ErrorCode } from '../../../shared/api/generated/enums'
 import { installMockApi } from '../../../test/mockApi'
 import type { MockRequest } from '../../../test/mockApi'
 import { CreateSpaceDialog } from './CreateSpaceDialog'
@@ -40,7 +41,7 @@ function slugInput(): HTMLInputElement {
 }
 
 beforeEach(() => {
-  installMockApi(() => ({ status: 500, data: { code: 'internal_error' } }))
+  installMockApi(() => ({ status: 500, data: { code: ErrorCode.INTERNAL_ERROR } }))
 })
 
 afterEach(async () => {
@@ -91,7 +92,13 @@ describe('create space dialog slug', () => {
 
 describe('create space dialog server errors', () => {
   it('a taken slug from the server is shown on the slug field', async () => {
-    installMockApi(() => ({ status: 409, data: { code: 'slug_taken' } }))
+    installMockApi(() => ({
+      status: 409,
+      data: {
+        code: ErrorCode.SLUG_TAKEN,
+        errors: [{ pointer: '/slug', code: ErrorCode.SLUG_TAKEN }],
+      },
+    }))
     renderDialog()
     fireEvent.change(nameInput(), { target: { value: 'Alpha' } })
 
@@ -99,15 +106,17 @@ describe('create space dialog server errors', () => {
 
     expect(await screen.findByText('Ten slug jest już zajęty.')).toBeDefined()
   })
+})
 
+describe('create space dialog server validation', () => {
   it('server validation errors are shown on the form fields', async () => {
     installMockApi(() => ({
       status: 400,
       data: {
-        code: 'validation_failed',
+        code: ErrorCode.VALIDATION_FAILED,
         errors: [
-          { code: 'invalid_name', pointer: '/name' },
-          { code: 'invalid_slug', pointer: '/slug' },
+          { code: ErrorCode.INVALID_NAME, pointer: '/name', params: { max: 100 } },
+          { code: ErrorCode.INVALID_SLUG, pointer: '/slug' },
         ],
       },
     }))
@@ -117,7 +126,9 @@ describe('create space dialog server errors', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Utwórz' }))
 
-    expect(await screen.findByText('Nazwa jest nieprawidłowa.')).toBeDefined()
+    expect(
+      await screen.findByText('Nazwa musi mieć 1–100 znaków bez znaków sterujących.'),
+    ).toBeDefined()
     expect(
       screen.getByText(
         'Slug musi mieć 3–40 znaków: małe litery, cyfry i myślniki, zaczynać się literą i nie kończyć myślnikiem.',

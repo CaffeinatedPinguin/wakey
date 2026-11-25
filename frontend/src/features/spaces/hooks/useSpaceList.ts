@@ -1,6 +1,7 @@
 import { useQueryClient } from '@tanstack/react-query'
 import { spacesQueryKeys, useSpaces } from '../api/spaces.queries'
-import type { SpaceSummary, SpacesStatus } from '../spaceTypes'
+import { SpacesStatus } from '../spaceTypes'
+import type { SpaceSummary } from '../spaceTypes'
 
 type SpacesQuery = ReturnType<typeof useSpaces>
 
@@ -18,12 +19,12 @@ function flattenSpaces(query: SpacesQuery): SpaceSummary[] {
 
 function spacesStatus(query: SpacesQuery): SpacesStatus {
   if (query.isPending) {
-    return 'loading'
+    return SpacesStatus.LOADING
   }
   if (query.isError) {
-    return 'error'
+    return SpacesStatus.ERROR
   }
-  return flattenSpaces(query).length === 0 ? 'empty' : 'ready'
+  return flattenSpaces(query).length === 0 ? SpacesStatus.EMPTY : SpacesStatus.READY
 }
 
 export function useSpaceList(): SpaceList {

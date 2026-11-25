@@ -1,7 +1,7 @@
 import { Skeleton, Text } from '@mantine/core'
 import type { ReactElement } from 'react'
 import { useTranslation } from 'react-i18next'
-import type { SpacesStatus } from '../spaceTypes'
+import { SpacesStatus } from '../spaceTypes'
 
 interface SwitcherTriggerProps {
   status: SpacesStatus
@@ -11,15 +11,15 @@ interface SwitcherTriggerProps {
 
 export function SwitcherTrigger({ status, name, compact }: SwitcherTriggerProps): ReactElement {
   const { t } = useTranslation()
-  if (status === 'loading') {
+  if (status === SpacesStatus.LOADING) {
     return (
       <Skeleton height="var(--app-type-metadata-line)" width="var(--app-space-96)" radius="xl" />
     )
   }
-  if (status === 'empty') {
+  if (status === SpacesStatus.EMPTY) {
     return <Text size="sm">{t('spaces.switcher.emptyLabel')}</Text>
   }
-  if (status === 'error') {
+  if (status === SpacesStatus.ERROR) {
     return <Text size="sm">{t('spaces.switcher.errorLabel')}</Text>
   }
   if (compact || name === undefined) {

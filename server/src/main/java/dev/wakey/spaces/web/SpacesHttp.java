@@ -1,4 +1,4 @@
-package dev.wakey.api.spaces;
+package dev.wakey.spaces.web;
 
 import dev.wakey.spaces.SpaceSlug;
 import dev.wakey.web.ApiException;
@@ -7,12 +7,15 @@ import dev.wakey.web.CommonError;
 import dev.wakey.web.CursorCodec;
 import java.net.URI;
 import org.jspecify.annotations.Nullable;
+import org.springframework.http.MediaType;
 import org.springframework.web.util.UriComponentsBuilder;
 
 /** The cursor and link helpers of the spaces HTTP surface. */
 final class SpacesHttp {
 
     static final String PATH = ApiPaths.API_V1 + "/spaces";
+
+    static final String JSON = MediaType.APPLICATION_JSON_VALUE;
 
     private SpacesHttp() {}
 

@@ -8,6 +8,11 @@ import { ColorSchemeToggle } from '../../shared/ui/ColorSchemeToggle'
 import { LanguageSwitch } from '../../shared/ui/LanguageSwitch'
 import { moreNavigation, navigationActiveOptions, navigationActiveStyle } from './panelNavigation'
 
+const LINK_ICON_SIZE = 18
+const LABEL_FONT_WEIGHT = 500
+const PREFERENCE_LABEL_SPACING = 4
+const ACTION_ICON_SIZE = 16
+
 interface PanelMoreDrawerProps {
   opened: boolean
   onClose: () => void
@@ -54,8 +59,8 @@ export function MoreSheetLinks({ onClose }: MoreSheetLinksProps): ReactElement {
           activeOptions={navigationActiveOptions(to)}
           onClick={onClose}
         >
-          <Icon size={18} />
-          <Text size="sm" fw={500}>
+          <Icon size={LINK_ICON_SIZE} />
+          <Text size="sm" fw={LABEL_FONT_WEIGHT}>
             {t(labelKey)}
           </Text>
         </Link>
@@ -70,13 +75,13 @@ function MoreSheetPreferences(): ReactElement {
   return (
     <>
       <Box>
-        <Text size="sm" fw={500} mb={4}>
+        <Text size="sm" fw={LABEL_FONT_WEIGHT} mb={PREFERENCE_LABEL_SPACING}>
           {t('common.language')}
         </Text>
         <LanguageSwitch />
       </Box>
       <Box>
-        <Text size="sm" fw={500} mb={4}>
+        <Text size="sm" fw={LABEL_FONT_WEIGHT} mb={PREFERENCE_LABEL_SPACING}>
           {t('common.theme')}
         </Text>
         <ColorSchemeToggle />
@@ -103,7 +108,7 @@ export function PanelMoreDrawer({ opened, onClose }: PanelMoreDrawerProps): Reac
         <MoreSheetPreferences />
         <Button
           variant="light"
-          leftSection={<IconLogout size={16} />}
+          leftSection={<IconLogout size={ACTION_ICON_SIZE} />}
           loading={logout.isPending}
           onClick={() => {
             logout.mutate()

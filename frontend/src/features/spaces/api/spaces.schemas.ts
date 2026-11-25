@@ -1,9 +1,10 @@
 import { z } from 'zod'
+import { SpaceRole } from '../../../shared/api/generated/enums'
 import type { GetSpaceResponse, ListSpacesResponse } from '../../../shared/api/generated/types'
 
 export const spaceSchema = z.object({
   name: z.string(),
-  role: z.enum(['EDITOR', 'VIEWER']).nullable(),
+  role: z.enum(SpaceRole).nullable(),
   slug: z.string(),
   version: z.number().int(),
 }) satisfies z.ZodType<GetSpaceResponse>

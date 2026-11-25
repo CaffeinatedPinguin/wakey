@@ -3,6 +3,7 @@ package dev.wakey.spaces;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.catchThrowable;
 
+import dev.wakey.security.CurrentUser;
 import dev.wakey.spaces.internal.SpaceMemberEntity;
 import dev.wakey.spaces.internal.SpaceMemberRepository;
 import dev.wakey.testsupport.PostgresIntegrationTest;
@@ -31,13 +32,13 @@ import org.springframework.session.jdbc.JdbcIndexedSessionRepository;
 
 class SpaceServiceIntegrationTest extends PostgresIntegrationTest {
 
-    private static final SpacePrincipal ADMIN = new SpacePrincipal("fixture-admin", true);
+    private static final CurrentUser ADMIN = new CurrentUser("fixture-admin", true);
 
-    private static final SpacePrincipal EDITOR = new SpacePrincipal("fixture-editor", false);
+    private static final CurrentUser EDITOR = new CurrentUser("fixture-editor", false);
 
-    private static final SpacePrincipal VIEWER = new SpacePrincipal("fixture-viewer", false);
+    private static final CurrentUser VIEWER = new CurrentUser("fixture-viewer", false);
 
-    private static final SpacePrincipal STRANGER = new SpacePrincipal("fixture-stranger", false);
+    private static final CurrentUser STRANGER = new CurrentUser("fixture-stranger", false);
 
     @Test
     void adminCreatesASpaceAndPutIsIdempotent() {
@@ -181,7 +182,7 @@ class SpaceServiceIntegrationTest extends PostgresIntegrationTest {
         String ownSlug = ownSpace.slug();
         String externalForeignSlug = foreignSpace.slug();
         String subject = uniqueSubject("managed");
-        SpacePrincipal member = new SpacePrincipal(subject, false);
+        CurrentUser member = new CurrentUser(subject, false);
 
         // when
         service.addMember(EDITOR, ownSlug, subject, SpaceRole.VIEWER);
@@ -369,7 +370,7 @@ class SpaceServiceIntegrationTest extends PostgresIntegrationTest {
 
         // when
         service.addMember(ADMIN, space.slug(), subject, SpaceRole.VIEWER);
-        SpacePrincipal member = new SpacePrincipal(subject, false);
+        CurrentUser member = new CurrentUser(subject, false);
         List<SpaceView> visible = service.listVisible(member, null, 100);
 
         // then

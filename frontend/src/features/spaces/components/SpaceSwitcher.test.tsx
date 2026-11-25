@@ -4,6 +4,8 @@ import i18n from '../../../app/i18n'
 import { coreTokens } from '../../../shared/theme'
 import { renderWithProviders } from '../../../test/providers'
 import { installViewport } from '../../../test/viewport'
+import { SpaceSwitcherLayout, SpacesStatus } from '../spaceTypes'
+import type { SpaceListActions, SpaceListState } from '../spaceTypes'
 import { DesktopSwitcher, MobileSwitcher } from './SpaceSwitcher'
 import type { SwitcherListProps } from './SpaceSwitcher'
 
@@ -16,23 +18,37 @@ const spaces = [
   { slug: 'staging', name: 'Staging' },
 ]
 
+interface SwitcherOverrides {
+  list?: Partial<SpaceListState>
+  actions?: Partial<SpaceListActions>
+}
+
 function renderSwitcher(
-  overrides: Partial<SwitcherListProps> = {},
-  layout: 'menu' | 'sheet' = 'menu',
+  overrides: SwitcherOverrides = {},
+  layout: SpaceSwitcherLayout = SpaceSwitcherLayout.MENU,
 ): SwitcherListProps {
   const props: SwitcherListProps = {
-    spaces,
-    currentSlug: 'produkcja',
-    status: 'ready',
-    canCreate: true,
-    hasMore: false,
-    onSelect: vi.fn(),
-    onCreate: vi.fn(),
-    onRetry: vi.fn(),
-    ...overrides,
+    list: {
+      spaces,
+      currentSlug: 'produkcja',
+      status: SpacesStatus.READY,
+      canCreate: true,
+      hasMore: false,
+      ...overrides.list,
+    },
+    actions: {
+      onSelect: vi.fn(),
+      onCreate: vi.fn(),
+      onRetry: vi.fn(),
+      ...overrides.actions,
+    },
   }
   renderWithProviders(
-    layout === 'menu' ? <DesktopSwitcher {...props} /> : <MobileSwitcher {...props} />,
+    layout === SpaceSwitcherLayout.MENU ? (
+      <DesktopSwitcher {...props} />
+    ) : (
+      <MobileSwitcher {...props} />
+    ),
   )
   return props
 }
@@ -70,12 +86,12 @@ describe('space switcher desktop', () => {
 
     fireEvent.click(await screen.findByRole('menuitem', { name: 'Staging' }))
 
-    expect(props.onSelect).toHaveBeenCalledWith('staging')
-    expect(props.onSelect).toHaveBeenCalledTimes(1)
+    expect(props.actions.onSelect).toHaveBeenCalledWith('staging')
+    expect(props.actions.onSelect).toHaveBeenCalledTimes(1)
   })
 
   it('the create action is hidden when the user cannot create spaces', async () => {
-    renderSwitcher({ canCreate: false })
+    renderSwitcher({ list: { canCreate: false } })
     openSwitcher()
 
     expect(await screen.findByRole('menuitem', { name: 'Produkcja' })).toBeDefined()
@@ -86,7 +102,7 @@ describe('space switcher desktop', () => {
 
 describe('space switcher states', () => {
   it('the space switcher shows a skeleton while loading', async () => {
-    renderSwitcher({ status: 'loading', spaces: [] })
+    renderSwitcher({ list: { status: SpacesStatus.LOADING, spaces: [] } })
 
     const trigger = screen.getByRole('button', { name: 'Przełącz przestrzeń' })
     expect(trigger.getAttribute('aria-busy')).toBe('true')
@@ -97,7 +113,7 @@ describe('space switcher states', () => {
   })
 
   it('the space switcher explains the empty state differently for admins and others', async () => {
-    renderSwitcher({ status: 'empty', spaces: [], canCreate: true })
+    renderSwitcher({ list: { status: SpacesStatus.EMPTY, spaces: [], canCreate: true } })
     openSwitcher()
     const adminMessage = await screen.findByText(
       'Nie masz jeszcze żadnej przestrzeni. Utwórz pierwszą, żeby zacząć.',
@@ -106,7 +122,7 @@ describe('space switcher states', () => {
     expect(screen.getByText('Utwórz przestrzeń')).toBeDefined()
 
     cleanup()
-    renderSwitcher({ status: 'empty', spaces: [], canCreate: false })
+    renderSwitcher({ list: { status: SpacesStatus.EMPTY, spaces: [], canCreate: false } })
     openSwitcher()
     const memberMessage = await screen.findByText(
       'Nie masz dostępu do żadnej przestrzeni. Poproś administratora instancji o zaproszenie.',
@@ -119,7 +135,7 @@ describe('space switcher states', () => {
 
 describe('space switcher theme tokens', () => {
   it('the switcher sizes controls from theme tokens', async () => {
-    renderSwitcher({ status: 'loading', spaces: [] })
+    renderSwitcher({ list: { status: SpacesStatus.LOADING, spaces: [] } })
     const trigger = screen.getByRole('button', { name: 'Przełącz przestrzeń' })
     const triggerSkeleton = trigger.querySelector<HTMLElement>('[style*="--skeleton-width"]')
 
@@ -142,26 +158,26 @@ describe('space switcher theme tokens', () => {
 
 describe('space switcher error', () => {
   it('the space switcher offers a retry after an error', async () => {
-    const props = renderSwitcher({ status: 'error', spaces: [] })
+    const props = renderSwitcher({ list: { status: SpacesStatus.ERROR, spaces: [] } })
     openSwitcher()
 
     fireEvent.click(await screen.findByRole('button', { name: 'Spróbuj ponownie' }))
 
-    expect(props.onRetry).toHaveBeenCalledTimes(1)
+    expect(props.actions.onRetry).toHaveBeenCalledTimes(1)
   })
 })
 
 describe('space switcher pagination', () => {
   it('the switcher offers to load more spaces when there is another page', async () => {
     const onLoadMore = vi.fn()
-    renderSwitcher({ hasMore: true, onLoadMore })
+    renderSwitcher({ list: { hasMore: true }, actions: { onLoadMore } })
     openSwitcher()
 
     fireEvent.click(await screen.findByRole('button', { name: 'Wczytaj więcej' }))
     expect(onLoadMore).toHaveBeenCalledTimes(1)
 
     cleanup()
-    renderSwitcher({ hasMore: true, onLoadMore }, 'sheet')
+    renderSwitcher({ list: { hasMore: true }, actions: { onLoadMore } }, SpaceSwitcherLayout.SHEET)
     openSwitcher()
 
     fireEvent.click(await screen.findByRole('button', { name: 'Wczytaj więcej' }))
@@ -172,7 +188,7 @@ describe('space switcher pagination', () => {
 describe('space switcher mobile', () => {
   it('on mobile the switcher opens as a sheet with touch targets of 44 px', async () => {
     installViewport(MOBILE_WIDTH)
-    renderSwitcher({}, 'sheet')
+    renderSwitcher({}, SpaceSwitcherLayout.SHEET)
     openSwitcher()
 
     const sheet = await screen.findByRole('dialog', { name: 'Przestrzeń' })

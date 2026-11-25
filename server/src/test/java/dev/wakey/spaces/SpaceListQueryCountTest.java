@@ -2,6 +2,7 @@ package dev.wakey.spaces;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import dev.wakey.security.CurrentUser;
 import dev.wakey.testsupport.PostgresIntegrationTest;
 import java.util.List;
 import java.util.UUID;
@@ -16,7 +17,7 @@ import org.springframework.jdbc.datasource.DriverManagerDataSource;
 @Import(SpaceListQueryCountTest.CountingDataConfiguration.class)
 class SpaceListQueryCountTest extends PostgresIntegrationTest {
 
-    private static final SpacePrincipal ADMIN = new SpacePrincipal("query-count-admin", true);
+    private static final CurrentUser ADMIN = new CurrentUser("query-count-admin", true);
 
     @Test
     void listingAPageRunsAtMostTwoQueries() {

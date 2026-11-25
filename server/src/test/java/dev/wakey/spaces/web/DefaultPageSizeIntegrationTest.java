@@ -1,10 +1,10 @@
-package dev.wakey.api.spaces;
+package dev.wakey.spaces.web;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.oidcLogin;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 
-import dev.wakey.spaces.SpacePrincipal;
+import dev.wakey.security.CurrentUser;
 import dev.wakey.spaces.SpaceService;
 import dev.wakey.testsupport.SecurityIntegrationTest;
 import dev.wakey.web.ApiProperties;
@@ -60,7 +60,7 @@ class DefaultPageSizeIntegrationTest extends SecurityIntegrationTest {
     }
 
     private void seedSpace(String slug) {
-        SpacePrincipal admin = new SpacePrincipal("fixture-admin", true);
+        CurrentUser admin = new CurrentUser("fixture-admin", true);
         bean(SpaceService.class).put(admin, slug, "Default page space");
     }
 

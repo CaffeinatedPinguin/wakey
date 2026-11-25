@@ -1,6 +1,26 @@
 import axios from 'axios'
 import { z } from 'zod'
+import { ErrorCode } from './generated/enums'
 import type { ProblemDetail } from './generated/types'
+
+// Codes the client itself produces; the server never sends them.
+export const ClientErrorCode = {
+  UNKNOWN: 'unknown',
+  NETWORK: 'network',
+} as const
+export type ClientErrorCode = (typeof ClientErrorCode)[keyof typeof ClientErrorCode]
+
+export type ApiErrorCode = ErrorCode | ClientErrorCode
+
+const KNOWN_ERROR_CODES: readonly string[] = Object.values(ErrorCode)
+
+function isErrorCode(value: string): value is ErrorCode {
+  return KNOWN_ERROR_CODES.includes(value)
+}
+
+function errorCodeOf(value: string): ApiErrorCode {
+  return isErrorCode(value) ? value : ClientErrorCode.UNKNOWN
+}
 
 // RFC 9457 Problem Details as the server sends them (ADR 0006): the standard
 // fields plus the `code` and `errors[]` extensions. The schema is checked
@@ -15,11 +35,11 @@ export const problemFieldSchema = z.object({
 // without `| undefined`, which `satisfies` needs under exactOptionalPropertyTypes.
 // `code` stays a plain string here: the generated type lists the codes this
 // client knows, but a newer server may send one it does not.
-export const problemSchema = z.object({
+export const problemDetailSchema = z.object({
   title: z.string().default(''),
   status: z.number().int().default(0),
   detail: z.string().default(''),
-  code: z.string().default('unknown'),
+  code: z.string().default(ClientErrorCode.UNKNOWN),
   errors: z.array(problemFieldSchema).default([]),
 }) satisfies z.ZodType<Omit<ProblemDetail, 'code'> & { code: string }>
 
@@ -27,7 +47,7 @@ export type ProblemField = z.infer<typeof problemFieldSchema>
 
 export interface ApiErrorInit {
   status?: number | undefined
-  code: string
+  code: ApiErrorCode
   errors?: ProblemField[] | undefined
   detail?: string | undefined
 }
@@ -36,7 +56,7 @@ export interface ApiErrorInit {
 // stable machine code the screens translate; `errors` describes invalid fields.
 export class ApiError extends Error {
   readonly status: number | undefined
-  readonly code: string
+  readonly code: ApiErrorCode
   readonly errors: ProblemField[]
   readonly detail: string | undefined
 
@@ -68,8 +88,8 @@ export function isNotFoundError(error: unknown): boolean {
   return statusOf(error) === 404
 }
 
-function parseProblem(body: unknown): z.infer<typeof problemSchema> | undefined {
-  const result = problemSchema.safeParse(body)
+function parseProblem(body: unknown): z.infer<typeof problemDetailSchema> | undefined {
+  const result = problemDetailSchema.safeParse(body)
   return result.success ? result.data : undefined
 }
 
@@ -81,15 +101,15 @@ export function toApiError(error: unknown): ApiError {
     return error
   }
   if (!axios.isAxiosError<unknown>(error)) {
-    return new ApiError({ code: 'unknown' })
+    return new ApiError({ code: ClientErrorCode.UNKNOWN })
   }
   if (error.response === undefined) {
-    return new ApiError({ code: 'network' })
+    return new ApiError({ code: ClientErrorCode.NETWORK })
   }
   const problem = parseProblem(error.response.data)
   return new ApiError({
     status: error.response.status,
-    code: problem?.code ?? 'unknown',
+    code: errorCodeOf(problem?.code ?? ClientErrorCode.UNKNOWN),
     errors: problem?.errors ?? [],
     detail: problem?.detail,
   })

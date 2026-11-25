@@ -1,4 +1,4 @@
 @NullMarked
-package dev.wakey.api.spaces;
+package dev.wakey.spaces.web;
 
 import org.jspecify.annotations.NullMarked;

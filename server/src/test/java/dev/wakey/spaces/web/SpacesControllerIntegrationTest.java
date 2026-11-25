@@ -1,4 +1,4 @@
-package dev.wakey.api.spaces;
+package dev.wakey.spaces.web;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
@@ -8,10 +8,10 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 
+import dev.wakey.security.CurrentUser;
 import dev.wakey.spaces.PutResult;
 import dev.wakey.spaces.Space;
 import dev.wakey.spaces.SpaceError;
-import dev.wakey.spaces.SpacePrincipal;
 import dev.wakey.spaces.SpaceRole;
 import dev.wakey.spaces.SpaceService;
 import dev.wakey.testsupport.SecurityIntegrationTest;
@@ -682,8 +682,8 @@ class SpacesControllerIntegrationTest extends SecurityIntegrationTest {
         return oidcLogin().idToken(token -> token.subject(subject));
     }
 
-    private static SpacePrincipal fixtureAdmin() {
-        return new SpacePrincipal("fixture-admin", true);
+    private static CurrentUser fixtureAdmin() {
+        return new CurrentUser("fixture-admin", true);
     }
 
     private static String nameBody(String name) {

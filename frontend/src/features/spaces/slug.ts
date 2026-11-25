@@ -1,4 +1,6 @@
-const SLUG_PATTERN = /^[a-z][a-z0-9-]{1,38}[a-z0-9]$/
+import { CREATE_SPACE_REQUEST_SLUG_PATTERN } from '../../shared/api/generated/limits'
+
+const SLUG_PATTERN = new RegExp(CREATE_SPACE_REQUEST_SLUG_PATTERN)
 const SLUG_MAX_LENGTH = 40
 
 // NFD splits every Polish letter into a base letter and a combining mark,

@@ -125,6 +125,25 @@ class OpenApiContractTest extends SecurityIntegrationTest {
     }
 
     @Test
+    void theContractStillHasTheSpaceRoleAsANullableNamedSchema() throws Exception {
+        // given
+        JsonNode document = MAPPER.readTree(generatedContract());
+        JsonNode schemas = document.path("components").path("schemas");
+        JsonNode role = schemas.path("SpaceResponse").path("properties").path("role");
+        JsonNode spaceRole = schemas.path("SpaceRole");
+
+        // when
+        String roleReference = role.path("$ref").asString();
+        List<String> spaceRoleType = valuesOf(spaceRole.path("type"));
+        List<String> roleType = valuesOf(role.path("type"));
+
+        // then
+        assertThat(roleReference).isEqualTo("#/components/schemas/SpaceRole");
+        assertThat(spaceRoleType).contains("string", "null");
+        assertThat(roleType).contains("null");
+    }
+
+    @Test
     void theSlugPathParameterHasThePatternInTheContract() throws Exception {
         // given
         JsonNode document = MAPPER.readTree(generatedContract());

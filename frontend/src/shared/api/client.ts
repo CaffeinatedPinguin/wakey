@@ -1,8 +1,8 @@
 import axios from 'axios'
 import type { AxiosInstance } from 'axios'
-import { ApiError, toApiError } from './problem'
+import { ApiError, ClientErrorCode, toApiError } from './apiError'
 
-export { isNotFoundError, isUnauthorizedError } from './problem'
+export { isNotFoundError, isUnauthorizedError } from './apiError'
 
 const NETWORK_RETRY_LIMIT = 2
 
@@ -41,7 +41,7 @@ export function shouldRetryRequest(failureCount: number, error: unknown): boolea
 
 function isNetworkError(error: unknown): boolean {
   if (error instanceof ApiError) {
-    return error.code === 'network'
+    return error.code === ClientErrorCode.NETWORK
   }
   return axios.isAxiosError(error) && error.response === undefined
 }

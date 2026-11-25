@@ -1,6 +1,8 @@
 import type { CSSProperties } from 'react'
 import type { SpaceSummary } from '../spaceTypes'
 
+const AVATAR_FONT_WEIGHT = 600
+
 export const touchStyle: CSSProperties = { minHeight: 'var(--app-size-control-touch)' }
 
 export const sheetStyles = {
@@ -34,7 +36,7 @@ export const avatarStyle: CSSProperties = {
   borderRadius: 'var(--app-radius-control)',
   background: 'var(--app-color-primary-bg)',
   color: 'var(--app-color-on-primary)',
-  fontWeight: 600,
+  fontWeight: AVATAR_FONT_WEIGHT,
 }
 
 export function currentName(

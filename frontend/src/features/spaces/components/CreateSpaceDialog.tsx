@@ -19,14 +19,12 @@ function SpaceFormFields({ spaceForm }: { spaceForm: CreateSpaceForm }): ReactEl
       <TextInput
         label={t('spaces.create.name')}
         {...form.getInputProps('name')}
-        error={spaceForm.nameError}
         onChange={spaceForm.onNameChange}
       />
       <TextInput
         label={t('spaces.create.slug')}
         description={t('spaces.create.slugHint')}
         {...form.getInputProps('slug')}
-        error={spaceForm.slugError}
         onChange={spaceForm.onSlugChange}
       />
     </>
@@ -67,9 +65,9 @@ export function CreateSpaceDialog({
         }}
       >
         <Stack gap="md">
-          {spaceForm.submitError === 'generic' ? (
-            <Alert color="danger">{t('spaces.create.errors.generic')}</Alert>
-          ) : null}
+          {spaceForm.formError === null ? null : (
+            <Alert color="danger">{spaceForm.formError}</Alert>
+          )}
           <SpaceFormFields spaceForm={spaceForm} />
           <SpaceDialogActions isPending={spaceForm.isPending} />
         </Stack>

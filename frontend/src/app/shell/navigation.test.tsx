@@ -1,5 +1,6 @@
 import { cleanup, fireEvent, screen, waitFor, within } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
+import { ErrorCode } from '../../shared/api/generated/enums'
 import { appConfig } from '../../shared/config'
 import { signedInUser, unauthorizedBody } from '../../test/data'
 import { installMockApi } from '../../test/mockApi'
@@ -20,7 +21,7 @@ function handleRequest(request: MockRequest): MockReply {
       ? { status: 200, data: signedInUser }
       : { status: meStatus, data: unauthorizedBody }
   }
-  return { status: 404, data: { code: 'not_found' } }
+  return { status: 404, data: { code: ErrorCode.NOT_FOUND } }
 }
 
 function linkNames(container: HTMLElement): string[] {
