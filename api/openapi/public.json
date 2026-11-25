@@ -300,6 +300,19 @@
         },
         "type" : "object"
       },
+      "PutSpacePlanRequest" : {
+        "description" : "The plan to assign to a space",
+        "properties" : {
+          "plan" : {
+            "description" : "A configured plan name",
+            "example" : "small",
+            "minLength" : 1,
+            "type" : "string"
+          }
+        },
+        "required" : [ "plan" ],
+        "type" : "object"
+      },
       "PutSpaceRequest" : {
         "description" : "The desired state of a space",
         "properties" : {
@@ -312,6 +325,19 @@
           }
         },
         "required" : [ "name" ],
+        "type" : "object"
+      },
+      "SetSpaceSettingRequest" : {
+        "description" : "The desired value of a space setting",
+        "properties" : {
+          "value" : {
+            "description" : "The desired value",
+            "example" : "60",
+            "minLength" : 1,
+            "type" : "string"
+          }
+        },
+        "required" : [ "value" ],
         "type" : "object"
       },
       "SpaceResponse" : {
@@ -345,6 +371,33 @@
           }
         },
         "required" : [ "admin", "name", "role", "slug", "version" ],
+        "type" : "object"
+      },
+      "SpaceSettingResponse" : {
+        "description" : "One effective space setting",
+        "properties" : {
+          "key" : {
+            "description" : "The stable setting key",
+            "example" : "check.interval",
+            "type" : "string"
+          },
+          "planName" : {
+            "description" : "The plan the value was resolved against",
+            "example" : "small",
+            "type" : "string"
+          },
+          "source" : {
+            "description" : "Where the effective value comes from",
+            "enum" : [ "SPACE", "PLAN", "INSTANCE", "DEFAULT" ],
+            "type" : "string"
+          },
+          "value" : {
+            "description" : "The effective value",
+            "example" : "60",
+            "type" : "string"
+          }
+        },
+        "required" : [ "key", "planName", "source", "value" ],
         "type" : "object"
       },
       "StateCountsResponse" : {
@@ -1345,6 +1398,278 @@
         },
         "summary" : "Resume monitoring of a check",
         "tags" : [ "checks-write-controller" ]
+      }
+    },
+    "/api/v1/spaces/{slug}/plan" : {
+      "put" : {
+        "operationId" : "putSpacePlan",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "slug",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/PutSpacePlanRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "204" : {
+            "description" : "The plan was assigned."
+          },
+          "400" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description" : "The plan is not configured on this instance."
+          },
+          "401" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description" : "Authentication is required."
+          },
+          "403" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description" : "Only an administrator can assign a plan."
+          },
+          "404" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description" : "The space was not found."
+          }
+        },
+        "summary" : "Assign a plan to a space idempotently",
+        "tags" : [ "settings-controller" ]
+      }
+    },
+    "/api/v1/spaces/{slug}/settings" : {
+      "get" : {
+        "operationId" : "getSpaceSettings",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "slug",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "items" : {
+                    "$ref" : "#/components/schemas/SpaceSettingResponse"
+                  },
+                  "type" : "array"
+                }
+              }
+            },
+            "description" : "OK"
+          },
+          "400" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description" : "The space plan or a setting is invalid."
+          },
+          "401" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description" : "Authentication is required."
+          },
+          "404" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description" : "The space was not found."
+          }
+        },
+        "summary" : "Read the effective settings of a space",
+        "tags" : [ "settings-controller" ]
+      }
+    },
+    "/api/v1/spaces/{slug}/settings/{key}" : {
+      "delete" : {
+        "operationId" : "deleteSpaceSetting",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "slug",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "in" : "path",
+          "name" : "key",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "204" : {
+            "description" : "The override was removed."
+          },
+          "400" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description" : "The setting key is unknown."
+          },
+          "401" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description" : "Authentication is required."
+          },
+          "403" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description" : "The caller cannot change the settings of this space."
+          },
+          "404" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description" : "The space was not found."
+          }
+        },
+        "summary" : "Reset a space setting to the plan value",
+        "tags" : [ "settings-controller" ]
+      },
+      "put" : {
+        "operationId" : "putSpaceSetting",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "slug",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "in" : "path",
+          "name" : "key",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/SetSpaceSettingRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "204" : {
+            "description" : "The setting was stored."
+          },
+          "400" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description" : "The value is outside the plan or has an invalid format."
+          },
+          "401" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description" : "Authentication is required."
+          },
+          "403" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description" : "The caller cannot change the settings of this space."
+          },
+          "404" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description" : "The space was not found."
+          }
+        },
+        "summary" : "Set a space setting within the plan",
+        "tags" : [ "settings-controller" ]
       }
     }
   },

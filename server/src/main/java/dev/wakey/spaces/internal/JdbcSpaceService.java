@@ -13,6 +13,7 @@ import dev.wakey.spaces.SpaceSlug;
 import dev.wakey.spaces.SpaceView;
 import dev.wakey.spaces.UserSessions;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
@@ -27,16 +28,20 @@ class JdbcSpaceService implements SpaceService {
     private static final int MAX_NAME_LENGTH = 100;
 
     private static final RowMapper<Space> SPACE_MAPPER = (rs, unusedRowNum) -> new Space(
-            rs.getObject("id", UUID.class), rs.getString("slug"), rs.getString("name"), rs.getLong("version"));
+            rs.getObject("id", UUID.class),
+            rs.getString("slug"),
+            rs.getString("name"),
+            rs.getString("plan_name"),
+            rs.getLong("version"));
 
     private static final String FIND_SPACE_SQL = """
-            SELECT id, slug, name, version
+            SELECT id, slug, name, plan_name, version
             FROM space
             WHERE slug = :slug
             """;
 
     private static final String VIEW_SPACE_SQL = """
-            SELECT s.id, s.slug, s.name, s.version, m.role
+            SELECT s.id, s.slug, s.name, s.plan_name, s.version, m.role
             FROM space s
             LEFT JOIN space_member m ON m.space_id = s.id AND m.subject = :subject
             WHERE s.slug = :slug
@@ -55,8 +60,14 @@ class JdbcSpaceService implements SpaceService {
             WHERE slug = :slug
             """;
 
+    private static final String ASSIGN_PLAN_SQL = """
+            UPDATE space
+            SET plan_name = :planName, version = version + 1, updated_at = CURRENT_TIMESTAMP
+            WHERE slug = :slug
+            """;
+
     private static final String LIST_ALL_SPACES_SQL = """
-            SELECT s.id, s.slug, s.name, s.version, m.role
+            SELECT s.id, s.slug, s.name, s.plan_name, s.version, m.role
             FROM space s
             LEFT JOIN space_member m ON m.space_id = s.id AND m.subject = :subject
             WHERE s.slug > :afterSlug
@@ -65,7 +76,7 @@ class JdbcSpaceService implements SpaceService {
             """;
 
     private static final String LIST_MEMBER_SPACES_SQL = """
-            SELECT s.id, s.slug, s.name, s.version, m.role
+            SELECT s.id, s.slug, s.name, s.plan_name, s.version, m.role
             FROM space s
             JOIN space_member m ON m.space_id = s.id
             WHERE m.subject = :subject AND s.slug > :afterSlug
@@ -187,6 +198,22 @@ class JdbcSpaceService implements SpaceService {
         sessions.invalidateAll(subject);
     }
 
+    @Override
+    public void assignPlan(SpacePrincipal actor, String slug, @Nullable String planName) {
+        Space space = requireManageableSpace(actor, slug);
+        requireAdmin(actor);
+        if (!Objects.equals(space.planName(), planName)) {
+            updatePlan(space.slug(), planName);
+        }
+    }
+
+    private void updatePlan(String slug, @Nullable String planName) {
+        jdbc.sql(ASSIGN_PLAN_SQL)
+                .param("planName", planName)
+                .param("slug", slug)
+                .update();
+    }
+
     private int insertSpaceIfAbsent(String slug, String name) {
         return jdbc.sql(INSERT_SPACE_IF_ABSENT_SQL)
                 .param("id", UUID.randomUUID())
@@ -243,6 +270,7 @@ class JdbcSpaceService implements SpaceService {
                     rs.getObject("id", UUID.class),
                     rs.getString("slug"),
                     rs.getString("name"),
+                    rs.getString("plan_name"),
                     rs.getLong("version"),
                     admin,
                     role);

@@ -45,6 +45,26 @@ public final class PlanCatalog {
         return plan;
     }
 
+    /** Checks that a plan exists and returns its name; an unknown name is a domain error. */
+    public String requireExisting(String planName) {
+        plan(planName);
+        return planName;
+    }
+
+    /** The name of the configured default plan; a space without an assigned plan resolves to it. */
+    public String defaultPlanName() {
+        return plans.entrySet().stream()
+                .filter(entry -> entry.getValue().defaultPlan())
+                .map(Map.Entry::getKey)
+                .findFirst()
+                .orElseThrow();
+    }
+
+    /** Resolves an assigned plan name; a null name means the instance default plan. */
+    public String resolvePlanName(@Nullable String planName) {
+        return planName == null ? defaultPlanName() : planName;
+    }
+
     /** The plan value of a setting: the bound associated with its key, when the plan defines it. */
     public @Nullable String planValue(PlanProperties plan, SettingKey key) {
         return number(bound(plan, key));

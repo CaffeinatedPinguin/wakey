@@ -38,4 +38,10 @@ public interface SpaceService {
 
     /** Removes a member and invalidates that user's sessions. */
     void removeMember(SpacePrincipal actor, String slug, String subject);
+
+    /**
+     * Assigns a plan to a space; only an application admin may call it. Repeating the current plan
+     * changes nothing, while {@code null} restores the instance default plan.
+     */
+    void assignPlan(SpacePrincipal actor, String slug, @Nullable String planName);
 }
