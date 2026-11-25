@@ -1,3 +1,7 @@
+/** The two colour schemes every token set is composed for. */
+export const ColorScheme = { LIGHT: 'light', DARK: 'dark' } as const
+export type ColorScheme = (typeof ColorScheme)[keyof typeof ColorScheme]
+
 /** CSS custom property map: name → value. */
 export type TokenMap = Readonly<Record<`--${string}`, string>>
 

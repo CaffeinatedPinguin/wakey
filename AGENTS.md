@@ -29,6 +29,7 @@ Domain: backend and frontend (the maintainer's generic rules live outside this r
 - Keep server modules separable: roles (`wakey.roles`) talk only through the queue port and the database, never shared in-memory state (ADR 0005).
 - Names: root package and `groupId` `dev.wakey`, configuration prefix `wakey.*` (`WAKEY_*`), license AGPL-3.0-or-later (ADR 0002).
 - Simple arguments: a call argument carries at most one method call; extract a longer expression into a named variable (ADR 0007).
+- Closed sets of strings in the frontend (states, roles, schemes, error codes) are one `as const` object with a same-named type, never an inline `'a' | 'b'` union or a TypeScript `enum`; lint enforces it (ADR 0007, "Zamknięte zbiory wartości").
 - A rule from an ADR that can be checked statically becomes an ArchUnit or lint rule, not a review comment.
 - Colours, sizes, radius and typography only from `--app-*` tokens or the Mantine theme (lint guards hex and px); a state is always `Badge color="<state>"` + icon + text, never colour alone; UI text goes through i18n.
 - A screen is built from its accepted mockup in `docs/specs/screens/`; with no mockup, the stage's mockup wave (see `docs/specs/roadmap.md`) comes first.

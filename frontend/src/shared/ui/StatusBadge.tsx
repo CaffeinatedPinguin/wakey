@@ -8,19 +8,18 @@ import {
 } from '@tabler/icons-react'
 import type { ComponentType, ReactElement } from 'react'
 import { useTranslation } from 'react-i18next'
-
-export type StatusState = 'up' | 'degraded' | 'down' | 'unknown' | 'maintenance'
+import { StatusState } from './statusState'
 
 interface StatusIconProps {
   size?: number
 }
 
 const stateIcons: Record<StatusState, ComponentType<StatusIconProps>> = {
-  up: IconCircleCheck,
-  degraded: IconAlertTriangle,
-  down: IconOctagon,
-  unknown: IconHelpCircle,
-  maintenance: IconTool,
+  [StatusState.UP]: IconCircleCheck,
+  [StatusState.DEGRADED]: IconAlertTriangle,
+  [StatusState.DOWN]: IconOctagon,
+  [StatusState.UNKNOWN]: IconHelpCircle,
+  [StatusState.MAINTENANCE]: IconTool,
 }
 
 interface StatusBadgeProps {

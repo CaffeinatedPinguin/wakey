@@ -3,7 +3,7 @@ import { contrastRatio } from './color'
 import { composeTokens } from './tokens/compose'
 import { DEFAULT_BRAND, type BrandInput } from './tokens/brand'
 import { resolveToken } from './test/resolve'
-import type { TokenMap } from './tokens/types'
+import { ColorScheme, type TokenMap } from './tokens/types'
 
 const BRANDS = ['#0EA5E9', '#FACC15', '#16A34A', '#111111', '#E11D48', '#FFFFFF']
 
@@ -17,7 +17,7 @@ const ACCENT_BACKGROUNDS = [
   '--app-color-selection-hover',
 ]
 
-function textFailures(brand: BrandInput, scheme: 'light' | 'dark', vars: TokenMap): string[] {
+function textFailures(brand: BrandInput, scheme: ColorScheme, vars: TokenMap): string[] {
   const failures: string[] = []
   for (const background of ACCENT_BACKGROUNDS) {
     const bg = resolveToken(vars, background as `--${string}`)
@@ -30,7 +30,7 @@ function textFailures(brand: BrandInput, scheme: 'light' | 'dark', vars: TokenMa
   return failures
 }
 
-function buttonFailures(brand: BrandInput, scheme: 'light' | 'dark', vars: TokenMap): string[] {
+function buttonFailures(brand: BrandInput, scheme: ColorScheme, vars: TokenMap): string[] {
   const buttons = [
     '--app-color-primary-bg',
     '--app-color-primary-hover',
@@ -50,7 +50,7 @@ function buttonFailures(brand: BrandInput, scheme: 'light' | 'dark', vars: Token
 
 function accentFailures(brand: BrandInput): string[] {
   const tokens = composeTokens({ brand })
-  return (['light', 'dark'] as const).flatMap((scheme) => {
+  return Object.values(ColorScheme).flatMap((scheme) => {
     const vars: TokenMap = { ...tokens.shared, ...tokens[scheme] }
     return [...textFailures(brand, scheme, vars), ...buttonFailures(brand, scheme, vars)]
   })

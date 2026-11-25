@@ -109,6 +109,28 @@ assertThat(winners).isEqualTo(1L);
 
 Reguły pilnują `config/checkstyle/checkstyle.xml` (kod produkcyjny) i `config/checkstyle/checkstyle-test.xml` (testy).
 
+### Zamknięte zbiory wartości we frontendzie (2026-11-25)
+
+Zamknięty zbiór napisów (stany, role, schematy kolorów, kody błędów) to jeden obiekt stałych z typem o tej samej nazwie, nigdy unia literałów rozpisana w miejscu użycia ani `enum`:
+
+```ts
+export const SpaceRole = { EDITOR: 'EDITOR', VIEWER: 'VIEWER' } as const
+export type SpaceRole = (typeof SpaceRole)[keyof typeof SpaceRole]
+
+function canEdit(role: SpaceRole): boolean {
+  return role === SpaceRole.EDITOR
+}
+const roleSchema = z.enum(SpaceRole)
+```
+
+- **Dlaczego nie unia `'a' | 'b'`:** ten sam zbiór powtarza się w typach, testach i schematach Zoda, a zmiana wartości wymaga szukania napisów po całym kodzie.
+- **Dlaczego nie `enum`:** `tsconfig` ma `erasableSyntaxOnly`, więc kod musi dać się uruchomić po samym wycięciu typów (esbuild w Vite, type stripping w Node), a `enum` generuje kod. Do tego string `enum` jest nominalny: napis z JSON-a API nie pasuje do niego bez rzutowania.
+- Obiekt stałych działa jak `enum` (`SpaceRole.EDITOR`, podpowiedzi), a napis z API pasuje do typu bez rzutowania. `Object.values(SpaceRole)` daje listę wartości, np. do testów i pętli.
+- Zbiór z kontraktu API generuje `generate-api.mjs`, a nie pisze się go ręcznie. Typ z biblioteki (np. `MantineColorScheme`) używamy wprost.
+- Pojedynczy literał (`scheme: 'light'` jako wartość) i klucze obiektów są dozwolone; reguła dotyczy typu, który wylicza dozwolone napisy.
+
+Regułę pilnuje `no-restricted-syntax` w `frontend/eslint.config.js`: unia typów z literałem napisowym oraz `z.enum([...])` z tablicą literałów są błędem w kodzie produkcyjnym i w testach. Pliki generowane (`src/shared/api/generated/`) są wyłączone.
+
 ## Consequences
 
 - Nowe zależności Javy (wtyczki builda i kompilatora): Spotless, palantir-java-format, Error Prone, NullAway, Checkstyle.

@@ -4,7 +4,7 @@ import { composeTokens } from './tokens/compose'
 import { uptimeExtension } from './extensions/uptime'
 import { resolveToken } from './test/resolve'
 import type { ComposedTokens } from './tokens/compose'
-import type { TokenMap } from './tokens/types'
+import { ColorScheme, type TokenMap } from './tokens/types'
 
 type Check = readonly [fg: string, bg: string, min: number, onBase?: string]
 
@@ -117,7 +117,7 @@ function checks(vars: TokenMap): Check[] {
   return [...textChecks(), ...controlChecks(), ...statusChecks(), ...extensionChecks(vars)]
 }
 
-function failuresFor(tokens: ComposedTokens, scheme: 'light' | 'dark'): string[] {
+function failuresFor(tokens: ComposedTokens, scheme: ColorScheme): string[] {
   const vars: TokenMap = { ...tokens.shared, ...tokens[scheme] }
   const failures: string[] = []
   for (const [fg, bg, min, onBase] of checks(vars)) {
@@ -138,7 +138,7 @@ describe('theme contrast', () => {
   it('every text and control pair meets WCAG AA in light and dark', () => {
     const themes = [composeTokens({ extensions: [uptimeExtension] }), composeTokens()]
     const failures = themes.flatMap((tokens) =>
-      (['light', 'dark'] as const).flatMap((scheme) => failuresFor(tokens, scheme)),
+      Object.values(ColorScheme).flatMap((scheme) => failuresFor(tokens, scheme)),
     )
     expect(failures).toEqual([])
   })

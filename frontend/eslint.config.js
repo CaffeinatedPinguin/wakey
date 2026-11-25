@@ -86,6 +86,32 @@ const boundaryZones = [
 
 const testFiles = ['src/**/*.test.{ts,tsx}', 'src/test/**']
 
+const generatedFiles = ['src/shared/api/generated/**']
+
+// A closed set of strings is one `as const` object with a same-named type
+// (ADR 0007, "Zamknięte zbiory wartości"). Kept in a constant because the token
+// block below sets no-restricted-syntax again and would otherwise drop it.
+const closedSetMessage =
+  'Declare a closed set of strings once as an `as const` object with a same-named type (ADR 0007).'
+
+const closedSetRestrictions = [
+  {
+    // One report per union that lists at least one string literal; `literal.value`
+    // must be an attribute path, esquery does not match a two-step `:has(> A > B)`.
+    selector: 'TSUnionType:has(> TSLiteralType[literal.value=/^/])',
+    message: closedSetMessage,
+  },
+  {
+    selector:
+      "CallExpression[callee.object.name='z'][callee.property.name='enum'] > ArrayExpression",
+    message: closedSetMessage,
+  },
+  {
+    selector: 'TSEnumDeclaration',
+    message: closedSetMessage,
+  },
+]
+
 const deferredWorkMessage =
   'Do not defer work with timers or microtasks. Keep state in TanStack Query and navigate with the router.'
 
@@ -165,12 +191,21 @@ export default defineConfig([
     },
   },
   {
+    files: ['src/**/*.{ts,tsx}'],
+    ignores: generatedFiles,
+    rules: {
+      'no-restricted-syntax': ['error', ...closedSetRestrictions],
+    },
+  },
+  {
     // Colours, sizes and spacing in application code come from theme tokens.
     // Hex colours and px values are rejected outside shared/theme.
     files: ['src/app/**', 'src/features/**', 'src/routes/**', 'src/shared/ui/**'],
+    ignores: generatedFiles,
     rules: {
       'no-restricted-syntax': [
         'error',
+        ...closedSetRestrictions,
         {
           selector:
             'Literal[value=/#(?:[0-9a-fA-F]{8}|[0-9a-fA-F]{6}|[0-9a-fA-F]{3,4})(?![0-9a-fA-F])|(^|[^0-9A-Za-z_])[0-9]+([.][0-9]+)?px/]',
