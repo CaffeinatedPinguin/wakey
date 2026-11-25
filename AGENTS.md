@@ -30,6 +30,7 @@ Domain: backend and frontend (the maintainer's generic rules live outside this r
 - Names: root package and `groupId` `dev.wakey`, configuration prefix `wakey.*` (`WAKEY_*`), license AGPL-3.0-or-later (ADR 0002).
 - Simple arguments: a call argument carries at most one method call; extract a longer expression into a named variable (ADR 0007).
 - Closed sets of strings in the frontend (states, roles, schemes, error codes) are one `as const` object with a same-named type, never an inline `'a' | 'b'` union or a TypeScript `enum`; lint enforces it (ADR 0007, "Zamknięte zbiory wartości").
+- Frontend lint also rejects: error codes and API paths written as literals instead of taken from the generated contract, `headers:` outside `shared/api`, untyped search params, data fetching in `app/shell`, more than 8 props and unnamed numbers in application code (ADR 0007, "Reguły z review warstwy przestrzeni").
 - A rule from an ADR that can be checked statically becomes an ArchUnit or lint rule, not a review comment.
 - Colours, sizes, radius and typography only from `--app-*` tokens or the Mantine theme (lint guards hex and px); a state is always `Badge color="<state>"` + icon + text, never colour alone; UI text goes through i18n.
 - A screen is built from its accepted mockup in `docs/specs/screens/`; with no mockup, the stage's mockup wave (see `docs/specs/roadmap.md`) comes first.

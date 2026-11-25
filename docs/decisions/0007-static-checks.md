@@ -131,6 +131,22 @@ const roleSchema = z.enum(SpaceRole)
 
 Regułę pilnuje `no-restricted-syntax` w `frontend/eslint.config.js`: unia typów z literałem napisowym oraz `z.enum([...])` z tablicą literałów są błędem w kodzie produkcyjnym i w testach. Pliki generowane (`src/shared/api/generated/`) są wyłączone.
 
+### Reguły z review warstwy przestrzeni (2026-11-25)
+
+Uwagi z review, które da się sprawdzić statycznie, są błędami lintu, a nie komentarzami w kolejnych PR-ach:
+
+| Reguła | Zakres | Dlaczego |
+|---|---|---|
+| Kod błędu (`.code`) porównujemy ze stałą z kontraktu, nie z literałem (`===`, `!==`, `case`) | `src/` | Kody są zamkniętym zbiorem z kontraktu ([0006](0006-api-contract.md)); literał rozjeżdża się z serwerem bez błędu kompilacji. |
+| Ścieżki API tylko z wygenerowanego `contract.<operacja>.path`, bez literałów `/api/...` | `src/` poza `shared/config` | Jedno źródło ścieżek; `shared/config` trzyma prefiks z konfiguracji. |
+| Interfejs lub typ `*Props` ma najwyżej 8 pól | `src/` | Więcej propsów zwykle znaczy przeciąganie danych przez drzewo albo komponent z kilkoma zadaniami. |
+| Bez `headers:` w wywołaniach | `app`, `features`, `routes` | Operacja przyjmuje dane w ścieżce, query albo body; nagłówki (CSRF, sesja) ustawia tylko `shared/api`. |
+| Bez `useSearch({ strict: false })` | `app`, `features`, `routes` | Parametry wyszukiwania czytamy z typem trasy (`useSearch({ from })`, `getRouteApi`). |
+| Bez importu `@tanstack/react-query` | `app/shell` | Zapytania i mutacje są w hookach feature'a; powłoka tylko składa feature'y. |
+| Liczby inne niż -1, 0 i 1 dostają nazwę (`@typescript-eslint/no-magic-numbers`) | `app`, `features`, `routes` bez testów | Limity typu długości nazwy albo rozmiaru strony pochodzą z kontraktu albo z jednej stałej, a nie są powtarzane w kodzie. Theme i testy są wyłączone. |
+
+`no-restricted-syntax` to jedna reguła: późniejszy blok konfiguracji zastępuje jej listę, więc `eslint.config.js` trzyma selektory w nazwanych tablicach i każdy blok składa listy, które obowiązują w jego plikach.
+
 ## Consequences
 
 - Nowe zależności Javy (wtyczki builda i kompilatora): Spotless, palantir-java-format, Error Prone, NullAway, Checkstyle.
