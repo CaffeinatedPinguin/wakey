@@ -35,6 +35,7 @@ final class JdbcSpaceSettings implements SpaceSettings {
             """;
 
     // The composite primary key makes this the one-statement upsert of a space setting.
+    // postgres-only: INSERT ... ON CONFLICT ... DO UPDATE; another database needs its own upsert (for example MERGE).
     private static final String UPSERT_OVERRIDE_SQL = """
             INSERT INTO space_setting (space_id, key, value, updated_at)
             VALUES (:spaceId, :key, :value, CURRENT_TIMESTAMP)
