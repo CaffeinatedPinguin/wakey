@@ -16,6 +16,7 @@ export const checkDetailsResources = {
         },
         actions: {
           menu: 'Akcje',
+          unavailable: 'Ta akcja pojawi się w kolejnym etapie.',
           checkNow: 'Sprawdź teraz',
           pause: 'Wstrzymaj',
           resume: 'Wznów',
@@ -89,6 +90,7 @@ export const checkDetailsResources = {
         },
         actions: {
           menu: 'Actions',
+          unavailable: 'This action arrives in a later stage.',
           checkNow: 'Check now',
           pause: 'Pause',
           resume: 'Resume',

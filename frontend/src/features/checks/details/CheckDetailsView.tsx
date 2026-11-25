@@ -24,7 +24,14 @@ function CheckDetailsReady(props: ReadyProps): ReactElement {
       py="md"
       gap="lg"
     >
-      <CheckHeader data={props.data} now={props.now} onAction={props.onAction} />
+      <CheckHeader
+        data={props.data}
+        now={props.now}
+        onAction={props.onAction}
+        {...(props.unavailableActions === undefined
+          ? {}
+          : { unavailableActions: props.unavailableActions })}
+      />
       <ConfigHintBanner reasons={props.data.configIssues} />
       <Grid gap="lg">
         <Grid.Col span={{ base: 12, md: 9 }}>

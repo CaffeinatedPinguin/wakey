@@ -62,6 +62,8 @@ export interface CheckDetailsViewProps {
   readonly onTabChange: (tab: CheckDetailsTab) => void
   readonly onAction: (action: CheckAction) => void
   readonly onRetry: () => void
+  /** Actions that have no backend yet and are rendered disabled with a hint. */
+  readonly unavailableActions?: readonly CheckAction[]
   /** Current time injected by the caller so relative ages stay deterministic. */
   readonly now: Date
 }

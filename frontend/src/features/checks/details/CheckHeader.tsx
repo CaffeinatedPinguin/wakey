@@ -11,6 +11,7 @@ interface CheckHeaderProps {
   readonly data: CheckDetailsData
   readonly now: Date
   readonly onAction: (action: CheckAction) => void
+  readonly unavailableActions?: readonly CheckAction[]
 }
 
 export function CheckHeader(props: CheckHeaderProps): ReactElement {
@@ -30,7 +31,13 @@ export function CheckHeader(props: CheckHeaderProps): ReactElement {
             {props.data.target}
           </Text>
         </Group>
-        <CheckActionBar paused={props.data.paused} onAction={props.onAction} />
+        <CheckActionBar
+          paused={props.data.paused}
+          onAction={props.onAction}
+          {...(props.unavailableActions === undefined
+            ? {}
+            : { unavailableActions: props.unavailableActions })}
+        />
       </Group>
       {unknownAge === null ? null : (
         <Text size="sm" c="dimmed">

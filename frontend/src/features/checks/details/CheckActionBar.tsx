@@ -18,12 +18,14 @@ import { useIsMobile } from './useIsMobile'
 interface CheckActionBarProps {
   readonly paused: boolean
   readonly onAction: (action: CheckAction) => void
+  readonly unavailableActions?: readonly CheckAction[]
 }
 
 interface ActionListProps {
   readonly paused: boolean
   readonly onAction: (action: CheckAction) => void
   readonly onDelete: () => void
+  readonly unavailableActions: readonly CheckAction[]
 }
 
 interface DeleteCheckDialogProps {
@@ -37,6 +39,7 @@ interface MobileMenuItemProps {
   readonly paused: boolean
   readonly onAction: (action: CheckAction) => void
   readonly onDelete: () => void
+  readonly unavailableActions: readonly CheckAction[]
 }
 
 type IconComponent = ComponentType<{ size?: number }>
@@ -66,16 +69,23 @@ function resolveAction(action: CheckAction, paused: boolean): CheckAction {
   return action === 'pause' && paused ? 'resume' : action
 }
 
+function isUnavailable(actions: readonly CheckAction[], action: CheckAction): boolean {
+  return actions.includes(action)
+}
+
 function DesktopActions(props: ActionListProps): ReactElement {
   const { t } = useTranslation()
   return (
     <Group gap="xs">
       {DESKTOP_ACTIONS.map((action) => {
         const resolved = resolveAction(action, props.paused)
+        const unavailable = isUnavailable(props.unavailableActions, resolved)
         return (
           <Button
             key={action}
             variant={action === 'check-now' ? 'filled' : 'default'}
+            disabled={unavailable}
+            {...(unavailable ? { title: t('checks.details.actions.unavailable') } : {})}
             onClick={() => {
               props.onAction(resolved)
             }}
@@ -94,6 +104,7 @@ function DesktopActions(props: ActionListProps): ReactElement {
 function MobileMenuItem(props: MobileMenuItemProps): ReactElement {
   const { t } = useTranslation()
   const resolved = resolveAction(props.action, props.paused)
+  const unavailable = isUnavailable(props.unavailableActions, resolved)
   const Icon = ACTION_ICONS[resolved]
 
   function handleClick(): void {
@@ -105,7 +116,13 @@ function MobileMenuItem(props: MobileMenuItemProps): ReactElement {
   }
 
   return (
-    <Menu.Item leftSection={<Icon size={16} />} style={touchStyle} onClick={handleClick}>
+    <Menu.Item
+      leftSection={<Icon size={16} />}
+      style={touchStyle}
+      disabled={unavailable}
+      {...(unavailable ? { title: t('checks.details.actions.unavailable') } : {})}
+      onClick={handleClick}
+    >
       {t(ACTION_LABEL_KEYS[resolved])}
     </Menu.Item>
   )
@@ -133,6 +150,7 @@ function MobileActions(props: ActionListProps): ReactElement {
             paused={props.paused}
             onAction={props.onAction}
             onDelete={props.onDelete}
+            unavailableActions={props.unavailableActions}
           />
         ))}
       </Menu.Dropdown>
@@ -188,7 +206,13 @@ export function CheckActionBar(props: CheckActionBarProps): ReactElement {
     props.onAction('delete')
   }
 
-  const actions = { paused: props.paused, onAction: props.onAction, onDelete: requestDelete }
+  const unavailableActions = props.unavailableActions ?? []
+  const actions = {
+    paused: props.paused,
+    onAction: props.onAction,
+    onDelete: requestDelete,
+    unavailableActions,
+  }
   return (
     <>
       {isMobile ? <MobileActions {...actions} /> : <DesktopActions {...actions} />}

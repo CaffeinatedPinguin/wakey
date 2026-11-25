@@ -1,6 +1,7 @@
 import i18n from 'i18next'
 import { initReactI18next } from 'react-i18next'
 import { authResources } from '../features/auth'
+import { checksResources } from '../features/checks'
 import { settingsResources } from '../features/settings'
 import { commonResources } from '../shared/i18n/resources'
 
@@ -8,10 +9,20 @@ const DEFAULT_LANGUAGE = 'pl'
 
 const resources = {
   pl: {
-    translation: { ...commonResources.pl, ...authResources.pl, ...settingsResources.pl },
+    translation: {
+      ...commonResources.pl,
+      ...authResources.pl,
+      ...checksResources.pl,
+      ...settingsResources.pl,
+    },
   },
   en: {
-    translation: { ...commonResources.en, ...authResources.en, ...settingsResources.en },
+    translation: {
+      ...commonResources.en,
+      ...authResources.en,
+      ...checksResources.en,
+      ...settingsResources.en,
+    },
   },
 }
 
