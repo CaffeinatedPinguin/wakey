@@ -1,6 +1,7 @@
 package dev.wakey.audit;
 
 import java.util.List;
+import java.util.UUID;
 import org.jspecify.annotations.Nullable;
 
 /** Append-only audit log; it is also the change history of a single object. */
@@ -15,14 +16,14 @@ public interface AuditLog {
     void record(AuditEntry entry);
 
     /**
-     * Returns the history of one object, newest first, at most {@code limit} entries. Pass the
-     * cursor of the last returned entry to resume after it.
+     * Returns the history of one object in one space, newest first. A null space reads only the
+     * entries that belong to no space, so one space never sees another space's history.
      *
+     * @param spaceId the space that owns the object, or null for entries without a space
      * @param objectType the object kind, for example {@code space}
      * @param objectId the object identifier
-     * @param after the last entry of the previous page, or {@code null} for the first page
-     * @param limit the maximum number of entries to return
+     * @param page the cursor to resume after and the maximum number of entries
      * @return the next entries of the object, newest first
      */
-    List<AuditRecord> history(String objectType, String objectId, @Nullable AuditCursor after, int limit);
+    List<AuditRecord> history(@Nullable UUID spaceId, String objectType, String objectId, AuditPage page);
 }

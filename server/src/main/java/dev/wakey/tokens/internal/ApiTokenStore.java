@@ -28,7 +28,8 @@ final class ApiTokenStore {
             """;
 
     private static final String FIND_BY_HASH_SQL = """
-            SELECT t.id, t.space_id, t.owner_subject, t.scope, t.expires_at, t.revoked_at, s.slug
+            SELECT t.id, t.space_id, t.owner_subject, t.scope, t.expires_at, t.revoked_at,
+                   t.created_at, s.slug
             FROM api_token t
             JOIN space s ON s.id = t.space_id
             WHERE t.token_hash = :tokenHash
@@ -37,7 +38,7 @@ final class ApiTokenStore {
     private static final String MARK_USED_SQL = """
             UPDATE api_token
             SET last_used_at = :lastUsedAt
-            WHERE id = :id
+            WHERE id = :id AND (last_used_at IS NULL OR last_used_at < :threshold)
             """;
 
     private static final String REVOKE_SQL = """
@@ -53,6 +54,14 @@ final class ApiTokenStore {
             ORDER BY created_at, id
             """;
 
+    private static final String COUNT_ACTIVE_SQL = """
+            SELECT count(*)
+            FROM api_token
+            WHERE space_id = :spaceId AND owner_subject = :ownerSubject
+              AND revoked_at IS NULL
+              AND (expires_at IS NULL OR expires_at > :now)
+            """;
+
     private static final RowMapper<StoredToken> STORED_TOKEN_MAPPER = (rs, unusedRowNum) -> new StoredToken(
             rs.getObject("id", UUID.class),
             rs.getObject("space_id", UUID.class),
@@ -60,6 +69,7 @@ final class ApiTokenStore {
             tokenScope(rs),
             toInstant(rs, "expires_at"),
             toInstant(rs, "revoked_at"),
+            requiredInstant(rs, "created_at"),
             rs.getString("slug"));
 
     private static final RowMapper<TokenSummary> SUMMARY_MAPPER = (rs, unusedRowNum) -> new TokenSummary(
@@ -96,12 +106,24 @@ final class ApiTokenStore {
                 .optional();
     }
 
-    void markUsed(UUID tokenId, Instant usedAt) {
+    void markUsed(UUID tokenId, Instant usedAt, Instant threshold) {
         OffsetDateTime lastUsedAt = toDatabase(usedAt);
+        OffsetDateTime oldestRewritten = toDatabase(threshold);
         jdbc.sql(MARK_USED_SQL)
                 .param("lastUsedAt", lastUsedAt)
                 .param("id", tokenId)
+                .param("threshold", oldestRewritten)
                 .update();
+    }
+
+    long countActive(UUID spaceId, String ownerSubject, Instant now) {
+        OffsetDateTime value = toDatabase(now);
+        return jdbc.sql(COUNT_ACTIVE_SQL)
+                .param("spaceId", spaceId)
+                .param("ownerSubject", ownerSubject)
+                .param("now", value)
+                .query(Long.class)
+                .single();
     }
 
     void revoke(UUID spaceId, String ownerSubject, UUID tokenId, Instant revokedAt) {

@@ -12,13 +12,13 @@ import dev.wakey.spaces.SpaceService;
 import dev.wakey.spaces.SpaceSlug;
 import dev.wakey.spaces.SpaceView;
 import dev.wakey.spaces.UserSessions;
+import java.time.Clock;
+import java.time.OffsetDateTime;
 import java.util.List;
-import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.jspecify.annotations.Nullable;
-import org.springframework.jdbc.core.RowMapper;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -27,13 +27,6 @@ class JdbcSpaceService implements SpaceService {
 
     private static final int MAX_NAME_LENGTH = 100;
 
-    private static final RowMapper<Space> SPACE_MAPPER = (rs, unusedRowNum) -> new Space(
-            rs.getObject("id", UUID.class),
-            rs.getString("slug"),
-            rs.getString("name"),
-            rs.getString("plan_name"),
-            rs.getLong("version"));
-
     private static final String FIND_SPACE_SQL = """
             SELECT id, slug, name, plan_name, version
             FROM space
@@ -41,7 +34,7 @@ class JdbcSpaceService implements SpaceService {
             """;
 
     private static final String VIEW_SPACE_SQL = """
-            SELECT s.id, s.slug, s.name, s.plan_name, s.version, m.role
+            SELECT s.id, s.slug, s.name, s.plan_name, s.version, m.role, m.since
             FROM space s
             LEFT JOIN space_member m ON m.space_id = s.id AND m.subject = :subject
             WHERE s.slug = :slug
@@ -67,7 +60,7 @@ class JdbcSpaceService implements SpaceService {
             """;
 
     private static final String LIST_ALL_SPACES_SQL = """
-            SELECT s.id, s.slug, s.name, s.plan_name, s.version, m.role
+            SELECT s.id, s.slug, s.name, s.plan_name, s.version, m.role, m.since
             FROM space s
             LEFT JOIN space_member m ON m.space_id = s.id AND m.subject = :subject
             WHERE s.slug > :afterSlug
@@ -76,7 +69,7 @@ class JdbcSpaceService implements SpaceService {
             """;
 
     private static final String LIST_MEMBER_SPACES_SQL = """
-            SELECT s.id, s.slug, s.name, s.plan_name, s.version, m.role
+            SELECT s.id, s.slug, s.name, s.plan_name, s.version, m.role, m.since
             FROM space s
             JOIN space_member m ON m.space_id = s.id
             WHERE m.subject = :subject AND s.slug > :afterSlug
@@ -92,8 +85,8 @@ class JdbcSpaceService implements SpaceService {
 
     // postgres-only: ON CONFLICT (space_id, subject) DO NOTHING keeps an existing membership and its role.
     private static final String INSERT_MEMBER_IF_ABSENT_SQL = """
-            INSERT INTO space_member (space_id, subject, role)
-            VALUES (:spaceId, :subject, :role)
+            INSERT INTO space_member (space_id, subject, role, since)
+            VALUES (:spaceId, :subject, :role, :since)
             ON CONFLICT (space_id, subject) DO NOTHING
             """;
 
@@ -111,6 +104,8 @@ class JdbcSpaceService implements SpaceService {
     private final JdbcClient jdbc;
 
     private final UserSessions sessions;
+
+    private final Clock clock;
 
     @Override
     public PutResult put(SpacePrincipal actor, String slug, String name) {
@@ -139,11 +134,11 @@ class JdbcSpaceService implements SpaceService {
     @Override
     public SpaceView view(SpacePrincipal actor, String slug) {
         String checkedSlug = SpaceSlug.requireValid(slug);
-        RowMapper<SpaceView> mapper = viewMapper(actor.admin());
+        boolean admin = actor.admin();
         Optional<SpaceView> found = jdbc.sql(VIEW_SPACE_SQL)
                 .param("subject", actor.subject())
                 .param("slug", checkedSlug)
-                .query(mapper)
+                .query(SpaceRowMappers.view(admin))
                 .optional();
         SpaceView view = found.orElseThrow(() -> new SpaceNotFoundException(checkedSlug));
         if (!actor.admin() && view.role() == null) {
@@ -165,10 +160,12 @@ class JdbcSpaceService implements SpaceService {
     @Override
     public void addMember(SpacePrincipal actor, String slug, String subject, SpaceRole role) {
         Space space = requireManageableSpace(actor, slug);
+        OffsetDateTime since = OffsetDateTime.now(clock);
         jdbc.sql(INSERT_MEMBER_IF_ABSENT_SQL)
                 .param("spaceId", space.id())
                 .param("subject", subject)
                 .param("role", role.name())
+                .param("since", since)
                 .update();
     }
 
@@ -202,7 +199,7 @@ class JdbcSpaceService implements SpaceService {
     public void assignPlan(SpacePrincipal actor, String slug, @Nullable String planName) {
         Space space = requireManageableSpace(actor, slug);
         requireAdmin(actor);
-        if (!Objects.equals(space.planName(), planName)) {
+        if (!samePlan(space.planName(), planName)) {
             updatePlan(space.slug(), planName);
         }
     }
@@ -253,32 +250,20 @@ class JdbcSpaceService implements SpaceService {
     }
 
     private List<SpaceView> listSpaces(String sql, SpacePrincipal actor, String cursor, int rowLimit) {
-        RowMapper<SpaceView> mapper = viewMapper(actor.admin());
+        boolean admin = actor.admin();
         return jdbc.sql(sql)
                 .param("subject", actor.subject())
                 .param("afterSlug", cursor)
                 .param("rowLimit", rowLimit)
-                .query(mapper)
+                .query(SpaceRowMappers.view(admin))
                 .list();
     }
 
-    private RowMapper<SpaceView> viewMapper(boolean admin) {
-        return (rs, unusedRowNum) -> {
-            String roleValue = rs.getString("role");
-            @Nullable SpaceRole role = roleOrNull(roleValue);
-            return new SpaceView(
-                    rs.getObject("id", UUID.class),
-                    rs.getString("slug"),
-                    rs.getString("name"),
-                    rs.getString("plan_name"),
-                    rs.getLong("version"),
-                    admin,
-                    role);
-        };
-    }
-
     private Optional<Space> findSpace(String slug) {
-        return jdbc.sql(FIND_SPACE_SQL).param("slug", slug).query(SPACE_MAPPER).optional();
+        return jdbc.sql(FIND_SPACE_SQL)
+                .param("slug", slug)
+                .query(SpaceRowMappers.SPACE)
+                .optional();
     }
 
     private Space findRequired(String slug) {
@@ -302,6 +287,10 @@ class JdbcSpaceService implements SpaceService {
                 .update();
     }
 
+    private static boolean samePlan(@Nullable String current, @Nullable String requested) {
+        return current == null ? requested == null : current.equals(requested);
+    }
+
     private static void requireAdmin(SpacePrincipal actor) {
         if (!actor.admin()) {
             throw new SpaceAccessDeniedException("Only an administrator can create or rename spaces");
@@ -314,9 +303,5 @@ class JdbcSpaceService implements SpaceService {
             throw new InvalidSpaceException("name", "invalid_name", "A space name must have 1-100 characters");
         }
         return trimmed;
-    }
-
-    private static @Nullable SpaceRole roleOrNull(String value) {
-        return value == null ? null : SpaceRole.valueOf(value);
     }
 }

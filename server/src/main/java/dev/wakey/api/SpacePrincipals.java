@@ -1,5 +1,6 @@
 package dev.wakey.api;
 
+import dev.wakey.security.ApiTokenAuthentication;
 import dev.wakey.security.CurrentUser;
 import dev.wakey.spaces.SpacePrincipal;
 import dev.wakey.web.ApiProblemException;
@@ -29,28 +30,33 @@ public final class SpacePrincipals {
     /** The actor for one space, refusing a token that belongs to another space with a 404. */
     public static SpacePrincipal forSpace(Authentication authentication, String slug) {
         CurrentUser user = CurrentUser.from(authentication);
-        requireTokenSpace(user, slug);
+        requireTokenSpace(tokenSpaceSlugOf(authentication), slug);
         return new SpacePrincipal(user.subject(), user.admin());
     }
 
     /** The one space of a token caller, or empty for a session caller. */
     public static Optional<String> tokenSpaceSlug(Authentication authentication) {
-        CurrentUser user = CurrentUser.from(authentication);
-        return Optional.ofNullable(user.tokenSpaceSlug());
+        return Optional.ofNullable(tokenSpaceSlugOf(authentication));
     }
 
     /** Rejects a token caller; token management accepts a session only. */
     public static void requireUserSession(Authentication authentication) {
-        CurrentUser user = CurrentUser.from(authentication);
-        if (user.tokenSpaceSlug() != null) {
+        if (tokenSpaceSlugOf(authentication) != null) {
             throw new ApiProblemException(HttpStatus.FORBIDDEN, INSUFFICIENT_SCOPE);
         }
     }
 
-    private static void requireTokenSpace(CurrentUser user, String slug) {
-        @Nullable String tokenSpaceSlug = user.tokenSpaceSlug();
+    private static void requireTokenSpace(@Nullable String tokenSpaceSlug, String slug) {
         if (tokenSpaceSlug != null && !tokenSpaceSlug.equals(slug)) {
             throw new ApiProblemException(HttpStatus.NOT_FOUND, NOT_FOUND);
         }
+    }
+
+    private static @Nullable String tokenSpaceSlugOf(Authentication authentication) {
+        @Nullable String slug = null;
+        if (authentication instanceof ApiTokenAuthentication tokenAuthentication) {
+            slug = tokenAuthentication.context().spaceSlug();
+        }
+        return slug;
     }
 }

@@ -7,6 +7,7 @@ import dev.wakey.spaces.SpaceRole;
 import dev.wakey.spaces.SpaceService;
 import dev.wakey.spaces.SpaceView;
 import dev.wakey.tokens.TokenScope;
+import java.time.Instant;
 import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -22,19 +23,32 @@ final class SpaceAccess {
         return spaces.view(new SpacePrincipal(subject, false), spaceSlug);
     }
 
-    Optional<SpaceRole> findRole(String spaceSlug, String subject) {
+    Optional<Membership> findMembership(String spaceSlug, String subject) {
+        Optional<Membership> membership = Optional.empty();
         try {
             SpaceView view = requireMember(spaceSlug, subject);
-            return Optional.ofNullable(view.role());
+            SpaceRole role = view.role();
+            Instant since = view.memberSince();
+            if (role != null && since != null) {
+                membership = Optional.of(new Membership(role, since));
+            }
         } catch (SpaceNotFoundException exception) {
             log.debug("Token owner {} is not a member of space {}", subject, spaceSlug, exception);
-            return Optional.empty();
         }
+        return membership;
     }
 
     static void requireWriteTokenAllowed(SpaceView space, TokenScope scope) {
         if (scope == TokenScope.WRITE && space.role() == SpaceRole.VIEWER) {
             throw new SpaceAccessDeniedException("A viewer cannot create a write token in space " + space.slug());
+        }
+    }
+
+    /** The membership values a token needs: the current role and the moment the owner joined. */
+    record Membership(SpaceRole role, Instant since) {
+
+        TokenScope effectiveScope(TokenScope requested) {
+            return role == SpaceRole.VIEWER ? TokenScope.READ : requested;
         }
     }
 }

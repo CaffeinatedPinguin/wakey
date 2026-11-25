@@ -6,6 +6,7 @@ import dev.wakey.audit.AuditCursor;
 import dev.wakey.audit.AuditEntry;
 import dev.wakey.audit.AuditLog;
 import dev.wakey.audit.AuditOutcome;
+import dev.wakey.audit.AuditPage;
 import dev.wakey.audit.AuditRecord;
 import dev.wakey.audit.AuditSource;
 import java.time.Clock;
@@ -58,7 +59,7 @@ class JdbcAuditLog implements AuditLog {
             SELECT id, occurred_at, action, object_type, object_id, outcome, source,
                    actor_subject, actor_kind, space_id, details
             FROM audit_event
-            WHERE object_type = :objectType AND object_id = :objectId
+            WHERE space_id %s AND object_type = :objectType AND object_id = :objectId
             ORDER BY occurred_at DESC, id DESC
             LIMIT :rowLimit
             """;
@@ -67,11 +68,15 @@ class JdbcAuditLog implements AuditLog {
             SELECT id, occurred_at, action, object_type, object_id, outcome, source,
                    actor_subject, actor_kind, space_id, details
             FROM audit_event
-            WHERE object_type = :objectType AND object_id = :objectId
+            WHERE space_id %s AND object_type = :objectType AND object_id = :objectId
               AND (occurred_at < :afterAt OR (occurred_at = :afterAt AND id < :afterId))
             ORDER BY occurred_at DESC, id DESC
             LIMIT :rowLimit
             """;
+
+    private static final String SPACE_SCOPE = "= :spaceId";
+
+    private static final String NO_SPACE_SCOPE = "IS NULL";
 
     private final JdbcClient jdbc;
 
@@ -102,18 +107,22 @@ class JdbcAuditLog implements AuditLog {
     }
 
     @Override
-    public List<AuditRecord> history(String objectType, String objectId, @Nullable AuditCursor after, int limit) {
-        if (limit <= 0) {
+    public List<AuditRecord> history(@Nullable UUID spaceId, String objectType, String objectId, AuditPage page) {
+        if (page.limit() <= 0) {
             log.debug("Read 0 audit events for {} {}", objectType, objectId);
             return List.of();
         }
-        String sql = after == null ? HISTORY_SQL : HISTORY_AFTER_SQL;
-        JdbcClient.StatementSpec statement = jdbc.sql(sql)
+        String scope = spaceId == null ? NO_SPACE_SCOPE : SPACE_SCOPE;
+        String template = page.after() == null ? HISTORY_SQL : HISTORY_AFTER_SQL;
+        JdbcClient.StatementSpec statement = jdbc.sql(String.format(template, scope))
                 .param("objectType", objectType)
                 .param("objectId", objectId)
-                .param("rowLimit", limit);
-        if (after != null) {
-            statement = addCursor(statement, after);
+                .param("rowLimit", page.limit());
+        if (spaceId != null) {
+            statement = statement.param("spaceId", spaceId);
+        }
+        if (page.after() != null) {
+            statement = addCursor(statement, page.after());
         }
         List<AuditRecord> records = statement.query(RECORD_MAPPER).list();
         log.debug("Read {} audit events for {} {}", records.size(), objectType, objectId);

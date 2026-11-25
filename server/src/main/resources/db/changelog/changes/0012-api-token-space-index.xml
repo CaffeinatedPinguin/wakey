@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        https://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+  <changeSet id="api-token-space-index" author="wakey">
+    <!-- Queries and the space foreign key filter by space first, so the owner-only index is superseded. -->
+    <createIndex tableName="api_token" indexName="ix_api_token_space_owner">
+      <column name="space_id"/>
+      <column name="owner_subject"/>
+    </createIndex>
+    <dropIndex tableName="api_token" indexName="ix_api_token_owner_subject"/>
+  </changeSet>
+</databaseChangeLog>

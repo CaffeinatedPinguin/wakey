@@ -28,6 +28,6 @@ class SpaceViewTest {
     }
 
     private static SpaceView view(boolean admin, @Nullable SpaceRole role) {
-        return new SpaceView(ID, "space", "Space", null, VERSION, admin, role);
+        return new SpaceView(ID, "space", "Space", null, VERSION, admin, role, null);
     }
 }

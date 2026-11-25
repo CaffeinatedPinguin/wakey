@@ -2,6 +2,7 @@ package dev.wakey.spaces.internal;
 
 import dev.wakey.spaces.SpaceService;
 import dev.wakey.spaces.UserSessions;
+import java.time.Clock;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.jdbc.core.simple.JdbcClient;
@@ -12,8 +13,8 @@ import org.springframework.session.Session;
 class SpacesConfiguration {
 
     @Bean
-    SpaceService spaceService(JdbcClient jdbc, UserSessions userSessions) {
-        return new JdbcSpaceService(jdbc, userSessions);
+    SpaceService spaceService(JdbcClient jdbc, UserSessions userSessions, Clock clock) {
+        return new JdbcSpaceService(jdbc, userSessions, clock);
     }
 
     @Bean

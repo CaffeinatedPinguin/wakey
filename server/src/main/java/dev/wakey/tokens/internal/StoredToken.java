@@ -13,4 +13,5 @@ record StoredToken(
         TokenScope scope,
         @Nullable Instant expiresAt,
         @Nullable Instant revokedAt,
+        Instant createdAt,
         String spaceSlug) {}

@@ -16,8 +16,11 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.time.Clock;
 import java.time.Instant;
+import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
 import java.util.HexFormat;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
@@ -89,14 +92,68 @@ class ApiTokensIntegrationTest extends PostgresIntegrationTest {
         Space space = seedSpaceWithMembers("expired");
         String slug = space.slug();
         Instant expiredAt = Instant.now(clock).minusSeconds(60);
-        CreatedToken created =
-                tokens().create(EDITOR_OWNER, slug, "expired", new TokenOptions(TokenScope.READ, expiredAt));
+        CreatedToken created = tokens().create(EDITOR_OWNER, slug, "expired", new TokenOptions(TokenScope.READ, null));
+        UUID tokenId = created.token().id();
+        expireAt(tokenId, expiredAt);
 
         // when
         Optional<TokenIdentity> found = tokens().authenticate(created.secret());
 
         // then
         assertThat(found).isEmpty();
+    }
+
+    @Test
+    void lastUsedIsNotWrittenOnEveryRequest() {
+        // given
+        Space space = seedSpaceWithMembers("last-used-threshold");
+        String slug = space.slug();
+        CreatedToken created = tokens().create(EDITOR_OWNER, slug, "used", new TokenOptions(TokenScope.READ, null));
+        UUID tokenId = created.token().id();
+        tokens().authenticate(created.secret());
+        Instant firstUse = lastUsedAt(tokenId);
+
+        // when
+        tokens().authenticate(created.secret());
+
+        // then
+        Instant secondUse = lastUsedAt(tokenId);
+        assertThat(firstUse).isNotNull();
+        assertThat(secondUse).isEqualTo(firstUse);
+    }
+
+    @Test
+    void aReInvitedMemberTokenStaysDead() {
+        // given
+        Space space = seedSpaceWithMembers("re-invited");
+        String slug = space.slug();
+        CreatedToken old = tokens().create(EDITOR_OWNER, slug, "old", new TokenOptions(TokenScope.WRITE, null));
+        spaces().removeMember(ADMIN, slug, EDITOR.subject());
+        spaces().addMember(ADMIN, slug, EDITOR.subject(), SpaceRole.EDITOR);
+
+        // when
+        Optional<TokenIdentity> afterReInvite = tokens().authenticate(old.secret());
+        CreatedToken fresh = tokens().create(EDITOR_OWNER, slug, "fresh", new TokenOptions(TokenScope.WRITE, null));
+        Optional<TokenIdentity> freshIdentity = tokens().authenticate(fresh.secret());
+
+        // then
+        assertThat(afterReInvite).isEmpty();
+        assertThat(freshIdentity).isPresent();
+    }
+
+    @Test
+    void theTokenIndexCoversSpaceAndOwner() {
+        // when
+        List<String> indexes = jdbc().sql("SELECT indexname FROM pg_indexes WHERE tablename = 'api_token'")
+                .query((rs, rowNum) -> Objects.requireNonNull(rs.getString("indexname")))
+                .list();
+        List<String> definitions = jdbc().sql("SELECT indexdef FROM pg_indexes WHERE tablename = 'api_token'")
+                .query((rs, rowNum) -> Objects.requireNonNull(rs.getString("indexdef")))
+                .list();
+
+        // then
+        assertThat(indexes).doesNotContain("ix_api_token_owner_subject");
+        assertThat(definitions).anyMatch(definition -> definition.contains("(space_id, owner_subject)"));
     }
 
     @Test
@@ -249,6 +306,22 @@ class ApiTokensIntegrationTest extends PostgresIntegrationTest {
         assertThat(create).isInstanceOf(SpaceNotFoundException.class);
         assertThat(list).isInstanceOf(SpaceNotFoundException.class);
         assertThat(revoke).isInstanceOf(SpaceNotFoundException.class);
+    }
+
+    private void expireAt(UUID tokenId, Instant expiresAt) {
+        OffsetDateTime value = OffsetDateTime.ofInstant(expiresAt, ZoneOffset.UTC);
+        jdbc().sql("UPDATE api_token SET expires_at = :expiresAt WHERE id = :id")
+                .param("expiresAt", value)
+                .param("id", tokenId)
+                .update();
+    }
+
+    private Instant lastUsedAt(UUID tokenId) {
+        OffsetDateTime value = jdbc().sql("SELECT last_used_at FROM api_token WHERE id = :id")
+                .param("id", tokenId)
+                .query(OffsetDateTime.class)
+                .single();
+        return value.toInstant();
     }
 
     private ApiTokens tokens() {

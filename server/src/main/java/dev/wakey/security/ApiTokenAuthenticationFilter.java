@@ -3,7 +3,6 @@ package dev.wakey.security;
 import dev.wakey.tokens.ApiTokens;
 import dev.wakey.tokens.TokenIdentity;
 import dev.wakey.web.ApiPaths;
-import dev.wakey.web.ProblemDetailsWriter;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -12,7 +11,6 @@ import java.io.IOException;
 import java.util.Optional;
 import org.jspecify.annotations.Nullable;
 import org.springframework.http.HttpHeaders;
-import org.springframework.http.HttpStatus;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContext;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -25,8 +23,6 @@ import org.springframework.web.filter.OncePerRequestFilter;
 final class ApiTokenAuthenticationFilter extends OncePerRequestFilter {
 
     private static final String BEARER_PREFIX = "Bearer ";
-
-    private static final String INVALID_TOKEN_DETAIL = "The API token is invalid.";
 
     private final ApiTokens tokens;
 
@@ -57,7 +53,7 @@ final class ApiTokenAuthenticationFilter extends OncePerRequestFilter {
             throws ServletException, IOException {
         Optional<TokenIdentity> identity = tokens.authenticate(secret);
         if (identity.isEmpty()) {
-            ProblemDetailsWriter.write(response, HttpStatus.UNAUTHORIZED, "invalid_token", INVALID_TOKEN_DETAIL);
+            UnauthorizedRequestLog.rejectInvalidToken(request, response);
         } else {
             setTokenAuthentication(identity.get());
             filterChain.doFilter(request, response);

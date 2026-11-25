@@ -1,11 +1,11 @@
 package dev.wakey.tokens.internal;
 
-import dev.wakey.spaces.SpaceRole;
 import dev.wakey.spaces.SpaceView;
 import dev.wakey.tokens.ApiTokens;
 import dev.wakey.tokens.CreatedToken;
 import dev.wakey.tokens.InvalidTokenException;
 import dev.wakey.tokens.TokenIdentity;
+import dev.wakey.tokens.TokenLimitException;
 import dev.wakey.tokens.TokenOptions;
 import dev.wakey.tokens.TokenOwner;
 import dev.wakey.tokens.TokenScope;
@@ -23,26 +23,32 @@ final class JdbcApiTokens implements ApiTokens {
 
     private static final int MAX_NAME_LENGTH = 100;
 
+    private static final int LAST_USED_REFRESH_SECONDS = 60;
+
     private final ApiTokenStore store;
 
     private final SpaceAccess spaces;
 
     private final Clock clock;
 
+    private final int maxPerOwner;
+
     @Override
     public CreatedToken create(TokenOwner owner, String spaceSlug, String name, TokenOptions options) {
         String checkedName = requireValidName(name);
+        Instant now = Instant.now(clock);
+        @Nullable Instant expiresAt = options.expiresAt();
+        requireFutureExpiry(expiresAt, now);
         SpaceView space = spaces.requireMember(spaceSlug, owner.subject());
         TokenScope scope = options.scope();
-        @Nullable Instant expiresAt = options.expiresAt();
         SpaceAccess.requireWriteTokenAllowed(space, scope);
+        requireTokenLimit(space, owner, now);
         String secret = TokenSecrets.generate();
-        Instant createdAt = Instant.now(clock);
         String tokenHash = TokenSecrets.hash(secret);
         NewToken newToken = new NewToken(
-                UUID.randomUUID(), space.id(), owner.subject(), checkedName, scope, tokenHash, expiresAt, createdAt);
+                UUID.randomUUID(), space.id(), owner.subject(), checkedName, scope, tokenHash, expiresAt, now);
         store.insert(newToken);
-        TokenSummary summary = new TokenSummary(newToken.id(), checkedName, scope, createdAt, expiresAt, null, null);
+        TokenSummary summary = new TokenSummary(newToken.id(), checkedName, scope, now, expiresAt, null, null);
         return new CreatedToken(secret, summary);
     }
 
@@ -68,20 +74,36 @@ final class JdbcApiTokens implements ApiTokens {
     }
 
     private Optional<TokenIdentity> authenticateStored(StoredToken token, Instant now) {
-        if (!isUsable(token, now)) {
-            return Optional.empty();
-        }
-        Optional<TokenScope> effectiveScope = spaces.findRole(token.spaceSlug(), token.ownerSubject())
-                .map(role -> effectiveScope(token.scope(), role));
         Optional<TokenIdentity> identity = Optional.empty();
-        if (effectiveScope.isPresent()) {
-            store.markUsed(token.id(), now);
-            TokenScope scope = effectiveScope.get();
-            TokenIdentity resolved =
-                    new TokenIdentity(token.id(), token.spaceId(), token.spaceSlug(), token.ownerSubject(), scope);
-            identity = Optional.of(resolved);
+        if (isUsable(token, now)) {
+            identity = spaces.findMembership(token.spaceSlug(), token.ownerSubject())
+                    .filter(membership -> joinedBeforeToken(membership, token))
+                    .map(membership -> useToken(token, membership, now));
         }
         return identity;
+    }
+
+    private TokenIdentity useToken(StoredToken token, SpaceAccess.Membership membership, Instant now) {
+        store.markUsed(token.id(), now, now.minusSeconds(LAST_USED_REFRESH_SECONDS));
+        TokenScope scope = membership.effectiveScope(token.scope());
+        return new TokenIdentity(token.id(), token.spaceId(), token.spaceSlug(), token.ownerSubject(), scope);
+    }
+
+    private static boolean joinedBeforeToken(SpaceAccess.Membership membership, StoredToken token) {
+        return !token.createdAt().isBefore(membership.since());
+    }
+
+    private void requireTokenLimit(SpaceView space, TokenOwner owner, Instant now) {
+        long active = store.countActive(space.id(), owner.subject(), now);
+        if (active >= maxPerOwner) {
+            throw new TokenLimitException(maxPerOwner);
+        }
+    }
+
+    private static void requireFutureExpiry(@Nullable Instant expiresAt, Instant now) {
+        if (expiresAt != null && !expiresAt.isAfter(now)) {
+            throw new InvalidTokenException("expiresAt", "invalid_expiry", "A token expiry must be in the future");
+        }
     }
 
     private static boolean isUsable(StoredToken token, Instant now) {
@@ -90,10 +112,6 @@ final class JdbcApiTokens implements ApiTokens {
 
     private static boolean notExpired(@Nullable Instant expiresAt, Instant now) {
         return expiresAt == null || expiresAt.isAfter(now);
-    }
-
-    private static TokenScope effectiveScope(TokenScope tokenScope, SpaceRole role) {
-        return role == SpaceRole.VIEWER ? TokenScope.READ : tokenScope;
     }
 
     private static String requireValidName(String name) {

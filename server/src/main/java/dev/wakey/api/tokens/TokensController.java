@@ -2,8 +2,6 @@ package dev.wakey.api.tokens;
 
 import dev.wakey.api.SpacePrincipals;
 import dev.wakey.tokens.ApiTokens;
-import dev.wakey.tokens.CreatedToken;
-import dev.wakey.tokens.TokenOptions;
 import dev.wakey.tokens.TokenOwner;
 import dev.wakey.tokens.TokenSummary;
 import dev.wakey.web.CursorPage;
@@ -41,8 +39,11 @@ final class TokensController {
 
     private final ApiTokens tokens;
 
-    TokensController(ApiTokens tokens) {
+    private final TokenCreation tokenCreation;
+
+    TokensController(ApiTokens tokens, TokenCreation tokenCreation) {
         this.tokens = tokens;
+        this.tokenCreation = tokenCreation;
     }
 
     @Operation(operationId = "createToken", summary = "Create an API token for a space")
@@ -71,9 +72,8 @@ final class TokensController {
             @PathVariable String slug, @Valid @RequestBody CreateTokenRequest request, Authentication authentication) {
         SpacePrincipals.requireUserSession(authentication);
         TokenOwner owner = owner(authentication);
-        TokenOptions options = new TokenOptions(request.scope(), request.expiresAt());
-        CreatedToken created = tokens.create(owner, slug, request.name(), options);
-        return ResponseEntity.status(201).body(CreateTokenResponse.from(created));
+        CreateTokenResponse response = tokenCreation.create(owner, slug, request);
+        return ResponseEntity.status(201).body(response);
     }
 
     @Operation(operationId = "listTokens", summary = "List the caller's API tokens in a space")

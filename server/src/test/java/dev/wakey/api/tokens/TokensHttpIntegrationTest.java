@@ -8,6 +8,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 
+import dev.wakey.security.CurrentUser;
 import dev.wakey.spaces.PutResult;
 import dev.wakey.spaces.Space;
 import dev.wakey.spaces.SpacePrincipal;
@@ -20,17 +21,24 @@ import dev.wakey.tokens.TokenOptions;
 import dev.wakey.tokens.TokenOwner;
 import dev.wakey.tokens.TokenScope;
 import jakarta.servlet.http.HttpSession;
+import java.lang.reflect.RecordComponent;
 import java.net.URI;
 import java.time.Clock;
 import java.time.Instant;
+import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.UUID;
 import org.jspecify.annotations.Nullable;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.boot.test.context.TestConfiguration;
+import org.springframework.boot.test.system.CapturedOutput;
+import org.springframework.boot.test.system.OutputCaptureExtension;
 import org.springframework.context.annotation.Bean;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
@@ -50,6 +58,7 @@ import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
 import tools.jackson.databind.json.JsonMapper;
 
+@ExtendWith(OutputCaptureExtension.class)
 class TokensHttpIntegrationTest extends SecurityIntegrationTest {
 
     private static final ObjectMapper MAPPER = JsonMapper.builder().build();
@@ -63,6 +72,13 @@ class TokensHttpIntegrationTest extends SecurityIntegrationTest {
     private static final String PROBLEM_JSON = "application/problem+json";
 
     private static final String WRITE_CALL = "/api/v1/test-write";
+
+    private CapturedOutput output;
+
+    @BeforeEach
+    void captureOutput(CapturedOutput capturedOutput) {
+        this.output = capturedOutput;
+    }
 
     @Test
     void aReadTokenReadsItsSpace() throws Exception {
@@ -189,7 +205,9 @@ class TokensHttpIntegrationTest extends SecurityIntegrationTest {
         Space space = seedSpace("expired", subject, SpaceRole.EDITOR);
         Clock clock = bean(Clock.class);
         Instant past = Instant.now(clock).minusSeconds(60);
-        CreatedToken token = createToken(subject, space.slug(), TokenScope.READ, past);
+        CreatedToken token = createToken(subject, space.slug(), TokenScope.READ);
+        UUID tokenId = token.token().id();
+        expireAt(tokenId, past);
 
         // when
         MvcResult result = performWithToken(get("/api/v1/me"), token);
@@ -199,6 +217,145 @@ class TokensHttpIntegrationTest extends SecurityIntegrationTest {
         String code = body.path("code").asString();
         assertThat(statusOf(result)).isEqualTo(401);
         assertThat(code).isEqualTo("invalid_token");
+    }
+
+    @Test
+    void aTokenOfAMemberRemovedAndInvitedAgainStaysDead() throws Exception {
+        // given
+        String subject = uniqueSubject("re-invited");
+        Space space = seedSpace("re-invited", subject, SpaceRole.EDITOR);
+        CreatedToken old = createToken(subject, space.slug(), TokenScope.WRITE);
+
+        // when
+        MvcResult beforeRemoval = performWithToken(get("/api/v1/me"), old);
+        spaces().removeMember(ADMIN, space.slug(), subject);
+        spaces().addMember(ADMIN, space.slug(), subject, SpaceRole.EDITOR);
+        MvcResult afterReInvite = performWithToken(get("/api/v1/me"), old);
+        CreatedToken fresh = createToken(subject, space.slug(), TokenScope.WRITE);
+        MvcResult freshUse = performWithToken(get("/api/v1/me"), fresh);
+
+        // then
+        assertThat(statusOf(beforeRemoval)).isEqualTo(200);
+        assertThat(statusOf(afterReInvite)).isEqualTo(401);
+        assertThat(codeOf(afterReInvite)).isEqualTo("invalid_token");
+        assertThat(statusOf(freshUse)).isEqualTo(200);
+    }
+
+    @Test
+    void aRejectedTokenIsLoggedWithAClosedReason() throws Exception {
+        // given
+        String subject = uniqueSubject("closed-reason");
+        Space space = seedSpace("closed-reason", subject, SpaceRole.EDITOR);
+        CreatedToken readToken = createToken(subject, space.slug(), TokenScope.READ);
+        String invalidSecret = "wk_" + UUID.randomUUID();
+
+        // when
+        MockHttpServletRequestBuilder invalidRequest =
+                get("/api/v1/me").header(HttpHeaders.AUTHORIZATION, "Bearer " + invalidSecret);
+        MvcResult invalid = mockMvc().perform(invalidRequest).andReturn();
+        MvcResult insufficient = performWithToken(post(WRITE_CALL), readToken);
+
+        // then
+        assertThat(statusOf(invalid)).isEqualTo(401);
+        assertThat(statusOf(insufficient)).isEqualTo(403);
+        assertThat(logEntries("reason=invalid-token")).hasSize(1);
+        assertThat(logEntries("reason=insufficient-scope")).hasSize(1);
+        assertThat(output.getOut()).doesNotContain(readToken.secret()).doesNotContain(invalidSecret);
+    }
+
+    @Test
+    void aRejectedTokenResponseHasWwwAuthenticate() throws Exception {
+        // given
+        String subject = uniqueSubject("challenge");
+        Space space = seedSpace("challenge", subject, SpaceRole.EDITOR);
+        CreatedToken readToken = createToken(subject, space.slug(), TokenScope.READ);
+
+        // when
+        MockHttpServletRequestBuilder invalidRequest =
+                get("/api/v1/me").header(HttpHeaders.AUTHORIZATION, "Bearer wk_not-a-real-token");
+        MvcResult invalid = mockMvc().perform(invalidRequest).andReturn();
+        MvcResult insufficient = performWithToken(post(WRITE_CALL), readToken);
+
+        // then
+        assertThat(statusOf(invalid)).isEqualTo(401);
+        assertThat(headerOf(invalid, HttpHeaders.WWW_AUTHENTICATE)).isEqualTo("Bearer error=\"invalid_token\"");
+        assertThat(statusOf(insufficient)).isEqualTo(403);
+        assertThat(headerOf(insufficient, HttpHeaders.WWW_AUTHENTICATE))
+                .isEqualTo("Bearer error=\"insufficient_scope\"");
+    }
+
+    @Test
+    void anExpiryInThePastIsRejected() throws Exception {
+        // given
+        String subject = uniqueSubject("past-expiry");
+        Space space = seedSpace("past-expiry", subject, SpaceRole.EDITOR);
+        Instant past = Instant.now(bean(Clock.class)).minusSeconds(60);
+        String body = "{\"name\":\"past\",\"scope\":\"READ\",\"expiresAt\":\"" + past + "\"}";
+        MockHttpServletRequestBuilder create = post(SPACES + "/" + space.slug() + TOKENS)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(body)
+                .with(login(subject))
+                .with(csrf());
+
+        // when
+        MvcResult result = mockMvc().perform(create).andReturn();
+
+        // then
+        JsonNode bodyNode = jsonOf(result);
+        String code = bodyNode.path("code").asString();
+        String pointer = bodyNode.path("errors").path(0).path("pointer").asString();
+        assertThat(statusOf(result)).isEqualTo(400);
+        assertThat(code).isEqualTo("validation_failed");
+        assertThat(pointer).isEqualTo("/expiresAt");
+    }
+
+    @Test
+    void aTokenLimitPerOwnerIsEnforced() throws Exception {
+        // given
+        String subject = uniqueSubject("limit");
+        Space space = seedSpace("limit", subject, SpaceRole.EDITOR);
+        for (int index = 0; index < 50; index++) {
+            createToken(subject, space.slug(), TokenScope.READ);
+        }
+        MockHttpServletRequestBuilder create = post(SPACES + "/" + space.slug() + TOKENS)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(tokenBody("over-limit", TokenScope.READ))
+                .with(login(subject))
+                .with(csrf());
+
+        // when
+        MvcResult result = mockMvc().perform(create).andReturn();
+
+        // then
+        JsonNode body = jsonOf(result);
+        String code = body.path("code").asString();
+        int bound = body.path("params").path("bound").asInt();
+        assertThat(statusOf(result)).isEqualTo(400);
+        assertThat(code).isEqualTo("token_limit");
+        assertThat(bound).isEqualTo(50);
+    }
+
+    @Test
+    void currentUserHasNoTokenContext() throws Exception {
+        // given
+        String subject = uniqueSubject("me-context");
+        Space space = seedSpace("me-context", subject, SpaceRole.EDITOR);
+        CreatedToken token = createToken(subject, space.slug(), TokenScope.READ);
+
+        // when
+        MvcResult result = performWithToken(get("/api/v1/me"), token);
+
+        // then
+        JsonNode body = jsonOf(result);
+        List<String> fields = new ArrayList<>();
+        body.propertyNames().forEach(fields::add);
+        List<String> components = new ArrayList<>();
+        for (RecordComponent component : CurrentUser.class.getRecordComponents()) {
+            components.add(component.getName());
+        }
+        assertThat(statusOf(result)).isEqualTo(200);
+        assertThat(components).containsExactly("subject", "admin");
+        assertThat(fields).containsExactlyInAnyOrder("subject", "admin");
     }
 
     @Test
@@ -372,6 +529,15 @@ class TokensHttpIntegrationTest extends SecurityIntegrationTest {
         return body.path("code").asString();
     }
 
+    private List<String> logEntries(String fragment) {
+        return output.getOut().lines().filter(line -> line.contains(fragment)).toList();
+    }
+
+    private static String headerOf(MvcResult result, String name) {
+        String header = result.getResponse().getHeader(name);
+        return Objects.requireNonNull(header);
+    }
+
     @Test
     void loweringTheRoleLowersTheTokenOverHttp() throws Exception {
         // given
@@ -428,6 +594,14 @@ class TokensHttpIntegrationTest extends SecurityIntegrationTest {
         TokenOwner owner = new TokenOwner(subject);
         TokenOptions options = new TokenOptions(scope, expiresAt);
         return tokens.create(owner, slug, "token", options);
+    }
+
+    private void expireAt(UUID tokenId, Instant expiresAt) {
+        OffsetDateTime value = OffsetDateTime.ofInstant(expiresAt, ZoneOffset.UTC);
+        jdbc().sql("UPDATE api_token SET expires_at = :expiresAt WHERE id = :id")
+                .param("expiresAt", value)
+                .param("id", tokenId)
+                .update();
     }
 
     private Space seedSpace(String prefix, String subject, SpaceRole role) {

@@ -157,6 +157,45 @@ class OpenApiContractTest extends SecurityIntegrationTest {
     }
 
     @Test
+    void tokenOperationsRequireTheSessionSchemeInTheContract() throws Exception {
+        // given
+        JsonNode document = MAPPER.readTree(generatedContract());
+        JsonNode schemes = document.path("components").path("securitySchemes");
+        JsonNode paths = document.path("paths");
+        String tokensPath = "/api/v1/spaces/{slug}/tokens";
+        JsonNode collection = paths.path(tokensPath);
+        JsonNode token = paths.path(tokensPath + "/{id}");
+        JsonNode me = paths.path("/api/v1/me");
+
+        // when
+        List<String> createSecurity = securityNames(document, collection.path("post"));
+        List<String> listSecurity = securityNames(document, collection.path("get"));
+        List<String> revokeSecurity = securityNames(document, token.path("delete"));
+        List<String> meSecurity = securityNames(document, me.path("get"));
+
+        // then
+        String sessionDescription =
+                schemes.path("sessionAuth").path("description").asString();
+        assertThat(schemes.has("bearerAuth")).isTrue();
+        assertThat(schemes.has("sessionAuth")).isTrue();
+        assertThat(sessionDescription).contains("CSRF");
+        assertThat(createSecurity).containsExactly("sessionAuth");
+        assertThat(listSecurity).containsExactly("sessionAuth");
+        assertThat(revokeSecurity).containsExactly("sessionAuth");
+        assertThat(meSecurity).containsExactlyInAnyOrder("bearerAuth", "sessionAuth");
+    }
+
+    private static List<String> securityNames(JsonNode document, JsonNode operation) {
+        JsonNode security = operation.path("security");
+        JsonNode effective = security.isMissingNode() ? document.path("security") : security;
+        List<String> names = new ArrayList<>();
+        for (JsonNode requirement : effective) {
+            requirement.propertyNames().forEach(names::add);
+        }
+        return names;
+    }
+
+    @Test
     void everyOperationHasAUniqueOperationId() throws Exception {
         // given
         String generated = generatedContract();

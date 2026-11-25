@@ -572,6 +572,12 @@
         "description" : "An API token issued for one space, sent as Authorization: Bearer wk_...",
         "scheme" : "bearer",
         "type" : "http"
+      },
+      "sessionAuth" : {
+        "description" : "The browser session cookie; state-changing requests also send the X-XSRF-TOKEN CSRF header",
+        "in" : "cookie",
+        "name" : "SESSION",
+        "type" : "apiKey"
       }
     }
   },
@@ -1789,6 +1795,9 @@
             "description" : "The space was not found."
           }
         },
+        "security" : [ {
+          "sessionAuth" : [ ]
+        } ],
         "summary" : "List the caller's API tokens in a space",
         "tags" : [ "tokens-controller" ]
       },
@@ -1864,6 +1873,9 @@
             "description" : "The space was not found."
           }
         },
+        "security" : [ {
+          "sessionAuth" : [ ]
+        } ],
         "summary" : "Create an API token for a space",
         "tags" : [ "tokens-controller" ]
       }
@@ -1922,6 +1934,9 @@
             "description" : "The space was not found."
           }
         },
+        "security" : [ {
+          "sessionAuth" : [ ]
+        } ],
         "summary" : "Revoke one of the caller's API tokens",
         "tags" : [ "tokens-controller" ]
       }
@@ -1929,6 +1944,8 @@
   },
   "security" : [ {
     "bearerAuth" : [ ]
+  }, {
+    "sessionAuth" : [ ]
   } ],
   "servers" : [ {
     "description" : "Generated server url",

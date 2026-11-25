@@ -7,7 +7,7 @@ import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 
 /** The authentication of a request that presented a valid {@code wk_} token. */
-final class ApiTokenAuthentication extends AbstractAuthenticationToken {
+public final class ApiTokenAuthentication extends AbstractAuthenticationToken {
 
     private static final long serialVersionUID = 1L;
 
@@ -21,6 +21,11 @@ final class ApiTokenAuthentication extends AbstractAuthenticationToken {
 
     TokenIdentity identity() {
         return identity;
+    }
+
+    /** The token context used by the HTTP adapters; it is not part of the {@code /me} response. */
+    public TokenContext context() {
+        return new TokenContext(identity.spaceSlug());
     }
 
     @Override
@@ -38,4 +43,7 @@ final class ApiTokenAuthentication extends AbstractAuthenticationToken {
         GrantedAuthority authority = new SimpleGrantedAuthority(scope);
         return List.of(authority);
     }
+
+    /** The one space an API token may reach. */
+    public record TokenContext(String spaceSlug) {}
 }

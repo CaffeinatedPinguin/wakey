@@ -15,6 +15,7 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
+import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.context.annotation.Bean;
@@ -41,7 +42,7 @@ class AuditLogIntegrationTest extends PostgresIntegrationTest {
 
         // when
         record(entry);
-        List<AuditRecord> history = auditLog().history(OBJECT_TYPE, objectId, null, 10);
+        List<AuditRecord> history = auditLog().history(SPACE_ID, OBJECT_TYPE, objectId, page(null, 10));
 
         // then
         assertThat(history).hasSize(1);
@@ -66,7 +67,7 @@ class AuditLogIntegrationTest extends PostgresIntegrationTest {
 
         // when
         Throwable rejection = catchThrowable(() -> auditLog().record(entry));
-        List<AuditRecord> history = auditLog().history(OBJECT_TYPE, objectId, null, 10);
+        List<AuditRecord> history = auditLog().history(SPACE_ID, OBJECT_TYPE, objectId, page(null, 10));
 
         // then
         assertThat(rejection).isInstanceOf(IllegalTransactionStateException.class);
@@ -85,7 +86,7 @@ class AuditLogIntegrationTest extends PostgresIntegrationTest {
             auditLog().record(entry);
             status.setRollbackOnly();
         });
-        List<AuditRecord> history = auditLog().history(OBJECT_TYPE, objectId, null, 10);
+        List<AuditRecord> history = auditLog().history(SPACE_ID, OBJECT_TYPE, objectId, page(null, 10));
 
         // then
         assertThat(history).isEmpty();
@@ -100,7 +101,7 @@ class AuditLogIntegrationTest extends PostgresIntegrationTest {
         record(entry(objectId, "{\"step\":3}"));
 
         // when
-        List<AuditRecord> history = auditLog().history(OBJECT_TYPE, objectId, null, 10);
+        List<AuditRecord> history = auditLog().history(SPACE_ID, OBJECT_TYPE, objectId, page(null, 10));
 
         // then
         assertThat(history)
@@ -119,12 +120,12 @@ class AuditLogIntegrationTest extends PostgresIntegrationTest {
         record(entry(objectId, "{\"step\":5}"));
 
         // when
-        List<AuditRecord> firstPage = auditLog().history(OBJECT_TYPE, objectId, null, 2);
+        List<AuditRecord> firstPage = auditLog().history(SPACE_ID, OBJECT_TYPE, objectId, page(null, 2));
         AuditRecord lastOfFirstPage = firstPage.get(1);
         Instant occurredAt = lastOfFirstPage.occurredAt();
         UUID id = lastOfFirstPage.id();
         AuditCursor cursor = new AuditCursor(occurredAt, id);
-        List<AuditRecord> secondPage = auditLog().history(OBJECT_TYPE, objectId, cursor, 10);
+        List<AuditRecord> secondPage = auditLog().history(SPACE_ID, OBJECT_TYPE, objectId, page(cursor, 10));
 
         // then
         assertThat(firstPage).extracting(AuditRecord::details).containsExactly("{\"step\":5}", "{\"step\":4}");
@@ -159,13 +160,34 @@ class AuditLogIntegrationTest extends PostgresIntegrationTest {
 
         // when
         record(entry);
-        List<AuditRecord> history = auditLog().history(OBJECT_TYPE, objectId, null, 10);
+        List<AuditRecord> history = auditLog().history(SPACE_ID, OBJECT_TYPE, objectId, page(null, 10));
 
         // then
         assertThat(history).hasSize(1);
         AuditRecord stored = history.get(0);
         assertThat(stored.outcome()).isEqualTo(AuditOutcome.DENIED);
         assertThat(stored.action()).isEqualTo("access.denied");
+    }
+
+    @Test
+    void auditHistoryIsScopedBySpace() {
+        // given
+        UUID ownSpace = UUID.randomUUID();
+        UUID foreignSpace = UUID.randomUUID();
+        String objectId = uniqueObjectId();
+        record(entryFor(ownSpace, objectId, "{\"space\":\"own\"}"));
+        record(entryFor(foreignSpace, objectId, "{\"space\":\"foreign\"}"));
+        record(entryFor(null, objectId, "{\"space\":\"none\"}"));
+
+        // when
+        List<AuditRecord> own = auditLog().history(ownSpace, OBJECT_TYPE, objectId, page(null, 10));
+        List<AuditRecord> foreign = auditLog().history(foreignSpace, OBJECT_TYPE, objectId, page(null, 10));
+        List<AuditRecord> withoutSpace = auditLog().history(null, OBJECT_TYPE, objectId, page(null, 10));
+
+        // then
+        assertThat(own).extracting(AuditRecord::details).containsExactly("{\"space\":\"own\"}");
+        assertThat(foreign).extracting(AuditRecord::details).containsExactly("{\"space\":\"foreign\"}");
+        assertThat(withoutSpace).extracting(AuditRecord::details).containsExactly("{\"space\":\"none\"}");
     }
 
     private AuditLog auditLog() {
@@ -183,6 +205,10 @@ class AuditLogIntegrationTest extends PostgresIntegrationTest {
     }
 
     private static AuditEntry entry(String objectId, String details) {
+        return entryFor(SPACE_ID, objectId, details);
+    }
+
+    private static AuditEntry entryFor(@Nullable UUID spaceId, String objectId, String details) {
         return new AuditEntry(
                 "space.put",
                 OBJECT_TYPE,
@@ -190,8 +216,12 @@ class AuditLogIntegrationTest extends PostgresIntegrationTest {
                 AuditOutcome.SUCCESS,
                 AuditSource.UI,
                 new AuditActor(USER_SUBJECT, ActorKind.USER),
-                SPACE_ID,
+                spaceId,
                 details);
+    }
+
+    private static AuditPage page(@Nullable AuditCursor after, int limit) {
+        return new AuditPage(after, limit);
     }
 
     private static String uniqueObjectId() {

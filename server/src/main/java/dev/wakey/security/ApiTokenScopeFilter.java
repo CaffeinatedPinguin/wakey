@@ -2,14 +2,12 @@ package dev.wakey.security;
 
 import dev.wakey.tokens.TokenIdentity;
 import dev.wakey.tokens.TokenScope;
-import dev.wakey.web.ProblemDetailsWriter;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.util.Set;
-import org.springframework.http.HttpStatus;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.filter.OncePerRequestFilter;
@@ -22,8 +20,6 @@ import org.springframework.web.filter.OncePerRequestFilter;
 final class ApiTokenScopeFilter extends OncePerRequestFilter {
 
     private static final Set<String> WRITE_METHODS = Set.of("POST", "PUT", "PATCH", "DELETE");
-
-    private static final String INSUFFICIENT_SCOPE_DETAIL = "The API token does not allow this request.";
 
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
@@ -41,7 +37,7 @@ final class ApiTokenScopeFilter extends OncePerRequestFilter {
             throws ServletException, IOException {
         boolean readTokenWrites = identity.scope() == TokenScope.READ && isWriteRequest(request);
         if (readTokenWrites) {
-            ProblemDetailsWriter.write(response, HttpStatus.FORBIDDEN, "insufficient_scope", INSUFFICIENT_SCOPE_DETAIL);
+            ForbiddenRequestLog.rejectInsufficientScope(request, response);
         } else {
             filterChain.doFilter(request, response);
         }
