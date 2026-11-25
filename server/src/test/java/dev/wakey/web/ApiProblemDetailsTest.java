@@ -10,7 +10,6 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 import java.util.Objects;
 import org.junit.jupiter.api.Test;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
@@ -52,9 +51,34 @@ class ApiProblemDetailsTest {
         String pointer = errors.path(0).path("pointer").asString();
         assertThat(status).isEqualTo(400);
         assertThat(contentType).isEqualTo(MediaType.APPLICATION_PROBLEM_JSON_VALUE);
-        assertThat(code).isEqualTo("validation_failed");
+        assertThat(code).isEqualTo(CommonError.VALIDATION_FAILED.getCode());
         assertThat(errors.isArray()).isTrue();
         assertThat(pointer).isEqualTo("/name");
+    }
+
+    @Test
+    void unreadableBodyKeepsItsOwnCode() throws Exception {
+        // given
+        MockMvc mvc = mvcFor(new ValidationController());
+        MockHttpServletRequestBuilder request = post("/api/v1/test-items")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{");
+
+        // when
+        MvcResult result = mvc.perform(request).andReturn();
+
+        // then
+        int status = result.getResponse().getStatus();
+        String responseBody = result.getResponse().getContentAsString();
+        JsonNode body = MAPPER.readTree(responseBody);
+        String code = body.path("code").asString();
+        JsonNode errors = body.path("errors");
+        int errorCount = errors.size();
+        boolean errorsAreArray = errors.isArray();
+        assertThat(status).isEqualTo(400);
+        assertThat(code).isEqualTo(CommonError.INVALID_BODY.getCode());
+        assertThat(errorsAreArray).isTrue();
+        assertThat(errorCount).isZero();
     }
 
     @Test
@@ -74,7 +98,7 @@ class ApiProblemDetailsTest {
         String code = body.path("code").asString();
         assertThat(status).isEqualTo(500);
         assertThat(contentType).isEqualTo(MediaType.APPLICATION_PROBLEM_JSON_VALUE);
-        assertThat(code).isEqualTo("internal_error");
+        assertThat(code).isEqualTo(CommonError.INTERNAL_ERROR.getCode());
         assertThat(responseBody).doesNotContain(SECRET);
     }
 
@@ -132,7 +156,7 @@ class ApiProblemDetailsTest {
         String code = body.path("code").asString();
         assertThat(status).isEqualTo(404);
         assertThat(contentType).isEqualTo(MediaType.APPLICATION_PROBLEM_JSON_VALUE);
-        assertThat(code).isEqualTo("not_found");
+        assertThat(code).isEqualTo(CommonError.NOT_FOUND.getCode());
     }
 
     private static MockMvc mvcFor(Object controller) {
@@ -178,7 +202,7 @@ class ApiProblemDetailsTest {
 
         @GetMapping("/api/v1/test-missing")
         void missing() {
-            throw new ApiProblemException(HttpStatus.NOT_FOUND, "not_found");
+            throw new ApiException(CommonError.NOT_FOUND);
         }
     }
 }

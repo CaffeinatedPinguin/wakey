@@ -10,6 +10,8 @@ import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import java.util.Optional;
+import lombok.RequiredArgsConstructor;
+import org.springframework.http.MediaType;
 import org.springframework.http.ProblemDetail;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -19,13 +21,10 @@ import org.springframework.web.bind.annotation.RestController;
 
 /** The HTTP read adapter for spaces; all access rules and validation live in the spaces module. */
 @RestController
+@RequiredArgsConstructor
 final class SpacesController {
 
     private static final String DEFAULT_PAGE_SIZE = "20";
-
-    private static final String JSON = "application/json";
-
-    private static final String PROBLEM_JSON = "application/problem+json";
 
     private static final int EXTRA_ROW = 1;
 
@@ -33,29 +32,30 @@ final class SpacesController {
 
     private final ApiProperties apiProperties;
 
-    SpacesController(SpaceService spaces, ApiProperties apiProperties) {
-        this.spaces = spaces;
-        this.apiProperties = apiProperties;
-    }
-
     @Operation(operationId = "listSpaces", summary = "List the spaces visible to the caller")
     @ApiResponse(responseCode = "200", description = "OK", useReturnTypeSchema = true)
     @ApiResponse(
             responseCode = "400",
             description = "The cursor or the limit is invalid.",
-            content = @Content(mediaType = PROBLEM_JSON, schema = @Schema(implementation = ProblemDetail.class)))
+            content =
+                    @Content(
+                            mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE,
+                            schema = @Schema(implementation = ProblemDetail.class)))
     @ApiResponse(
             responseCode = "401",
             description = "Authentication is required.",
-            content = @Content(mediaType = PROBLEM_JSON, schema = @Schema(implementation = ProblemDetail.class)))
-    @GetMapping(path = SpacesPaths.COLLECTION, produces = JSON)
+            content =
+                    @Content(
+                            mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE,
+                            schema = @Schema(implementation = ProblemDetail.class)))
+    @GetMapping(path = SpacesPaths.COLLECTION, produces = MediaType.APPLICATION_JSON_VALUE)
     CursorPage<SpaceResponse> listSpaces(
             @Parameter(description = "The page size, at least 1; values above the instance maximum are capped.")
                     @RequestParam(defaultValue = DEFAULT_PAGE_SIZE)
                     int limit,
             @RequestParam(required = false) Optional<String> cursor,
             Authentication authentication) {
-        var actor = SpacesErrors.principal(authentication);
+        var actor = SpacePrincipals.of(authentication);
         int pageSize = apiProperties.capPageSize(limit);
         String afterSlug = cursor.map(SpacesController::sortValue).orElse("");
         var views = spaces.listVisible(actor, afterSlug, pageSize + EXTRA_ROW);
@@ -76,22 +76,30 @@ final class SpacesController {
     @ApiResponse(
             responseCode = "400",
             description = "The slug is invalid.",
-            content = @Content(mediaType = PROBLEM_JSON, schema = @Schema(implementation = ProblemDetail.class)))
+            content =
+                    @Content(
+                            mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE,
+                            schema = @Schema(implementation = ProblemDetail.class)))
     @ApiResponse(
             responseCode = "401",
             description = "Authentication is required.",
-            content = @Content(mediaType = PROBLEM_JSON, schema = @Schema(implementation = ProblemDetail.class)))
+            content =
+                    @Content(
+                            mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE,
+                            schema = @Schema(implementation = ProblemDetail.class)))
     @ApiResponse(
             responseCode = "404",
             description = "The space was not found.",
-            content = @Content(mediaType = PROBLEM_JSON, schema = @Schema(implementation = ProblemDetail.class)))
-    @GetMapping(path = SpacesPaths.ITEM, produces = JSON)
+            content =
+                    @Content(
+                            mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE,
+                            schema = @Schema(implementation = ProblemDetail.class)))
+    @GetMapping(path = SpacesPaths.ITEM, produces = MediaType.APPLICATION_JSON_VALUE)
     SpaceResponse getSpace(
             @PathVariable @Parameter(schema = @Schema(pattern = SpaceResponse.SLUG_PATTERN)) String slug,
             Authentication authentication) {
-        var actor = SpacesErrors.principal(authentication);
-        var view = SpacesErrors.mapped(() -> spaces.view(actor, slug));
-        return SpaceResponse.from(view);
+        var actor = SpacePrincipals.of(authentication);
+        return SpaceResponse.from(spaces.view(actor, slug));
     }
 
     private static String sortValue(String encoded) {

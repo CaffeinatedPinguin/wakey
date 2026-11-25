@@ -2,7 +2,6 @@ package dev.wakey.web;
 
 import java.nio.charset.StandardCharsets;
 import java.util.Base64;
-import org.springframework.http.HttpStatus;
 
 /**
  * Encodes and decodes the opaque keyset cursor. The payload carries the sort value and the id, and a
@@ -33,15 +32,14 @@ public final class CursorCodec {
         try {
             bytes = DECODER.decode(cursor);
         } catch (IllegalArgumentException exception) {
-            throw new ApiProblemException(
-                    HttpStatus.BAD_REQUEST, "invalid_cursor", "The cursor is invalid.", exception);
+            throw new ApiException(CommonError.INVALID_CURSOR, exception);
         }
         String payload = new String(bytes, StandardCharsets.UTF_8);
         String separator = String.valueOf(SEPARATOR);
         String[] parts = payload.split(separator, -1);
         boolean valid = parts.length == EXPECTED_PARTS && FORMAT_VERSION.equals(parts[0]);
         if (!valid) {
-            throw new ApiProblemException(HttpStatus.BAD_REQUEST, "invalid_cursor", "The cursor is invalid.");
+            throw new ApiException(CommonError.INVALID_CURSOR);
         }
         return new CursorPosition(parts[1], parts[2]);
     }

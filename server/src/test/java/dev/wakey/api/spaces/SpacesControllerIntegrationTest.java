@@ -9,16 +9,19 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 
 import dev.wakey.spaces.PutResult;
 import dev.wakey.spaces.Space;
+import dev.wakey.spaces.SpaceError;
 import dev.wakey.spaces.SpacePrincipal;
 import dev.wakey.spaces.SpaceRole;
 import dev.wakey.spaces.SpaceService;
 import dev.wakey.testsupport.SecurityIntegrationTest;
+import dev.wakey.web.CommonError;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.test.web.servlet.MvcResult;
@@ -91,7 +94,7 @@ class SpacesControllerIntegrationTest extends SecurityIntegrationTest {
     void nonAdminPutIsForbiddenAsProblem() throws Exception {
         // given
         String subject = uniqueSubject("non-admin");
-        String slug = uniqueSlug("forbidden");
+        String slug = uniqueSlug("non-admin-write");
 
         // when
         MvcResult result = putSpace(subject, false, slug, nameBody("Forbidden"), true);
@@ -101,7 +104,7 @@ class SpacesControllerIntegrationTest extends SecurityIntegrationTest {
         String code = body.path("code").asString();
         assertThat(statusOf(result)).isEqualTo(403);
         assertThat(contentTypeOf(result)).isEqualTo(PROBLEM_JSON);
-        assertThat(code).isEqualTo("forbidden");
+        assertThat(code).isEqualTo(CommonError.FORBIDDEN.getCode());
     }
 
     @Test
@@ -121,7 +124,7 @@ class SpacesControllerIntegrationTest extends SecurityIntegrationTest {
         String code = body.path("code").asString();
         assertThat(statusOf(result)).isEqualTo(404);
         assertThat(contentTypeOf(result)).isEqualTo(PROBLEM_JSON);
-        assertThat(code).isEqualTo("not_found");
+        assertThat(code).isEqualTo(CommonError.NOT_FOUND.getCode());
     }
 
     @Test
@@ -143,7 +146,7 @@ class SpacesControllerIntegrationTest extends SecurityIntegrationTest {
         String role = readBody.path("role").asString();
         assertThat(statusOf(read)).isEqualTo(200);
         assertThat(readSlug).isEqualTo(slug);
-        assertThat(role).isEqualTo("VIEWER");
+        assertThat(role).isEqualTo(SpaceRole.VIEWER.name());
         assertThat(statusOf(write)).isEqualTo(403);
     }
 
@@ -169,7 +172,7 @@ class SpacesControllerIntegrationTest extends SecurityIntegrationTest {
         assertThat(statusOf(result)).isEqualTo(200);
         assertThat(slug).isEqualTo(targetSlug);
         assertThat(name).isEqualTo("Target space");
-        assertThat(role).isEqualTo("VIEWER");
+        assertThat(role).isEqualTo(SpaceRole.VIEWER.name());
     }
 
     @Test
@@ -240,9 +243,9 @@ class SpacesControllerIntegrationTest extends SecurityIntegrationTest {
         String fieldCode = firstError.path("code").asString();
         assertThat(statusOf(result)).isEqualTo(400);
         assertThat(contentTypeOf(result)).isEqualTo(PROBLEM_JSON);
-        assertThat(code).isEqualTo("validation_failed");
+        assertThat(code).isEqualTo(CommonError.VALIDATION_FAILED.getCode());
         assertThat(pointer).isEqualTo("/slug");
-        assertThat(fieldCode).isEqualTo("invalid_slug");
+        assertThat(fieldCode).isEqualTo(SpaceError.INVALID_SLUG.getCode());
     }
 
     @Test
@@ -260,7 +263,7 @@ class SpacesControllerIntegrationTest extends SecurityIntegrationTest {
         String code = body.path("code").asString();
         String pointer = firstError.path("pointer").asString();
         assertThat(statusOf(result)).isEqualTo(400);
-        assertThat(code).isEqualTo("validation_failed");
+        assertThat(code).isEqualTo(CommonError.VALIDATION_FAILED.getCode());
         assertThat(pointer).isEqualTo("/name");
     }
 
@@ -278,7 +281,7 @@ class SpacesControllerIntegrationTest extends SecurityIntegrationTest {
         String code = body.path("code").asString();
         assertThat(statusOf(result)).isEqualTo(403);
         assertThat(contentTypeOf(result)).isEqualTo(PROBLEM_JSON);
-        assertThat(code).isEqualTo("forbidden");
+        assertThat(code).isEqualTo(CommonError.FORBIDDEN.getCode());
     }
 
     @Test
@@ -301,10 +304,29 @@ class SpacesControllerIntegrationTest extends SecurityIntegrationTest {
         String wrongMethodCode = wrongMethodBody.path("code").asString();
         assertThat(statusOf(badLimit)).isEqualTo(400);
         assertThat(contentTypeOf(badLimit)).isEqualTo(PROBLEM_JSON);
-        assertThat(badLimitCode).isEqualTo("bad_request");
+        assertThat(badLimitCode).isEqualTo(CommonError.BAD_REQUEST.getCode());
         assertThat(statusOf(wrongMethod)).isEqualTo(405);
         assertThat(contentTypeOf(wrongMethod)).isEqualTo(PROBLEM_JSON);
-        assertThat(wrongMethodCode).isEqualTo("method_not_allowed");
+        assertThat(wrongMethodCode).isEqualTo(CommonError.METHOD_NOT_ALLOWED.getCode());
+    }
+
+    @Test
+    void unsupportedMethodKeepsTheAllowHeader() throws Exception {
+        // given
+        String admin = uniqueSubject("allow-header");
+        MockHttpServletRequestBuilder request =
+                post(SPACES_PATH).with(login(admin, true)).with(csrf());
+
+        // when
+        MvcResult result = mockMvc().perform(request).andReturn();
+
+        // then
+        JsonNode body = jsonOf(result);
+        String allow = result.getResponse().getHeader(HttpHeaders.ALLOW);
+        String code = body.path("code").asString();
+        assertThat(statusOf(result)).isEqualTo(405);
+        assertThat(allow).contains("GET");
+        assertThat(code).isEqualTo(CommonError.METHOD_NOT_ALLOWED.getCode());
     }
 
     @Test
@@ -333,7 +355,7 @@ class SpacesControllerIntegrationTest extends SecurityIntegrationTest {
         String readName = readBody.path("name").asString();
         assertThat(statusOf(refused)).isEqualTo(409);
         assertThat(contentTypeOf(refused)).isEqualTo(PROBLEM_JSON);
-        assertThat(refusedCode).isEqualTo("slug_taken");
+        assertThat(refusedCode).isEqualTo(SpaceError.SLUG_TAKEN.getCode());
         assertThat(readName).isEqualTo("Original name");
     }
 
@@ -373,7 +395,7 @@ class SpacesControllerIntegrationTest extends SecurityIntegrationTest {
         String staleCode = staleBody.path("code").asString();
         String storedName = jsonOf(read).path("name").asString();
         assertThat(statusOf(stale)).isEqualTo(409);
-        assertThat(staleCode).isEqualTo("version_conflict");
+        assertThat(staleCode).isEqualTo(SpaceError.VERSION_CONFLICT.getCode());
         assertThat(storedName).isEqualTo("Original name");
     }
 
@@ -410,7 +432,7 @@ class SpacesControllerIntegrationTest extends SecurityIntegrationTest {
         JsonNode body = jsonOf(rejected);
         String code = body.path("code").asString();
         assertThat(statusOf(rejected)).isEqualTo(400);
-        assertThat(code).isEqualTo("invalid_precondition");
+        assertThat(code).isEqualTo(SpaceError.INVALID_PRECONDITION.getCode());
     }
 
     @Test
@@ -429,9 +451,9 @@ class SpacesControllerIntegrationTest extends SecurityIntegrationTest {
         String pointer = firstError.path("pointer").asString();
         String fieldCode = firstError.path("code").asString();
         assertThat(statusOf(rejected)).isEqualTo(400);
-        assertThat(code).isEqualTo("validation_failed");
+        assertThat(code).isEqualTo(CommonError.VALIDATION_FAILED.getCode());
         assertThat(pointer).isEqualTo("/name");
-        assertThat(fieldCode).isEqualTo("invalid_name");
+        assertThat(fieldCode).isEqualTo(SpaceError.INVALID_NAME.getCode());
     }
 
     @Test
@@ -449,8 +471,8 @@ class SpacesControllerIntegrationTest extends SecurityIntegrationTest {
         String code = body.path("code").asString();
         String fieldCode = firstError.path("code").asString();
         assertThat(statusOf(rejected)).isEqualTo(400);
-        assertThat(code).isEqualTo("validation_failed");
-        assertThat(fieldCode).isEqualTo("invalid_name");
+        assertThat(code).isEqualTo(CommonError.VALIDATION_FAILED.getCode());
+        assertThat(fieldCode).isEqualTo(SpaceError.INVALID_NAME.getCode());
     }
 
     @Test

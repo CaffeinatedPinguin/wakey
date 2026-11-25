@@ -1,11 +1,11 @@
 package dev.wakey.security;
 
+import dev.wakey.web.CommonError;
 import dev.wakey.web.ProblemDetailsWriter;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.http.HttpStatus;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.web.AuthenticationEntryPoint;
 
@@ -24,6 +24,6 @@ final class UnauthorizedRequestLog implements AuthenticationEntryPoint {
         if (response.isCommitted()) {
             return;
         }
-        ProblemDetailsWriter.write(response, HttpStatus.UNAUTHORIZED, "unauthenticated", "Authentication is required.");
+        ProblemDetailsWriter.write(response, CommonError.UNAUTHENTICATED);
     }
 }

@@ -1,5 +1,11 @@
 package dev.wakey.spaces;
 
+import dev.wakey.web.ApiException;
+import dev.wakey.web.CommonError;
+import dev.wakey.web.FieldProblem;
+import java.util.List;
+import java.util.Map;
+
 /**
  * The one space-name rule: after stripping, 1-100 characters with no Unicode control or
  * bidirectional formatting characters. The HTTP contract documents the same length limit.
@@ -14,10 +20,8 @@ public final class SpaceName {
         String stripped = candidate.strip();
         boolean invalid = stripped.isEmpty() || stripped.length() > MAX_LENGTH || containsControlOrFormat(stripped);
         if (invalid) {
-            throw new InvalidSpaceException(
-                    "name",
-                    "invalid_name",
-                    "A space name must have 1-100 characters without control or bidirectional formatting characters");
+            FieldProblem problem = new FieldProblem("/name", SpaceError.INVALID_NAME.getCode(), Map.of());
+            throw new ApiException(CommonError.VALIDATION_FAILED, List.of(problem));
         }
         return stripped;
     }

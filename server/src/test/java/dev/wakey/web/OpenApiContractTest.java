@@ -232,7 +232,7 @@ class OpenApiContractTest extends SecurityIntegrationTest {
         String code = body.path("code").asString();
         assertThat(status).isEqualTo(401);
         assertThat(contentType).isEqualTo(MediaType.APPLICATION_PROBLEM_JSON_VALUE);
-        assertThat(code).isEqualTo("unauthenticated");
+        assertThat(code).isEqualTo(CommonError.UNAUTHENTICATED.getCode());
     }
 
     private static boolean isSafe(HttpMethod method) {

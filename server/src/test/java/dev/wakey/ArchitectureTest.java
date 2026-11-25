@@ -36,7 +36,7 @@ class ArchitectureTest {
             "config", Set.of(),
             "leadership", Set.of(),
             "messaging", Set.of(),
-            "spaces", Set.of(),
+            "spaces", Set.of("web"),
             "web", Set.of(),
             "security", Set.of("web"),
             "executor", Set.of("leadership", "messaging"),

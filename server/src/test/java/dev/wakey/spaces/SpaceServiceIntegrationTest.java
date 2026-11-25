@@ -4,6 +4,10 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.catchThrowable;
 
 import dev.wakey.testsupport.PostgresIntegrationTest;
+import dev.wakey.web.ApiException;
+import dev.wakey.web.CommonError;
+import dev.wakey.web.ErrorCode;
+import dev.wakey.web.FieldProblem;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
@@ -87,9 +91,9 @@ class SpaceServiceIntegrationTest extends PostgresIntegrationTest {
         Throwable viewerCreation = catchThrowable(() -> service.put(VIEWER, newSlug, "Denied"));
 
         // then
-        assertThat(creation).isInstanceOf(SpaceAccessDeniedException.class);
-        assertThat(rename).isInstanceOf(SpaceAccessDeniedException.class);
-        assertThat(viewerCreation).isInstanceOf(SpaceAccessDeniedException.class);
+        assertError(creation, CommonError.FORBIDDEN);
+        assertError(rename, CommonError.FORBIDDEN);
+        assertError(viewerCreation, CommonError.FORBIDDEN);
     }
 
     @Test
@@ -108,11 +112,11 @@ class SpaceServiceIntegrationTest extends PostgresIntegrationTest {
         List<SpaceView> visible = service.listVisible(STRANGER, null, 100);
 
         // then
-        assertThat(read).isInstanceOf(SpaceNotFoundException.class);
-        assertThat(add).isInstanceOf(SpaceNotFoundException.class);
-        assertThat(change).isInstanceOf(SpaceNotFoundException.class);
-        assertThat(remove).isInstanceOf(SpaceNotFoundException.class);
-        assertThat(write).isInstanceOf(SpaceAccessDeniedException.class);
+        assertError(read, CommonError.NOT_FOUND);
+        assertError(add, CommonError.NOT_FOUND);
+        assertError(change, CommonError.NOT_FOUND);
+        assertError(remove, CommonError.NOT_FOUND);
+        assertError(write, CommonError.FORBIDDEN);
         assertThat(visible).isEmpty();
     }
 
@@ -135,10 +139,10 @@ class SpaceServiceIntegrationTest extends PostgresIntegrationTest {
         // then
         assertThat(read.id()).isEqualTo(space.id());
         assertThat(visible).extracting(SpaceView::slug).contains(slug);
-        assertThat(write).isInstanceOf(SpaceAccessDeniedException.class);
-        assertThat(add).isInstanceOf(SpaceAccessDeniedException.class);
-        assertThat(change).isInstanceOf(SpaceAccessDeniedException.class);
-        assertThat(remove).isInstanceOf(SpaceAccessDeniedException.class);
+        assertError(write, CommonError.FORBIDDEN);
+        assertError(add, CommonError.FORBIDDEN);
+        assertError(change, CommonError.FORBIDDEN);
+        assertError(remove, CommonError.FORBIDDEN);
     }
 
     @Test
@@ -170,9 +174,9 @@ class SpaceServiceIntegrationTest extends PostgresIntegrationTest {
         assertThat(afterAdd).extracting(SpaceView::slug).contains(ownSlug);
         assertThat(afterChange).extracting(SpaceView::role).contains(SpaceRole.EDITOR);
         assertThat(afterRemove).isEmpty();
-        assertThat(foreignAdd).isInstanceOf(SpaceNotFoundException.class);
-        assertThat(foreignChange).isInstanceOf(SpaceNotFoundException.class);
-        assertThat(foreignRemove).isInstanceOf(SpaceNotFoundException.class);
+        assertError(foreignAdd, CommonError.NOT_FOUND);
+        assertError(foreignChange, CommonError.NOT_FOUND);
+        assertError(foreignRemove, CommonError.NOT_FOUND);
     }
 
     @Test
@@ -203,7 +207,7 @@ class SpaceServiceIntegrationTest extends PostgresIntegrationTest {
                 .contains(memberSlug)
                 .doesNotContain(foreignSlug);
         assertThat(adminRead.id()).isEqualTo(foreignSpace.id());
-        assertThat(editorRead).isInstanceOf(SpaceNotFoundException.class);
+        assertError(editorRead, CommonError.NOT_FOUND);
 
         SpaceView adminOwnView = viewOf(adminVisible, memberSlug);
         SpaceView adminForeignView = viewOf(adminVisible, foreignSlug);
@@ -244,8 +248,10 @@ class SpaceServiceIntegrationTest extends PostgresIntegrationTest {
         assertThat(editorView.admin()).isFalse();
         assertThat(editorView.role()).isEqualTo(SpaceRole.EDITOR);
         assertThat(viewerView.role()).isEqualTo(SpaceRole.VIEWER);
-        assertThat(editorForeign).isInstanceOf(SpaceNotFoundException.class);
-        assertThat(strangerView).isInstanceOf(SpaceNotFoundException.class);
+        assertThat(editorForeign).isInstanceOf(ApiException.class);
+        assertThat(strangerView).isInstanceOf(ApiException.class);
+        assertError(editorForeign, CommonError.NOT_FOUND);
+        assertError(strangerView, CommonError.NOT_FOUND);
     }
 
     @Test
@@ -261,11 +267,12 @@ class SpaceServiceIntegrationTest extends PostgresIntegrationTest {
         Throwable longName = catchThrowable(() -> service.put(ADMIN, longSlug, tooLongName));
 
         // then
-        assertThat(blankName).isInstanceOf(InvalidSpaceException.class);
-        assertThat(longName).isInstanceOf(InvalidSpaceException.class);
-        InvalidSpaceException exception = (InvalidSpaceException) longName;
-        assertThat(exception.field()).isEqualTo("name");
-        assertThat(exception.code()).isEqualTo("invalid_name");
+        assertThat(blankName).isInstanceOf(ApiException.class);
+        assertThat(longName).isInstanceOf(ApiException.class);
+        ApiException exception = (ApiException) longName;
+        FieldProblem problem = exception.getFieldProblems().getFirst();
+        assertThat(problem.pointer()).isEqualTo("/name");
+        assertThat(problem.code()).isEqualTo(SpaceError.INVALID_NAME.getCode());
     }
 
     @Test
@@ -282,12 +289,14 @@ class SpaceServiceIntegrationTest extends PostgresIntegrationTest {
         Throwable removeTooLong = catchThrowable(() -> service.removeMember(ADMIN, space.slug(), tooLong));
 
         // then
-        assertThat(addEmpty).isInstanceOf(InvalidSpaceException.class);
-        assertThat(addTooLong).isInstanceOf(InvalidSpaceException.class);
-        assertThat(changeBlank).isInstanceOf(InvalidSpaceException.class);
-        assertThat(removeTooLong).isInstanceOf(InvalidSpaceException.class);
-        InvalidSpaceException exception = (InvalidSpaceException) addEmpty;
-        assertThat(exception.field()).isEqualTo("subject");
+        assertThat(addEmpty).isInstanceOf(ApiException.class);
+        assertThat(addTooLong).isInstanceOf(ApiException.class);
+        assertThat(changeBlank).isInstanceOf(ApiException.class);
+        assertThat(removeTooLong).isInstanceOf(ApiException.class);
+        ApiException exception = (ApiException) addEmpty;
+        FieldProblem problem = exception.getFieldProblems().getFirst();
+        assertThat(problem.pointer()).isEqualTo("/subject");
+        assertThat(problem.code()).isEqualTo(SpaceError.INVALID_SUBJECT.getCode());
     }
 
     @Test
@@ -412,6 +421,12 @@ class SpaceServiceIntegrationTest extends PostgresIntegrationTest {
                 .filter(view -> view.slug().equals(slug))
                 .findFirst()
                 .orElseThrow();
+    }
+
+    private static void assertError(Throwable thrown, ErrorCode expected) {
+        assertThat(thrown).isInstanceOf(ApiException.class);
+        ApiException exception = (ApiException) thrown;
+        assertThat(exception.getErrorCode()).isEqualTo(expected);
     }
 
     private Session createSession(String principal) {

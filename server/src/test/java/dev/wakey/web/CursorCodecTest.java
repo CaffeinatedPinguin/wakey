@@ -5,7 +5,6 @@ import static org.assertj.core.api.Assertions.catchThrowable;
 
 import java.util.Objects;
 import org.junit.jupiter.api.Test;
-import org.springframework.http.HttpStatus;
 
 class CursorCodecTest {
 
@@ -30,9 +29,10 @@ class CursorCodecTest {
         Throwable thrown = catchThrowable(() -> CursorCodec.decode("not-base64!"));
 
         // then
-        assertThat(thrown).isInstanceOf(ApiProblemException.class);
-        ApiProblemException problem = (ApiProblemException) Objects.requireNonNull(thrown);
-        assertThat(problem.getStatus()).isEqualTo(HttpStatus.BAD_REQUEST);
-        assertThat(problem.getCode()).isEqualTo("invalid_cursor");
+        assertThat(thrown).isInstanceOf(ApiException.class);
+        ApiException problem = (ApiException) Objects.requireNonNull(thrown);
+        String code = problem.getErrorCode().getCode();
+        assertThat(problem.getErrorCode()).isEqualTo(CommonError.INVALID_CURSOR);
+        assertThat(code).isEqualTo(CommonError.INVALID_CURSOR.getCode());
     }
 }

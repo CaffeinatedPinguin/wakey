@@ -2,7 +2,6 @@ package dev.wakey.web;
 
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ProblemDetail;
 import org.springframework.http.converter.json.ProblemDetailJacksonMixin;
@@ -21,11 +20,11 @@ public final class ProblemDetailsWriter {
 
     private ProblemDetailsWriter() {}
 
-    public static void write(HttpServletResponse response, HttpStatus status, String code, String detail)
-            throws IOException {
-        ProblemDetail problem = Problems.of(status, code, detail);
+    public static void write(HttpServletResponse response, ErrorCode error) throws IOException {
+        ProblemDetail problem = ProblemDetails.of(error);
         byte[] bytes = MAPPER.writeValueAsBytes(problem);
-        response.setStatus(status.value());
+        int status = error.getStatus().value();
+        response.setStatus(status);
         response.setContentType(MediaType.APPLICATION_PROBLEM_JSON_VALUE);
         response.getOutputStream().write(bytes);
     }

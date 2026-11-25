@@ -13,13 +13,15 @@ export const problemFieldSchema = z.object({
 
 // Defaults keep parsing tolerant of a partial body while giving Zod an output
 // without `| undefined`, which `satisfies` needs under exactOptionalPropertyTypes.
+// `code` stays a plain string here: the generated type lists the codes this
+// client knows, but a newer server may send one it does not.
 export const problemSchema = z.object({
   title: z.string().default(''),
   status: z.number().int().default(0),
   detail: z.string().default(''),
   code: z.string().default('unknown'),
   errors: z.array(problemFieldSchema).default([]),
-}) satisfies z.ZodType<ProblemDetail>
+}) satisfies z.ZodType<Omit<ProblemDetail, 'code'> & { code: string }>
 
 export type ProblemField = z.infer<typeof problemFieldSchema>
 

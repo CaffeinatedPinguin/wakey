@@ -3,7 +3,10 @@ package dev.wakey.spaces;
 import java.util.List;
 import org.jspecify.annotations.Nullable;
 
-/** The module's public port; the HTTP layer maps the domain exceptions to Problem Details. */
+/**
+ * The module's public port; the HTTP layer renders its {@link dev.wakey.web.ApiException}s as
+ * Problem Details.
+ */
 public interface SpaceService {
 
     /**
@@ -16,12 +19,12 @@ public interface SpaceService {
 
     /**
      * Creates a space or renames it by slug, and when {@code expectedVersion} is present renames only
-     * the version the caller read; a stale version fails with {@link SpaceVersionConflictException}.
+     * the version the caller read; a stale version fails with {@link SpaceError#VERSION_CONFLICT}.
      */
     PutResult put(SpacePrincipal actor, String slug, String name, @Nullable Long expectedVersion);
 
     /**
-     * Creates a space only when its slug is still free and fails with {@link SlugTakenException}
+     * Creates a space only when its slug is still free and fails with {@link SpaceError#SLUG_TAKEN}
      * otherwise. Only an application admin may call it; the name of an existing space is never changed.
      */
     PutResult create(SpacePrincipal actor, String slug, String name);

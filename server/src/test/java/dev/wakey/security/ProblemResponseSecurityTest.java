@@ -6,6 +6,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 
 import dev.wakey.testsupport.SecurityIntegrationTest;
+import dev.wakey.web.CommonError;
 import java.util.Objects;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.MediaType;
@@ -32,7 +33,7 @@ class ProblemResponseSecurityTest extends SecurityIntegrationTest {
         String code = body.path("code").asString();
         assertThat(status).isEqualTo(401);
         assertThat(contentType).isEqualTo(MediaType.APPLICATION_PROBLEM_JSON_VALUE);
-        assertThat(code).isEqualTo("unauthenticated");
+        assertThat(code).isEqualTo(CommonError.UNAUTHENTICATED.getCode());
     }
 
     @Test
@@ -52,6 +53,6 @@ class ProblemResponseSecurityTest extends SecurityIntegrationTest {
         String code = body.path("code").asString();
         assertThat(status).isEqualTo(403);
         assertThat(contentType).isEqualTo(MediaType.APPLICATION_PROBLEM_JSON_VALUE);
-        assertThat(code).isEqualTo("forbidden");
+        assertThat(code).isEqualTo(CommonError.FORBIDDEN.getCode());
     }
 }

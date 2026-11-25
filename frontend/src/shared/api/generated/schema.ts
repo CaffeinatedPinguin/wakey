@@ -74,7 +74,8 @@ export interface components {
             nextCursor: string | null;
         };
         ProblemDetail: {
-            code?: string;
+            /** @enum {string} */
+            code?: "bad_request" | "validation_failed" | "invalid_body" | "invalid_cursor" | "unauthenticated" | "forbidden" | "not_found" | "method_not_allowed" | "not_acceptable" | "unsupported_media_type" | "internal_error" | "slug_taken" | "version_conflict" | "invalid_name" | "invalid_slug" | "invalid_subject" | "invalid_precondition";
             detail?: string;
             errors?: {
                 code?: string;

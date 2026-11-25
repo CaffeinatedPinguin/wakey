@@ -1,20 +1,20 @@
 package dev.wakey.spaces.internal;
 
-import dev.wakey.spaces.InvalidSpaceException;
 import dev.wakey.spaces.PutResult;
-import dev.wakey.spaces.SlugTakenException;
 import dev.wakey.spaces.Space;
-import dev.wakey.spaces.SpaceAccessDeniedException;
+import dev.wakey.spaces.SpaceError;
 import dev.wakey.spaces.SpaceName;
-import dev.wakey.spaces.SpaceNotFoundException;
 import dev.wakey.spaces.SpacePrincipal;
 import dev.wakey.spaces.SpaceRole;
 import dev.wakey.spaces.SpaceService;
 import dev.wakey.spaces.SpaceSlug;
-import dev.wakey.spaces.SpaceVersionConflictException;
 import dev.wakey.spaces.SpaceView;
 import dev.wakey.spaces.UserSessions;
+import dev.wakey.web.ApiException;
+import dev.wakey.web.CommonError;
+import dev.wakey.web.FieldProblem;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
@@ -25,8 +25,6 @@ import org.springframework.transaction.annotation.Transactional;
 
 @RequiredArgsConstructor
 class JdbcSpaceService implements SpaceService {
-
-    private static final int MAX_SUBJECT_LENGTH = 100;
 
     private static final RowMapper<Space> SPACE_MAPPER = (rs, unusedRowNum) -> new Space(
             rs.getObject("id", UUID.class), rs.getString("slug"), rs.getString("name"), rs.getLong("version"));
@@ -128,7 +126,7 @@ class JdbcSpaceService implements SpaceService {
         String checkedName = SpaceName.requireValid(name);
         int inserted = insertSpaceIfAbsent(checkedSlug, checkedName);
         if (inserted == 0) {
-            throw new SlugTakenException(checkedSlug);
+            throw new ApiException(SpaceError.SLUG_TAKEN);
         }
         return new PutResult(findRequired(checkedSlug), true);
     }
@@ -142,9 +140,9 @@ class JdbcSpaceService implements SpaceService {
                 .param("slug", checkedSlug)
                 .query(mapper)
                 .optional();
-        SpaceView view = found.orElseThrow(() -> new SpaceNotFoundException(checkedSlug));
+        SpaceView view = found.orElseThrow(() -> new ApiException(CommonError.NOT_FOUND));
         if (!actor.admin() && view.role() == null) {
-            throw new SpaceNotFoundException(checkedSlug);
+            throw new ApiException(CommonError.NOT_FOUND);
         }
         return view;
     }
@@ -175,7 +173,7 @@ class JdbcSpaceService implements SpaceService {
         requireValidSubject(subject);
         Space space = requireManageableSpace(actor, slug);
         SpaceRole currentRole =
-                findRole(space.id(), subject).orElseThrow(() -> new SpaceNotFoundException(space.slug()));
+                findRole(space.id(), subject).orElseThrow(() -> new ApiException(CommonError.NOT_FOUND));
         if (currentRole != role) {
             updateMemberRole(space.id(), subject, role);
             sessions.invalidateAll(subject);
@@ -192,7 +190,7 @@ class JdbcSpaceService implements SpaceService {
                 .param("subject", subject)
                 .update();
         if (deleted == 0) {
-            throw new SpaceNotFoundException(space.slug());
+            throw new ApiException(CommonError.NOT_FOUND);
         }
         sessions.invalidateAll(subject);
     }
@@ -232,7 +230,7 @@ class JdbcSpaceService implements SpaceService {
 
     private static void requireMatchingVersion(Space existing, @Nullable Long expectedVersion) {
         if (expectedVersion != null && existing.version() != expectedVersion) {
-            throw new SpaceVersionConflictException(existing.slug());
+            throw new ApiException(SpaceError.VERSION_CONFLICT);
         }
     }
 
@@ -247,9 +245,9 @@ class JdbcSpaceService implements SpaceService {
 
     private void requireManager(Space space, SpacePrincipal actor) {
         SpaceRole role =
-                findRole(space.id(), actor.subject()).orElseThrow(() -> new SpaceNotFoundException(space.slug()));
+                findRole(space.id(), actor.subject()).orElseThrow(() -> new ApiException(CommonError.NOT_FOUND));
         if (role == SpaceRole.VIEWER) {
-            throw new SpaceAccessDeniedException("A viewer cannot manage members of space " + space.slug());
+            throw new ApiException(CommonError.FORBIDDEN);
         }
     }
 
@@ -282,7 +280,7 @@ class JdbcSpaceService implements SpaceService {
     }
 
     private Space findRequired(String slug) {
-        return findSpace(slug).orElseThrow(() -> new SpaceNotFoundException(slug));
+        return findSpace(slug).orElseThrow(() -> new ApiException(CommonError.NOT_FOUND));
     }
 
     private Optional<SpaceRole> findRole(UUID spaceId, String subject) {
@@ -304,14 +302,14 @@ class JdbcSpaceService implements SpaceService {
 
     private static void requireAdmin(SpacePrincipal actor) {
         if (!actor.admin()) {
-            throw new SpaceAccessDeniedException("Only an administrator can create or rename spaces");
+            throw new ApiException(CommonError.FORBIDDEN);
         }
     }
 
     private static void requireValidSubject(String subject) {
-        if (subject.isBlank() || subject.length() > MAX_SUBJECT_LENGTH) {
-            throw new InvalidSpaceException(
-                    "subject", "invalid_subject", "A member subject must have 1-100 characters");
+        if (subject.isBlank() || subject.length() > SpacePrincipal.MAX_SUBJECT_LENGTH) {
+            FieldProblem problem = new FieldProblem("/subject", SpaceError.INVALID_SUBJECT.getCode(), Map.of());
+            throw new ApiException(CommonError.VALIDATION_FAILED, List.of(problem));
         }
     }
 

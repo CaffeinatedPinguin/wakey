@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.catchThrowable;
 
 import dev.wakey.testsupport.ContractFile;
+import dev.wakey.web.ApiException;
 import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.List;
@@ -43,7 +44,7 @@ class SpaceSlugTest {
         }
 
         // then
-        assertThat(rejectionTypes).hasSize(invalid.size()).containsOnly(InvalidSpaceException.class);
+        assertThat(rejectionTypes).hasSize(invalid.size()).containsOnly(ApiException.class);
     }
 
     @Test

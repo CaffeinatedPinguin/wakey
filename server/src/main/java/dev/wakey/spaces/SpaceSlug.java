@@ -1,5 +1,10 @@
 package dev.wakey.spaces;
 
+import dev.wakey.web.ApiException;
+import dev.wakey.web.CommonError;
+import dev.wakey.web.FieldProblem;
+import java.util.List;
+import java.util.Map;
 import java.util.regex.Pattern;
 
 /**
@@ -8,7 +13,11 @@ import java.util.regex.Pattern;
  */
 public final class SpaceSlug {
 
-    public static final String PATTERN = "^[a-z][a-z0-9-]{1,38}[a-z0-9]$";
+    public static final int MIN_LENGTH = 3;
+
+    public static final int MAX_LENGTH = 40;
+
+    public static final String PATTERN = "^[a-z][a-z0-9-]{" + (MIN_LENGTH - 2) + "," + (MAX_LENGTH - 2) + "}[a-z0-9]$";
 
     private static final Pattern COMPILED = Pattern.compile(PATTERN);
 
@@ -17,10 +26,8 @@ public final class SpaceSlug {
     public static String requireValid(String candidate) {
         boolean valid = COMPILED.matcher(candidate).matches();
         if (!valid) {
-            throw new InvalidSpaceException(
-                    "slug",
-                    "invalid_slug",
-                    "A space slug must have 3-40 lowercase letters, digits or hyphens, start with a letter and end with a letter or digit");
+            FieldProblem problem = new FieldProblem("/slug", SpaceError.INVALID_SLUG.getCode(), Map.of());
+            throw new ApiException(CommonError.VALIDATION_FAILED, List.of(problem));
         }
         return candidate;
     }
