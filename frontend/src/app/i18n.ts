@@ -1,13 +1,18 @@
 import i18n from 'i18next'
 import { initReactI18next } from 'react-i18next'
 import { authResources } from '../features/auth'
+import { settingsResources } from '../features/settings'
 import { commonResources } from '../shared/i18n/resources'
 
 const DEFAULT_LANGUAGE = 'pl'
 
 const resources = {
-  pl: { translation: { ...commonResources.pl, ...authResources.pl } },
-  en: { translation: { ...commonResources.en, ...authResources.en } },
+  pl: {
+    translation: { ...commonResources.pl, ...authResources.pl, ...settingsResources.pl },
+  },
+  en: {
+    translation: { ...commonResources.en, ...authResources.en, ...settingsResources.en },
+  },
 }
 
 // Keep <html lang> in sync with the interface language for assistive technology

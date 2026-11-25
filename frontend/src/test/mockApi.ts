@@ -2,6 +2,7 @@ export interface MockRequest {
   method: string
   url: string
   headers: Record<string, string>
+  body: string | undefined
 }
 
 export interface MockReply {
@@ -52,11 +53,12 @@ class MockXMLHttpRequest {
     return undefined
   }
 
-  send(): void {
+  send(body?: string): void {
     const reply = handler({
       method: this.method,
       url: this.url,
       headers: { ...this.headers },
+      body,
     })
     this.readyState = 4
     if (reply.networkError === true) {

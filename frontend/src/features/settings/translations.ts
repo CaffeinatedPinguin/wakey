@@ -2,6 +2,17 @@ export const settingsResources = {
   pl: {
     settings: {
       title: 'Ogólne i domyślne',
+      groups: {
+        general: 'Ogólne',
+        defaults: 'Domyślne dla nowych checków',
+      },
+      keys: {
+        timezone: 'Strefa czasowa',
+        language: 'Język',
+        interval: 'Interwał',
+        timeout: 'Timeout',
+        retries: 'Ponowienia',
+      },
       columns: {
         setting: 'Ustawienie',
         value: 'Wartość',
@@ -40,6 +51,17 @@ export const settingsResources = {
   en: {
     settings: {
       title: 'General and defaults',
+      groups: {
+        general: 'General',
+        defaults: 'Defaults for new checks',
+      },
+      keys: {
+        timezone: 'Time zone',
+        language: 'Language',
+        interval: 'Interval',
+        timeout: 'Timeout',
+        retries: 'Retries',
+      },
       columns: {
         setting: 'Setting',
         value: 'Value',

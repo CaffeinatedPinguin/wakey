@@ -1,4 +1,4 @@
-import { Button, Stack, Title } from '@mantine/core'
+import { Button, Group, Stack, Title } from '@mantine/core'
 import { IconArrowBackUp } from '@tabler/icons-react'
 import type { ReactElement } from 'react'
 import { useState } from 'react'
@@ -149,16 +149,9 @@ interface SurfaceProps {
   state: ViewState
 }
 
-function GeneralDefaultsSurface({ viewProps, state }: SurfaceProps): ReactElement {
-  const { t } = useTranslation()
-
+function SettingsContent({ viewProps, state }: SurfaceProps): ReactElement {
   return (
-    <PageFrame
-      title={t('settings.title')}
-      actions={
-        state.showRestoreAll ? <RestoreAllAction onClick={state.openRestoreAll} /> : undefined
-      }
-    >
+    <>
       <SettingsBody
         groups={viewProps.groups}
         status={viewProps.status}
@@ -183,6 +176,42 @@ function GeneralDefaultsSurface({ viewProps, state }: SurfaceProps): ReactElemen
         onRestore={state.restoreOne}
         onClose={state.closeSheet}
       />
+    </>
+  )
+}
+
+interface EmbeddedSurfaceProps {
+  content: ReactElement
+  restoreAll: ReactElement | undefined
+}
+
+function EmbeddedSurface({ content, restoreAll }: EmbeddedSurfaceProps): ReactElement {
+  const { t } = useTranslation()
+
+  return (
+    <Stack gap="lg">
+      <Group justify="space-between" align="flex-start" gap="md" wrap="wrap">
+        <Title order={2}>{t('settings.title')}</Title>
+        {restoreAll}
+      </Group>
+      {content}
+    </Stack>
+  )
+}
+
+function GeneralDefaultsSurface({ viewProps, state }: SurfaceProps): ReactElement {
+  const { t } = useTranslation()
+  const restoreAll = state.showRestoreAll ? (
+    <RestoreAllAction onClick={state.openRestoreAll} />
+  ) : undefined
+  const content = <SettingsContent viewProps={viewProps} state={state} />
+  if (viewProps.embedded === true) {
+    return <EmbeddedSurface content={content} restoreAll={restoreAll} />
+  }
+
+  return (
+    <PageFrame title={t('settings.title')} actions={restoreAll}>
+      {content}
     </PageFrame>
   )
 }

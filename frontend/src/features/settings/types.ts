@@ -43,4 +43,5 @@ export interface GeneralDefaultsViewProps {
   onRestoreAll: () => void
   onRetry: () => void
   fieldErrors?: SettingFieldErrors
+  embedded?: boolean
 }
