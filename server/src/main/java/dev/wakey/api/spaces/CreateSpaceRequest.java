@@ -19,7 +19,6 @@ public record CreateSpaceRequest(
         @Schema(
                 description = "The display name, 1-100 characters after trimming",
                 example = "Acme",
-                minLength = 1,
                 maxLength = SpaceName.MAX_LENGTH)
         @NotNull
         String name) {}

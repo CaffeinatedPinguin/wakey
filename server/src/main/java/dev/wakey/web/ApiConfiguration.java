@@ -2,22 +2,11 @@ package dev.wakey.web;
 
 import io.swagger.v3.oas.models.Components;
 import io.swagger.v3.oas.models.OpenAPI;
-import io.swagger.v3.oas.models.Operation;
-import io.swagger.v3.oas.models.PathItem;
-import io.swagger.v3.oas.models.Paths;
 import io.swagger.v3.oas.models.info.Info;
-import io.swagger.v3.oas.models.media.Content;
-import io.swagger.v3.oas.models.media.MediaType;
 import io.swagger.v3.oas.models.media.Schema;
-import io.swagger.v3.oas.models.parameters.Parameter;
-import io.swagger.v3.oas.models.responses.ApiResponse;
-import io.swagger.v3.oas.models.responses.ApiResponses;
-import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Objects;
-import org.jspecify.annotations.Nullable;
-import org.springdoc.core.customizers.OperationCustomizer;
+import java.util.Map;
 import org.springdoc.core.models.GroupedOpenApi;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
@@ -38,6 +27,8 @@ public class ApiConfiguration {
 
     private static final String PROBLEM_DETAIL_REF = "#/components/schemas/" + PROBLEM_DETAIL_SCHEMA;
 
+    private static final String SPACE_ROLE_SCHEMA = "SpaceRole";
+
     @Bean
     GroupedOpenApi publicApi(ApiProperties apiProperties, List<ErrorCodes> errorCodeGroups) {
         List<String> codes = errorCodeValues(errorCodeGroups);
@@ -57,8 +48,19 @@ public class ApiConfiguration {
             components = new Components();
         }
         components.addSchemas(PROBLEM_DETAIL_SCHEMA, ProblemDetailSchema.schema(codes));
+        markSpaceRoleNullable(components);
         openApi.setComponents(components);
         OpenApiPageLimit.document(openApi.getPaths(), apiProperties.maxPageSize());
+    }
+
+    private static void markSpaceRoleNullable(Components components) {
+        Map<String, Schema> schemas = components.getSchemas();
+        if (schemas != null) {
+            Schema<?> role = schemas.get(SPACE_ROLE_SCHEMA);
+            if (role != null) {
+                role.addType("null");
+            }
+        }
     }
 
     private static List<String> errorCodeValues(List<ErrorCodes> errorCodeGroups) {
@@ -72,73 +74,5 @@ public class ApiConfiguration {
             }
         }
         return List.copyOf(codes);
-    }
-
-    /** Documents the single {@code 401} answer that every public API operation shares. */
-    private static final class OpenApiUnauthenticatedResponse {
-
-        private static final String UNAUTHORIZED = "401";
-
-        private OpenApiUnauthenticatedResponse() {}
-
-        static OperationCustomizer customizer(String problemDetailRef) {
-            return (operation, handlerMethod) -> {
-                ApiResponses responses = operation.getResponses();
-                if (responses == null) {
-                    responses = new ApiResponses();
-                    operation.setResponses(responses);
-                }
-                responses.addApiResponse(UNAUTHORIZED, problemResponse(problemDetailRef));
-                return operation;
-            };
-        }
-
-        private static ApiResponse problemResponse(String problemDetailRef) {
-            Schema<?> schema = new Schema<>().$ref(problemDetailRef);
-            MediaType mediaType = new MediaType().schema(schema);
-            Content content = new Content();
-            content.addMediaType(org.springframework.http.MediaType.APPLICATION_PROBLEM_JSON_VALUE, mediaType);
-            return new ApiResponse()
-                    .description(CommonError.UNAUTHENTICATED.getDetail())
-                    .content(content);
-        }
-    }
-
-    /** Documents the instance page-size bounds on the {@code limit} parameter of every operation. */
-    private static final class OpenApiPageLimit {
-
-        private static final String LIMIT_PARAMETER = "limit";
-
-        private OpenApiPageLimit() {}
-
-        static void document(@Nullable Paths paths, int maxPageSize) {
-            if (paths != null) {
-                for (PathItem pathItem : paths.values()) {
-                    documentBounds(pathItem.readOperations(), maxPageSize);
-                }
-            }
-        }
-
-        private static void documentBounds(List<Operation> operations, int maxPageSize) {
-            for (Operation operation : operations) {
-                List<Parameter> parameters = operation.getParameters();
-                if (parameters != null) {
-                    parameters.stream()
-                            .filter(OpenApiPageLimit::isLimit)
-                            .findFirst()
-                            .ifPresent(parameter -> setBounds(parameter, maxPageSize));
-                }
-            }
-        }
-
-        private static void setBounds(Parameter parameter, int maxPageSize) {
-            Schema<?> schema = Objects.requireNonNull(parameter.getSchema());
-            schema.setMinimum(BigDecimal.ONE);
-            schema.setMaximum(BigDecimal.valueOf(maxPageSize));
-        }
-
-        private static boolean isLimit(Parameter parameter) {
-            return LIMIT_PARAMETER.equals(parameter.getName());
-        }
     }
 }

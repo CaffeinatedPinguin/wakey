@@ -14,7 +14,10 @@ import org.springframework.web.bind.annotation.RequestMethod;
 @Target(ElementType.METHOD)
 @Retention(RetentionPolicy.RUNTIME)
 @Documented
-@RequestMapping(path = "/{slug}", method = RequestMethod.PUT, produces = MediaType.APPLICATION_JSON_VALUE)
+@RequestMapping(
+        path = SpacesHttp.PATH + "/{slug}",
+        method = RequestMethod.PUT,
+        produces = MediaType.APPLICATION_JSON_VALUE)
 @ApiResponse(responseCode = "200", description = "OK", useReturnTypeSchema = true)
 @CreatedWithLocation
 @interface PutSpaceOperation {}

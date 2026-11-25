@@ -28,6 +28,8 @@ public record SpaceResponse(
         @Schema(
                 description = "The caller's membership role, or null for an Admin who is not a member",
                 requiredMode = Schema.RequiredMode.REQUIRED,
+                implementation = SpaceRole.class,
+                enumAsRef = true,
                 nullable = true)
         @Nullable
         SpaceRole role) {

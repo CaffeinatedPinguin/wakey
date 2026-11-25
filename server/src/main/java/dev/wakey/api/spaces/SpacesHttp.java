@@ -6,7 +6,7 @@ import dev.wakey.web.ApiPaths;
 import dev.wakey.web.CommonError;
 import dev.wakey.web.CursorCodec;
 import java.net.URI;
-import java.util.Optional;
+import org.jspecify.annotations.Nullable;
 import org.springframework.web.util.UriComponentsBuilder;
 
 /** The cursor and link helpers of the spaces HTTP surface. */
@@ -20,12 +20,8 @@ final class SpacesHttp {
         return UriComponentsBuilder.fromPath(PATH).pathSegment(slug).build().toUri();
     }
 
-    static String afterSlug(Optional<String> cursor) {
-        return cursor.map(SpacesHttp::sortValue).orElse("");
-    }
-
-    static String nextCursor(String slug) {
-        return CursorCodec.encode(slug);
+    static String afterSlug(@Nullable String cursor) {
+        return cursor == null ? "" : sortValue(cursor);
     }
 
     private static String sortValue(String encoded) {

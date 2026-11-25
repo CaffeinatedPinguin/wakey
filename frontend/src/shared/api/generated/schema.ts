@@ -120,11 +120,8 @@ export interface components {
              * @example Acme
              */
             name: string;
-            /**
-             * @description The caller's membership role, or null for an Admin who is not a member
-             * @enum {string|null}
-             */
-            role: "EDITOR" | "VIEWER" | null;
+            /** @description The caller's membership role, or null for an Admin who is not a member */
+            role: components["schemas"]["SpaceRole"];
             /**
              * @description The stable space slug
              * @example acme
@@ -137,6 +134,8 @@ export interface components {
              */
             version: number;
         };
+        /** @enum {string|null} */
+        SpaceRole: "EDITOR" | "VIEWER" | null;
     };
     responses: never;
     parameters: never;

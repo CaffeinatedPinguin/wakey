@@ -8,7 +8,6 @@
             "description" : "The display name, 1-100 characters after trimming",
             "example" : "Acme",
             "maxLength" : 100,
-            "minLength" : 1,
             "type" : "string"
           },
           "slug" : {
@@ -104,7 +103,6 @@
             "description" : "The display name, 1-100 characters after trimming",
             "example" : "Acme",
             "maxLength" : 100,
-            "minLength" : 1,
             "type" : "string"
           },
           "version" : {
@@ -127,9 +125,9 @@
             "type" : "string"
           },
           "role" : {
+            "$ref" : "#/components/schemas/SpaceRole",
             "description" : "The caller's membership role, or null for an Admin who is not a member",
-            "enum" : [ "EDITOR", "VIEWER" ],
-            "type" : [ "string", "null" ]
+            "type" : "null"
           },
           "slug" : {
             "description" : "The stable space slug",
@@ -146,6 +144,10 @@
         },
         "required" : [ "name", "role", "slug", "version" ],
         "type" : "object"
+      },
+      "SpaceRole" : {
+        "enum" : [ "EDITOR", "VIEWER" ],
+        "type" : [ "string", "null" ]
       }
     }
   },
@@ -193,8 +195,7 @@
           "name" : "limit",
           "required" : false,
           "schema" : {
-            "default" : 20,
-            "format" : "int32",
+            "exclusiveMinimum" : 0,
             "maximum" : 100,
             "minimum" : 1,
             "type" : "integer"

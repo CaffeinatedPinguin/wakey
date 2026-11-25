@@ -135,7 +135,7 @@ class JdbcSpaceService implements SpaceService {
     @Override
     public SpaceView view(SpacePrincipal actor, String slug) {
         String checkedSlug = SpaceSlug.requireValid(slug);
-        RowMapper<SpaceView> mapper = viewMapper(actor.admin());
+        RowMapper<SpaceView> mapper = viewMapper();
         Optional<SpaceView> found = jdbc.sql(VIEW_SPACE_SQL)
                 .param("subject", actor.subject())
                 .param("slug", checkedSlug)
@@ -253,7 +253,7 @@ class JdbcSpaceService implements SpaceService {
     }
 
     private List<SpaceView> listSpaces(String sql, SpacePrincipal actor, String cursor, int rowLimit) {
-        RowMapper<SpaceView> mapper = viewMapper(actor.admin());
+        RowMapper<SpaceView> mapper = viewMapper();
         return jdbc.sql(sql)
                 .param("subject", actor.subject())
                 .param("afterSlug", cursor)
@@ -262,7 +262,7 @@ class JdbcSpaceService implements SpaceService {
                 .list();
     }
 
-    private RowMapper<SpaceView> viewMapper(boolean admin) {
+    private RowMapper<SpaceView> viewMapper() {
         return (rs, unusedRowNum) -> {
             String roleValue = rs.getString("role");
             @Nullable SpaceRole role = roleOrNull(roleValue);
@@ -271,7 +271,6 @@ class JdbcSpaceService implements SpaceService {
                     rs.getString("slug"),
                     rs.getString("name"),
                     rs.getLong("version"),
-                    admin,
                     role);
         };
     }

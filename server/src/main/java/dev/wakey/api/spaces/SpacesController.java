@@ -1,60 +1,49 @@
 package dev.wakey.api.spaces;
 
 import dev.wakey.spaces.SpaceService;
+import dev.wakey.spaces.SpaceView;
 import dev.wakey.web.ApiProperties;
 import dev.wakey.web.CursorPage;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
-import java.util.Optional;
+import jakarta.validation.constraints.Positive;
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 /** The HTTP adapter for spaces; all access rules and validation live in the spaces module. */
 @RestController
-@RequestMapping(SpacesHttp.PATH)
 @Tag(name = "spaces")
 @RequiredArgsConstructor
 final class SpacesController {
-
-    private static final String DEFAULT_PAGE_SIZE = "20";
-
-    private static final int EXTRA_ROW = 1;
 
     private final SpaceService spaces;
 
     private final ApiProperties apiProperties;
 
-    @GetMapping
+    @GetMapping(SpacesHttp.PATH)
     CursorPage<SpaceResponse> listSpaces(
-            @Parameter(description = "The page size, at least 1; values above the instance maximum are capped.")
-                    @RequestParam(defaultValue = DEFAULT_PAGE_SIZE)
-                    int limit,
-            @RequestParam(required = false) Optional<String> cursor) {
+            @Parameter(
+                            description = "The page size, at least 1; values above the instance maximum are capped.",
+                            schema = @Schema(type = "integer"))
+                    @RequestParam(required = false)
+                    @Positive
+                    Integer limit,
+            @RequestParam(required = false) @Parameter(schema = @Schema(type = "string")) String cursor) {
         var actor = SpacePrincipals.current();
-        int pageSize = apiProperties.capPageSize(limit);
+        int pageSize = apiProperties.pageSize(limit);
         String afterSlug = SpacesHttp.afterSlug(cursor);
-        var views = spaces.listVisible(actor, afterSlug, pageSize + EXTRA_ROW);
-        boolean hasMore = views.size() > pageSize;
-        var current = hasMore ? views.subList(0, pageSize) : views;
-        var items = current.stream().map(SpaceResponse::from).toList();
-        if (!hasMore) {
-            return new CursorPage<>(items, null);
-        }
-        var last = current.get(current.size() - EXTRA_ROW);
-        String nextCursor = SpacesHttp.nextCursor(last.slug());
-        return new CursorPage<>(items, nextCursor);
+        var rows = spaces.listVisible(actor, afterSlug, pageSize + 1);
+        return CursorPage.of(rows, pageSize, SpaceView::slug, SpaceResponse::from);
     }
 
-    @GetMapping(path = "/{slug}", produces = MediaType.APPLICATION_JSON_VALUE)
+    @GetMapping(path = SpacesHttp.PATH + "/{slug}", produces = "application/json")
     SpaceResponse getSpace(
             @PathVariable @Parameter(schema = @Schema(pattern = SpaceResponse.SLUG_PATTERN)) String slug) {
         var actor = SpacePrincipals.current();

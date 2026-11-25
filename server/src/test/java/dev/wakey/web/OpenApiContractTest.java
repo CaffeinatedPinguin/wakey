@@ -85,21 +85,43 @@ class OpenApiContractTest extends SecurityIntegrationTest {
         JsonNode schemas = document.path("components").path("schemas");
         JsonNode space = schemas.path("SpaceResponse");
         JsonNode cursorPage = schemas.path("CursorPageSpaceResponse");
+        JsonNode spaceRole = schemas.path("SpaceRole");
 
         // when
-        JsonNode roleSchema = space.path("properties").path("role").path("type");
+        JsonNode role = space.path("properties").path("role");
         JsonNode nextCursorSchema =
                 cursorPage.path("properties").path("nextCursor").path("type");
         List<String> spaceRequired = valuesOf(space.path("required"));
         List<String> cursorPageRequired = valuesOf(cursorPage.path("required"));
-        List<String> roleType = valuesOf(roleSchema);
+        List<String> roleType = valuesOf(role.path("type"));
+        List<String> spaceRoleType = valuesOf(spaceRole.path("type"));
         List<String> nextCursorType = valuesOf(nextCursorSchema);
 
         // then
         assertThat(spaceRequired).containsExactlyInAnyOrder("slug", "name", "version", "role");
         assertThat(cursorPageRequired).containsExactlyInAnyOrder("items", "nextCursor");
-        assertThat(roleType).contains("string", "null");
+        String roleReference = role.path("$ref").asString();
+        assertThat(roleReference).isEqualTo("#/components/schemas/SpaceRole");
+        assertThat(roleType).contains("null");
+        assertThat(spaceRoleType).contains("string");
         assertThat(nextCursorType).contains("string", "null");
+    }
+
+    @Test
+    void spaceRoleIsANamedSchemaInTheContract() throws Exception {
+        // given
+        JsonNode document = MAPPER.readTree(generatedContract());
+        JsonNode schemas = document.path("components").path("schemas");
+        JsonNode role = schemas.path("SpaceResponse").path("properties").path("role");
+        JsonNode spaceRole = schemas.path("SpaceRole");
+
+        // when
+        List<String> roleValues = valuesOf(spaceRole.path("enum"));
+        String roleReference = role.path("$ref").asString();
+
+        // then
+        assertThat(roleValues).containsExactly("EDITOR", "VIEWER");
+        assertThat(roleReference).isEqualTo("#/components/schemas/SpaceRole");
     }
 
     @Test

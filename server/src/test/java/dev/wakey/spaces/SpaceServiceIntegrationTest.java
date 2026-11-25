@@ -213,10 +213,8 @@ class SpaceServiceIntegrationTest extends PostgresIntegrationTest {
         SpaceView adminForeignView = viewOf(adminVisible, foreignSlug);
         SpaceView editorView = viewOf(editorVisible, memberSlug);
         SpaceView viewerView = viewOf(viewerVisible, memberSlug);
-        assertThat(adminOwnView.admin()).isTrue();
         assertThat(adminOwnView.role()).isNull();
-        assertThat(adminForeignView.admin()).isTrue();
-        assertThat(editorView.admin()).isFalse();
+        assertThat(adminForeignView.role()).isNull();
         assertThat(editorView.role()).isEqualTo(SpaceRole.EDITOR);
         assertThat(viewerView.role()).isEqualTo(SpaceRole.VIEWER);
     }
@@ -241,11 +239,9 @@ class SpaceServiceIntegrationTest extends PostgresIntegrationTest {
 
         // then
         assertThat(adminView.id()).isEqualTo(space.id());
-        assertThat(adminView.admin()).isTrue();
         assertThat(adminView.role()).isNull();
         assertThat(adminForeignView.slug()).isEqualTo(foreignSlug);
-        assertThat(adminForeignView.admin()).isTrue();
-        assertThat(editorView.admin()).isFalse();
+        assertThat(adminForeignView.role()).isNull();
         assertThat(editorView.role()).isEqualTo(SpaceRole.EDITOR);
         assertThat(viewerView.role()).isEqualTo(SpaceRole.VIEWER);
         assertThat(editorForeign).isInstanceOf(ApiException.class);

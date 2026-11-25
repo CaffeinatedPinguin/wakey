@@ -546,6 +546,96 @@ class SpacesControllerIntegrationTest extends SecurityIntegrationTest {
         assertThat(responseSlug).isEqualTo(slug);
     }
 
+    @Test
+    void aNameIsStoredInNormalizationFormC() throws Exception {
+        // given
+        String admin = uniqueSubject("nfc-name");
+        String slug = uniqueSlug("nfc-name");
+        String decomposed = "Cafe\u0301";
+        String composed = "Caf\u00e9";
+
+        // when
+        MvcResult created = putSpace(admin, true, slug, nameBody(decomposed), true);
+        MvcResult decomposedAgain = putSpace(admin, true, slug, nameBody(decomposed), true);
+        MvcResult composedAgain = putSpace(admin, true, slug, nameBody(composed), true);
+
+        // then
+        JsonNode createdBody = jsonOfUtf8(created);
+        JsonNode decomposedAgainBody = jsonOfUtf8(decomposedAgain);
+        JsonNode composedAgainBody = jsonOfUtf8(composedAgain);
+        long createdVersion = createdBody.path("version").asLong();
+        String createdName = createdBody.path("name").asString();
+        long decomposedVersion = decomposedAgainBody.path("version").asLong();
+        long composedVersion = composedAgainBody.path("version").asLong();
+        assertThat(createdName).isEqualTo(composed);
+        assertThat(decomposedVersion).isEqualTo(createdVersion);
+        assertThat(composedVersion).isEqualTo(createdVersion);
+    }
+
+    @Test
+    void aNameLengthIsCountedInCodePoints() throws Exception {
+        // given
+        String admin = uniqueSubject("code-points");
+        String acceptedSlug = uniqueSlug("code-points-ok");
+        String rejectedSlug = uniqueSlug("code-points-bad");
+        String hundred = "\uD83D\uDE00".repeat(100);
+        String hundredAndOne = "\uD83D\uDE00".repeat(101);
+
+        // when
+        MvcResult accepted = putSpace(admin, true, acceptedSlug, nameBody(hundred), true);
+        MvcResult rejected = putSpace(admin, true, rejectedSlug, nameBody(hundredAndOne), true);
+
+        // then
+        JsonNode acceptedBody = jsonOfUtf8(accepted);
+        JsonNode rejectedBody = jsonOfUtf8(rejected);
+        JsonNode firstError = rejectedBody.path("errors").path(0);
+        JsonNode params = firstError.path("params");
+        String acceptedName = acceptedBody.path("name").asString();
+        String rejectedCode = rejectedBody.path("code").asString();
+        String fieldCode = firstError.path("code").asString();
+        int max = params.path("max").asInt();
+        assertThat(statusOf(accepted)).isEqualTo(201);
+        assertThat(acceptedName).isEqualTo(hundred);
+        assertThat(statusOf(rejected)).isEqualTo(400);
+        assertThat(rejectedCode).isEqualTo(CommonError.VALIDATION_FAILED.getCode());
+        assertThat(fieldCode).isEqualTo(SpaceError.INVALID_NAME.getCode());
+        assertThat(max).isEqualTo(100);
+    }
+
+    @Test
+    void aNameWithALineSeparatorIsRejected() throws Exception {
+        // given
+        String admin = uniqueSubject("line-separator-name");
+        String slug = uniqueSlug("line-separator-name");
+
+        // when
+        MvcResult rejected = putSpace(admin, true, slug, "{\"name\":\"Bad\\u2028name\"}", true);
+
+        // then
+        JsonNode body = jsonOf(rejected);
+        JsonNode firstError = body.path("errors").path(0);
+        String code = body.path("code").asString();
+        String fieldCode = firstError.path("code").asString();
+        assertThat(statusOf(rejected)).isEqualTo(400);
+        assertThat(code).isEqualTo(CommonError.VALIDATION_FAILED.getCode());
+        assertThat(fieldCode).isEqualTo(SpaceError.INVALID_NAME.getCode());
+    }
+
+    @Test
+    void aNonPositiveLimitIsRejected() throws Exception {
+        // given
+        String admin = uniqueSubject("non-positive-limit");
+
+        // when
+        MockHttpServletRequestBuilder request =
+                get(SPACES_PATH).param("limit", "0").with(login(admin, true));
+        MvcResult result = mockMvc().perform(request).andReturn();
+
+        // then
+        assertThat(statusOf(result)).isEqualTo(400);
+        assertThat(contentTypeOf(result)).isEqualTo(PROBLEM_JSON);
+    }
+
     private MvcResult postSpace(String subject, String slug, String name) throws Exception {
         var request = post(SPACES_PATH)
                 .contentType(MediaType.APPLICATION_JSON)
@@ -619,6 +709,11 @@ class SpacesControllerIntegrationTest extends SecurityIntegrationTest {
 
     private static JsonNode jsonOf(MvcResult result) throws Exception {
         String content = result.getResponse().getContentAsString();
+        return MAPPER.readTree(content);
+    }
+
+    private static JsonNode jsonOfUtf8(MvcResult result) throws Exception {
+        byte[] content = result.getResponse().getContentAsByteArray();
         return MAPPER.readTree(content);
     }
 

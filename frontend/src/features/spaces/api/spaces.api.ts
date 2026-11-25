@@ -4,7 +4,6 @@ import { serverClient } from '../../../shared/api/instances'
 import type { SpaceFieldErrors, SpaceSummary } from '../spaceTypes'
 import { spaceSchema, spacesPageSchema } from './spaces.schemas'
 
-const SPACE_PAGE_LIMIT = 100
 const SLUG_PLACEHOLDER = '{slug}'
 
 const FIELD_BY_POINTER: Record<string, keyof SpaceFieldErrors | undefined> = {
@@ -66,7 +65,7 @@ export async function fetchSpaces(
   signal: AbortSignal,
 ): Promise<SpacesPage> {
   const response = await serverClient.get<unknown>(contract.listSpaces.path, {
-    params: { limit: SPACE_PAGE_LIMIT, cursor },
+    params: { cursor },
     signal,
   })
   const page = spacesPageSchema.parse(response.data)
