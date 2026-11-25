@@ -5,6 +5,7 @@ import { useEffect } from 'react'
 import type {
   CreateSpaceDialogProps,
   CreateSpaceInput,
+  SpaceFieldErrors,
   SpaceFormValues,
   SpaceSubmitError,
   SpaceSummary,
@@ -12,7 +13,9 @@ import type {
   SpacesStatus,
 } from '../../features/spaces'
 import {
+  hasSpaceFieldErrors,
   isSlugTakenError,
+  spaceFieldErrors,
   spaceFromSearch,
   useCreateSpace,
   useSpace,
@@ -43,7 +46,10 @@ function spacesStatus(query: SpacesQuery): SpacesStatus {
   return flattenSpaces(query).length === 0 ? 'empty' : 'ready'
 }
 
-function submitErrorOf(error: Error | null): SpaceSubmitError {
+function submitErrorOf(error: Error | null, fieldErrors: SpaceFieldErrors): SpaceSubmitError {
+  if (hasSpaceFieldErrors(fieldErrors)) {
+    return null
+  }
   if (error === null) {
     return null
   }
@@ -61,11 +67,18 @@ function useSpacesState() {
     spaces,
     status: spacesStatus(query),
     requestedSlug,
+    detail,
     isUnknown: detail.isError && isNotFoundError(detail.error),
   }
 }
 
 type SpaceNavigate = ReturnType<typeof useNavigate>
+
+function createSelectSpace(navigate: SpaceNavigate, pathname: string): (slug: string) => void {
+  return (slug) => {
+    void navigate({ to: pathname, search: (previous) => ({ ...previous, space: slug }) })
+  }
+}
 
 function useDefaultSpace(
   navigate: SpaceNavigate,
@@ -100,42 +113,86 @@ function submitSpace(
   }
 }
 
+interface SwitcherInput {
+  query: SpacesQuery
+  spaces: readonly SpaceSummary[]
+  status: SpacesStatus
+  canCreate: boolean
+  currentSlug: string
+  currentName: string | undefined
+  onSelect: (slug: string) => void
+  onCreate: () => void
+}
+
+function switcherData(input: SwitcherInput): SpaceSwitcherDataProps {
+  const { query, ...rest } = input
+  return {
+    ...rest,
+    hasMore: query.hasNextPage,
+    onLoadMore: () => {
+      void query.fetchNextPage()
+    },
+    onRetry: () => {
+      void query.refetch()
+    },
+  }
+}
+
+interface DialogInput {
+  opened: boolean
+  submitting: boolean
+  error: Error | null
+  fieldErrors: SpaceFieldErrors
+  onSubmit: (values: SpaceFormValues) => void
+  onClose: () => void
+}
+
+function dialogData(input: DialogInput): CreateSpaceDialogProps {
+  return {
+    opened: input.opened,
+    submitting: input.submitting,
+    submitError: submitErrorOf(input.error, input.fieldErrors),
+    fieldErrors: input.fieldErrors,
+    onSubmit: input.onSubmit,
+    onClose: input.onClose,
+  }
+}
+
 export function useSpaceController(canCreate: boolean): SpaceController {
-  const { query, spaces, status, requestedSlug, isUnknown } = useSpacesState()
+  const { query, spaces, status, requestedSlug, detail, isUnknown } = useSpacesState()
   const create = useCreateSpace()
   const pathname = useRouterState({ select: (state) => state.location.pathname })
   const navigate = useNavigate()
   const [opened, { open, close }] = useDisclosure(false)
   const firstSlug = spaces[0]?.slug
   const currentSlug = requestedSlug ?? firstSlug ?? ''
+  const currentName = spaces.find((space) => space.slug === currentSlug)?.name ?? detail.data?.name
+  const fieldErrors = spaceFieldErrors(create.error)
   useDefaultSpace(navigate, pathname, requestedSlug, firstSlug)
-  const selectSpace = (slug: string): void => {
-    void navigate({ to: pathname, search: (previous) => ({ ...previous, space: slug }) })
-  }
+  const selectSpace = createSelectSpace(navigate, pathname)
   const submit = submitSpace(create, close, selectSpace)
   return {
-    switcher: {
+    switcher: switcherData({
+      query,
       spaces,
-      currentSlug,
       status,
       canCreate,
-      hasMore: query.hasNextPage,
-      onLoadMore: () => {
-        void query.fetchNextPage()
-      },
+      currentSlug,
+      currentName,
       onSelect: selectSpace,
       onCreate: open,
-      onRetry: () => {
-        void query.refetch()
-      },
-    },
-    dialog: {
+    }),
+    dialog: dialogData({
       opened,
       submitting: create.isPending,
-      submitError: submitErrorOf(create.error),
+      error: create.error,
+      fieldErrors,
       onSubmit: submit,
-      onClose: close,
-    },
+      onClose: () => {
+        close()
+        create.reset()
+      },
+    }),
     spaces,
     isUnknown,
   }

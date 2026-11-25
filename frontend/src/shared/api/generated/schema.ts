@@ -47,7 +47,7 @@ export interface paths {
         get: operations["getSpace"];
         /**
          * Create or rename a space idempotently
-         * @description A rename is last-write-wins until the space carries a version or an If-Match precondition. Send If-None-Match: * to create the space only when the slug is free.
+         * @description A rename is last-write-wins unless an If-Match precondition is sent. Send If-None-Match: * to create the space only when the slug is free, and If-Match: "<version>" to rename only the version the caller read.
          */
         put: operations["putSpace"];
         post?: never;
@@ -101,8 +101,6 @@ export interface components {
         };
         /** @description A space as seen by the caller */
         SpaceResponse: {
-            /** @description Whether the caller is an application administrator */
-            admin: boolean;
             /**
              * @description The display name
              * @example Acme
@@ -149,7 +147,16 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "*/*": components["schemas"]["CurrentUser"];
+                    "application/json": components["schemas"]["CurrentUser"];
+                };
+            };
+            /** @description Authentication is required. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
                 };
             };
         };
@@ -157,6 +164,7 @@ export interface operations {
     listSpaces: {
         parameters: {
             query?: {
+                /** @description The page size, at least 1; values above the instance maximum are capped. */
                 limit?: number;
                 cursor?: string;
             };
@@ -175,7 +183,7 @@ export interface operations {
                     "application/json": components["schemas"]["CursorPageSpaceResponse"];
                 };
             };
-            /** @description The cursor is invalid. */
+            /** @description The cursor or the limit is invalid. */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -248,7 +256,10 @@ export interface operations {
         parameters: {
             query?: never;
             header?: {
+                /** @description Send * to create the space only when the slug is free. */
                 "If-None-Match"?: string;
+                /** @description The quoted space version to rename, for example "1". */
+                "If-Match"?: string;
             };
             path: {
                 slug: string;
@@ -279,7 +290,7 @@ export interface operations {
                     "application/json": components["schemas"]["SpaceResponse"];
                 };
             };
-            /** @description The request is invalid. */
+            /** @description The request is invalid or a precondition header is malformed. */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -306,7 +317,7 @@ export interface operations {
                     "application/problem+json": components["schemas"]["ProblemDetail"];
                 };
             };
-            /** @description The space already exists and If-None-Match: * was sent. */
+            /** @description The slug is taken or the If-Match version is stale. */
             409: {
                 headers: {
                     [name: string]: unknown;

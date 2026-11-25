@@ -1,11 +1,16 @@
 import { ApiError } from '../../../shared/api/problem'
 import { contract } from '../../../shared/api/generated/contract'
 import { serverClient } from '../../../shared/api/instances'
-import type { SpaceSummary } from '../spaceTypes'
+import type { SpaceFieldErrors, SpaceSummary } from '../spaceTypes'
 import { spaceSchema, spacesPageSchema } from './spaces.schemas'
 
 const SPACE_PAGE_LIMIT = 100
 const SLUG_PLACEHOLDER = '{slug}'
+
+const FIELD_BY_POINTER: Record<string, keyof SpaceFieldErrors | undefined> = {
+  '/name': 'name',
+  '/slug': 'slug',
+}
 
 export interface CreateSpaceInput {
   name: string
@@ -21,6 +26,32 @@ export interface SpacesPage {
 // slug that already exists.
 export function isSlugTakenError(error: unknown): boolean {
   return error instanceof ApiError && error.code === 'slug_taken'
+}
+
+// A 400 `validation_failed` (or a top-level `invalid_slug`) carries `errors[]`
+// with JSON Pointers, so the form can show the message on the right field.
+export function spaceFieldErrors(error: unknown): SpaceFieldErrors {
+  const fields: SpaceFieldErrors = { name: false, slug: false }
+  if (!(error instanceof ApiError)) {
+    return fields
+  }
+  if (error.code !== 'validation_failed' && error.code !== 'invalid_slug') {
+    return fields
+  }
+  if (error.code === 'invalid_slug') {
+    fields.slug = true
+  }
+  for (const fieldError of error.errors) {
+    const field = FIELD_BY_POINTER[fieldError.pointer]
+    if (field !== undefined) {
+      fields[field] = true
+    }
+  }
+  return fields
+}
+
+export function hasSpaceFieldErrors(errors: SpaceFieldErrors): boolean {
+  return errors.name || errors.slug
 }
 
 function spaceUrl(path: string, slug: string): string {

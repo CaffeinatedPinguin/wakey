@@ -10,6 +10,7 @@ import { createSpace, fetchSpace, fetchSpaces } from './spaces.api'
 import type { CreateSpaceInput, SpacesPage } from './spaces.api'
 
 export const spacesQueryKeys = {
+  all: ['spaces'] as const,
   list: ['spaces', 'list'] as const,
   detail: (slug: string) => ['spaces', 'detail', slug] as const,
 }
@@ -41,7 +42,9 @@ export function useCreateSpace(): UseMutationResult<SpaceSummary, Error, CreateS
   return useMutation({
     mutationFn: createSpace,
     onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: spacesQueryKeys.list })
+      // A just-created space can be the requested slug whose detail query is in
+      // the 404 state, so invalidate the whole prefix instead of only the list.
+      void queryClient.invalidateQueries({ queryKey: spacesQueryKeys.all })
     },
   })
 }

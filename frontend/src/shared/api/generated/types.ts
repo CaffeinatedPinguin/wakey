@@ -4,7 +4,7 @@
 import type { components, operations } from './schema'
 
 export type ProblemDetail = components['schemas']['ProblemDetail']
-export type GetMeResponse = operations['getMe']['responses'][200]['content']['*/*']
+export type GetMeResponse = operations['getMe']['responses'][200]['content']['application/json']
 export type GetSpaceResponse = operations['getSpace']['responses'][200]['content']['application/json']
 export type GetSpacePath = NonNullable<operations['getSpace']['parameters']['path']>
 export type ListSpacesResponse = operations['listSpaces']['responses'][200]['content']['application/json']

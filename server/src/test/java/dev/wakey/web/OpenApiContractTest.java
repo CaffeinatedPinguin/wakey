@@ -5,6 +5,7 @@ import static org.springframework.security.test.web.servlet.request.SecurityMock
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.request;
 
+import dev.wakey.spaces.SpaceSlug;
 import dev.wakey.testsupport.ContractFile;
 import dev.wakey.testsupport.SecurityIntegrationTest;
 import java.nio.file.Files;
@@ -95,10 +96,54 @@ class OpenApiContractTest extends SecurityIntegrationTest {
         List<String> nextCursorType = valuesOf(nextCursorSchema);
 
         // then
-        assertThat(spaceRequired).containsExactlyInAnyOrder("slug", "name", "version", "role", "admin");
+        assertThat(spaceRequired).containsExactlyInAnyOrder("slug", "name", "version", "role");
         assertThat(cursorPageRequired).containsExactlyInAnyOrder("items", "nextCursor");
         assertThat(roleType).contains("string", "null");
         assertThat(nextCursorType).contains("string", "null");
+    }
+
+    @Test
+    void theSlugPathParameterHasThePatternInTheContract() throws Exception {
+        // given
+        JsonNode document = MAPPER.readTree(generatedContract());
+        JsonNode parameters =
+                document.path("paths").path("/api/v1/spaces/{slug}").path("get").path("parameters");
+
+        // when
+        JsonNode slug = parameterNamed(parameters, "slug");
+
+        // then
+        JsonNode slugSchema = slug.path("schema");
+        String pattern = slugSchema.path("pattern").asString();
+        assertThat(pattern).isEqualTo(SpaceSlug.PATTERN);
+    }
+
+    @Test
+    void limitHasBoundsInTheContract() throws Exception {
+        // given
+        JsonNode document = MAPPER.readTree(generatedContract());
+        JsonNode parameters =
+                document.path("paths").path("/api/v1/spaces").path("get").path("parameters");
+        int maxPageSize = bean(ApiProperties.class).maxPageSize();
+
+        // when
+        JsonNode schema = parameterNamed(parameters, "limit").path("schema");
+
+        // then
+        int minimum = schema.path("minimum").asInt();
+        int maximum = schema.path("maximum").asInt();
+        assertThat(minimum).isEqualTo(1);
+        assertThat(maximum).isEqualTo(maxPageSize);
+    }
+
+    private static JsonNode parameterNamed(JsonNode parameters, String name) {
+        for (JsonNode parameter : parameters) {
+            String parameterName = parameter.path("name").asString();
+            if (name.equals(parameterName)) {
+                return parameter;
+            }
+        }
+        throw new AssertionError("Missing parameter " + name);
     }
 
     private static List<String> valuesOf(JsonNode node) {

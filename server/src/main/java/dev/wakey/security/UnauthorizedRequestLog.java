@@ -15,8 +15,6 @@ final class UnauthorizedRequestLog implements AuthenticationEntryPoint {
 
     private static final String MISSING_AUTHENTICATION = "missing-authentication";
 
-    private static final String PROBLEM_JSON = "application/problem+json";
-
     @Override
     public void commence(HttpServletRequest request, HttpServletResponse response, AuthenticationException exception)
             throws IOException {
@@ -26,7 +24,6 @@ final class UnauthorizedRequestLog implements AuthenticationEntryPoint {
         if (response.isCommitted()) {
             return;
         }
-        response.setContentType(PROBLEM_JSON);
         ProblemDetailsWriter.write(response, HttpStatus.UNAUTHORIZED, "unauthenticated", "Authentication is required.");
     }
 }

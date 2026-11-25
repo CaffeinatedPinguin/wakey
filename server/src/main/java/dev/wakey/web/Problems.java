@@ -34,22 +34,15 @@ public final class Problems {
 
     /** One {@code errors[]} entry, pointing at the offending field. */
     public static Map<String, Object> error(String pointer, String code) {
+        return error(pointer, code, Map.of());
+    }
+
+    /** One {@code errors[]} entry with the constraint attributes that produced it. */
+    public static Map<String, Object> error(String pointer, String code, Map<String, Object> params) {
         Map<String, Object> entry = new LinkedHashMap<>();
         entry.put("pointer", pointer);
         entry.put("code", code);
-        entry.put("params", Map.of());
+        entry.put("params", params);
         return entry;
-    }
-
-    /** The body written by the security filters, which run before MVC and cannot return a ProblemDetail. */
-    public static Map<String, Object> body(HttpStatus status, String code, String detail) {
-        Map<String, Object> body = new LinkedHashMap<>();
-        body.put("type", TYPE.toString());
-        body.put("title", status.getReasonPhrase());
-        body.put("status", status.value());
-        body.put("detail", detail);
-        body.put("code", code);
-        body.put("errors", List.of());
-        return body;
     }
 }

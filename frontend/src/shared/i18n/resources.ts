@@ -50,14 +50,16 @@ export const commonResources = {
         title: 'Nowa przestrzeń',
         name: 'Nazwa',
         slug: 'Slug',
-        slugHint: 'Małe litery, cyfry i myślniki, 3–40 znaków.',
+        slugHint:
+          '3–40 znaków: małe litery, cyfry i myślniki; zaczyna się literą i nie kończy się myślnikiem.',
         submit: 'Utwórz',
         cancel: 'Anuluj',
-        saving: 'Zapisywanie…',
         errors: {
           nameRequired: 'Podaj nazwę.',
           nameTooLong: 'Nazwa może mieć najwyżej 100 znaków.',
-          slugInvalid: 'Slug musi mieć 3–40 znaków: małe litery, cyfry i myślniki.',
+          nameInvalid: 'Nazwa jest nieprawidłowa.',
+          slugInvalid:
+            'Slug musi mieć 3–40 znaków: małe litery, cyfry i myślniki, zaczynać się literą i nie kończyć myślnikiem.',
           slugTaken: 'Ten slug jest już zajęty.',
           generic: 'Nie udało się utworzyć przestrzeni. Spróbuj ponownie.',
         },
@@ -122,14 +124,16 @@ export const commonResources = {
         title: 'New space',
         name: 'Name',
         slug: 'Slug',
-        slugHint: 'Lowercase letters, digits and hyphens, 3–40 characters.',
+        slugHint:
+          '3–40 characters: lowercase letters, digits and hyphens; starts with a letter and does not end with a hyphen.',
         submit: 'Create',
         cancel: 'Cancel',
-        saving: 'Saving…',
         errors: {
           nameRequired: 'Enter a name.',
           nameTooLong: 'The name may be at most 100 characters long.',
-          slugInvalid: 'The slug must be 3–40 characters: lowercase letters, digits and hyphens.',
+          nameInvalid: 'The name is invalid.',
+          slugInvalid:
+            'The slug must be 3–40 characters: lowercase letters, digits and hyphens, start with a letter and not end with a hyphen.',
           slugTaken: 'This slug is already taken.',
           generic: 'Could not create the space. Please try again.',
         },

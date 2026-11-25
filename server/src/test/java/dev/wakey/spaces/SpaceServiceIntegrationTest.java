@@ -269,6 +269,28 @@ class SpaceServiceIntegrationTest extends PostgresIntegrationTest {
     }
 
     @Test
+    void addingAMemberValidatesTheSubject() {
+        // given
+        SpaceService service = service();
+        Space space = seedSpace("subject-validation");
+        String tooLong = "x".repeat(101);
+
+        // when
+        Throwable addEmpty = catchThrowable(() -> service.addMember(ADMIN, space.slug(), "", SpaceRole.VIEWER));
+        Throwable addTooLong = catchThrowable(() -> service.addMember(ADMIN, space.slug(), tooLong, SpaceRole.VIEWER));
+        Throwable changeBlank = catchThrowable(() -> service.changeRole(ADMIN, space.slug(), "   ", SpaceRole.EDITOR));
+        Throwable removeTooLong = catchThrowable(() -> service.removeMember(ADMIN, space.slug(), tooLong));
+
+        // then
+        assertThat(addEmpty).isInstanceOf(InvalidSpaceException.class);
+        assertThat(addTooLong).isInstanceOf(InvalidSpaceException.class);
+        assertThat(changeBlank).isInstanceOf(InvalidSpaceException.class);
+        assertThat(removeTooLong).isInstanceOf(InvalidSpaceException.class);
+        InvalidSpaceException exception = (InvalidSpaceException) addEmpty;
+        assertThat(exception.field()).isEqualTo("subject");
+    }
+
+    @Test
     void changingARoleInvalidatesTheUsersSessions() {
         // given
         SpaceService service = service();

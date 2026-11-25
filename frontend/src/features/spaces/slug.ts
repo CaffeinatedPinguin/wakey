@@ -9,8 +9,10 @@ function transliterate(character: string): string {
   return POLISH_LETTERS[character] ?? character
 }
 
-// Suggests a slug from a space name: Polish letters become ASCII, everything
-// outside a-z0-9 collapses into one hyphen, and the result fits the slug rule.
+// Suggests a slug from a space name: Polish letters become ASCII and everything
+// outside a-z0-9 collapses into one hyphen. When the result would not follow the
+// slug rule (for example a name starting with a digit), the suggestion is empty
+// and the form asks the user to type a valid slug instead of offering a wrong one.
 export function slugFromName(name: string): string {
   const ascii = name
     .toLowerCase()
@@ -22,7 +24,8 @@ export function slugFromName(name: string): string {
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-+|-+$/g, '')
   const truncated = base.slice(0, SLUG_MAX_LENGTH)
-  return truncated.replace(/-+$/, '')
+  const candidate = truncated.replace(/-+$/, '')
+  return isValidSlug(candidate) ? candidate : ''
 }
 
 export function isValidSlug(slug: string): boolean {

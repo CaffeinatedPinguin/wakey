@@ -12,9 +12,9 @@ export type {
   SpaceSwitcherProps,
 } from './components/SpaceSwitcher'
 export type { CreateSpaceInput } from './api/spaces.api'
-export { isSlugTakenError } from './api/spaces.api'
+export { hasSpaceFieldErrors, isSlugTakenError, spaceFieldErrors } from './api/spaces.api'
 export { spacesQueryKeys, useCreateSpace, useSpace, useSpaces } from './api/spaces.queries'
 export { spaceFromSearch, validateSpaceSearch } from './search'
 export type { SpaceSearch } from './search'
-export type { SpaceSummary, SpacesStatus } from './spaceTypes'
+export type { SpaceFieldErrors, SpaceSummary, SpacesStatus } from './spaceTypes'
 export { isValidSlug, slugFromName } from './slug'
