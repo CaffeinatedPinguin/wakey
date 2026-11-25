@@ -3,6 +3,8 @@ package dev.wakey.spaces;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.catchThrowable;
 
+import dev.wakey.spaces.internal.SpaceMemberEntity;
+import dev.wakey.spaces.internal.SpaceMemberRepository;
 import dev.wakey.testsupport.PostgresIntegrationTest;
 import dev.wakey.web.ApiException;
 import dev.wakey.web.CommonError;
@@ -12,6 +14,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.Callable;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
@@ -76,6 +79,29 @@ class SpaceServiceIntegrationTest extends PostgresIntegrationTest {
         assertThat(renamedSpace.version()).isEqualTo(createdSpace.version() + 1);
         assertThat(renamedSpace.name()).isEqualTo("New name");
         assertThat(stored.name()).isEqualTo("New name");
+    }
+
+    @Test
+    void aStaleVersionNeverOverwritesARename() {
+        // given
+        SpaceService service = service();
+        String slug = uniqueSlug("stale");
+        service.put(ADMIN, slug, "Original name");
+        long firstRead = service.view(ADMIN, slug).version();
+        long secondRead = service.view(ADMIN, slug).version();
+
+        // when
+        PutResult renamed = service.put(ADMIN, slug, "First rename", firstRead);
+        Throwable stale = catchThrowable(() -> service.put(ADMIN, slug, "Second rename", secondRead));
+        SpaceView stored = service.view(ADMIN, slug);
+
+        // then
+        Space renamedSpace = renamed.space();
+        long renamedVersion = renamedSpace.version();
+        assertThat(renamedVersion).isEqualTo(firstRead + 1);
+        assertError(stale, SpaceError.VERSION_CONFLICT);
+        assertThat(stored.name()).isEqualTo("First rename");
+        assertThat(stored.version()).isEqualTo(firstRead + 1);
     }
 
     @Test
@@ -377,6 +403,51 @@ class SpaceServiceIntegrationTest extends PostgresIntegrationTest {
         long stored = visible.stream().filter(view -> view.slug().equals(slug)).count();
         assertThat(created).isEqualTo(1L);
         assertThat(stored).isEqualTo(1L);
+    }
+
+    @Test
+    void addingTheSameMemberConcurrentlyKeepsOneMembershipAndItsRole() throws Exception {
+        // given
+        SpaceService service = service();
+        Space space = seedSpace("concurrent-member");
+        String subject = uniqueSubject("concurrent-member");
+        ExecutorService executor = Executors.newFixedThreadPool(2);
+        CountDownLatch start = new CountDownLatch(1);
+
+        // when
+        try {
+            Callable<Void> addEditor = () -> {
+                start.await();
+                service.addMember(ADMIN, space.slug(), subject, SpaceRole.EDITOR);
+                return null;
+            };
+            Callable<Void> addViewer = () -> {
+                start.await();
+                service.addMember(ADMIN, space.slug(), subject, SpaceRole.VIEWER);
+                return null;
+            };
+            List<Future<Void>> futures = new ArrayList<>();
+            futures.add(executor.submit(addEditor));
+            futures.add(executor.submit(addViewer));
+            start.countDown();
+            for (Future<Void> future : futures) {
+                future.get();
+            }
+        } finally {
+            executor.shutdown();
+        }
+
+        // then
+        List<SpaceMemberEntity> memberships = bean(SpaceMemberRepository.class).findByKeySubject(subject);
+        assertThat(memberships).hasSize(1);
+        SpaceRole storedRole = memberships.getFirst().role();
+        SpaceRole otherRole = storedRole == SpaceRole.EDITOR ? SpaceRole.VIEWER : SpaceRole.EDITOR;
+        service.addMember(ADMIN, space.slug(), subject, otherRole);
+        List<SpaceMemberEntity> afterRepeatedAdd =
+                bean(SpaceMemberRepository.class).findByKeySubject(subject);
+        assertThat(afterRepeatedAdd).hasSize(1);
+        SpaceRole repeatedRole = afterRepeatedAdd.getFirst().role();
+        assertThat(repeatedRole).isEqualTo(storedRole);
     }
 
     @Test
