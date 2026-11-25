@@ -1,6 +1,6 @@
 import { act, cleanup, fireEvent, screen } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
-import { apiClient } from '../../shared/api/instances'
+import { serverClient } from '../../shared/api/instances'
 import { appConfig } from '../../shared/config'
 import { meQueryKey } from './api/auth.queries'
 import { signedInUser, unauthorizedBody } from '../../test/data'
@@ -120,7 +120,7 @@ describe('cross-origin requests', () => {
       return { status: 204 }
     })
 
-    await apiClient.post('https://other.example/logout')
+    await serverClient.post('https://other.example/logout')
 
     expect(foreignHeader).toBeUndefined()
   })
