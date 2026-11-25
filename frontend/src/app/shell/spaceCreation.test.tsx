@@ -107,6 +107,12 @@ function openSwitcher(): void {
   fireEvent.click(screen.getByRole('button', { name: 'Przełącz przestrzeń' }))
 }
 
+async function openCreateDialog(name: string): Promise<void> {
+  openSwitcher()
+  fireEvent.click(await screen.findByText('Utwórz przestrzeń'))
+  fireEvent.change(await screen.findByLabelText('Nazwa'), { target: { value: name } })
+}
+
 beforeEach(() => {
   api = createApiState()
   installMockApi(handleRequest)
@@ -196,6 +202,28 @@ describe('create space dialog errors', () => {
     fireEvent.click(await screen.findByText('Utwórz przestrzeń'))
 
     expect(screen.queryByText('Ten slug jest już zajęty.')).toBeNull()
+  })
+})
+
+describe('create space dialog reopening', () => {
+  it('reopening the create dialog starts without the previous error', async () => {
+    api.spaces = [alpha]
+    api.putError = { status: 500, data: { code: 'internal_error' } }
+    renderApp('/')
+    await screen.findByText('Przestrzeń: Alpha')
+    await openCreateDialog('Beta')
+    fireEvent.click(screen.getByRole('button', { name: 'Utwórz' }))
+    expect(
+      await screen.findByText('Nie udało się utworzyć przestrzeni. Spróbuj ponownie.'),
+    ).toBeDefined()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Zamknij' }))
+    await waitFor(() => {
+      expect(screen.queryByRole('dialog', { name: 'Nowa przestrzeń' })).toBeNull()
+    })
+    await openCreateDialog('Beta')
+
+    expect(screen.queryByText('Nie udało się utworzyć przestrzeni. Spróbuj ponownie.')).toBeNull()
   })
 })
 

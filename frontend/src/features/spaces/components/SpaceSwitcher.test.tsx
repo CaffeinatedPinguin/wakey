@@ -4,8 +4,8 @@ import i18n from '../../../app/i18n'
 import { coreTokens } from '../../../shared/theme'
 import { renderWithProviders } from '../../../test/providers'
 import { installViewport } from '../../../test/viewport'
-import { SpaceSwitcher } from './SpaceSwitcher'
-import type { SpaceSwitcherProps } from './SpaceSwitcher'
+import { DesktopSwitcher, MobileSwitcher } from './SpaceSwitcher'
+import type { SwitcherListProps } from './SpaceSwitcher'
 
 const DESKTOP_WIDTH = 1024
 const MOBILE_WIDTH = 375
@@ -16,20 +16,24 @@ const spaces = [
   { slug: 'staging', name: 'Staging' },
 ]
 
-function renderSwitcher(overrides: Partial<SpaceSwitcherProps> = {}): SpaceSwitcherProps {
-  const props: SpaceSwitcherProps = {
+function renderSwitcher(
+  overrides: Partial<SwitcherListProps> = {},
+  layout: 'menu' | 'sheet' = 'menu',
+): SwitcherListProps {
+  const props: SwitcherListProps = {
     spaces,
     currentSlug: 'produkcja',
     status: 'ready',
     canCreate: true,
     hasMore: false,
-    layout: 'menu',
     onSelect: vi.fn(),
     onCreate: vi.fn(),
     onRetry: vi.fn(),
     ...overrides,
   }
-  renderWithProviders(<SpaceSwitcher {...props} />)
+  renderWithProviders(
+    layout === 'menu' ? <DesktopSwitcher {...props} /> : <MobileSwitcher {...props} />,
+  )
   return props
 }
 
@@ -150,14 +154,14 @@ describe('space switcher error', () => {
 describe('space switcher pagination', () => {
   it('the switcher offers to load more spaces when there is another page', async () => {
     const onLoadMore = vi.fn()
-    renderSwitcher({ layout: 'menu', hasMore: true, onLoadMore })
+    renderSwitcher({ hasMore: true, onLoadMore })
     openSwitcher()
 
     fireEvent.click(await screen.findByRole('button', { name: 'Wczytaj więcej' }))
     expect(onLoadMore).toHaveBeenCalledTimes(1)
 
     cleanup()
-    renderSwitcher({ layout: 'sheet', hasMore: true, onLoadMore })
+    renderSwitcher({ hasMore: true, onLoadMore }, 'sheet')
     openSwitcher()
 
     fireEvent.click(await screen.findByRole('button', { name: 'Wczytaj więcej' }))
@@ -168,7 +172,7 @@ describe('space switcher pagination', () => {
 describe('space switcher mobile', () => {
   it('on mobile the switcher opens as a sheet with touch targets of 44 px', async () => {
     installViewport(MOBILE_WIDTH)
-    renderSwitcher({ layout: 'sheet' })
+    renderSwitcher({}, 'sheet')
     openSwitcher()
 
     const sheet = await screen.findByRole('dialog', { name: 'Przestrzeń' })

@@ -4,11 +4,7 @@ import { Link, useLinkProps, useRouterState } from '@tanstack/react-router'
 import type { ReactElement } from 'react'
 import { useTranslation } from 'react-i18next'
 import { PageFrame } from '../../../shared/ui/PageFrame'
-import type { SpaceSummary } from '../spaceTypes'
-
-interface SpaceNotFoundViewProps {
-  spaces: readonly SpaceSummary[]
-}
+import { useSpaceList } from '../hooks/useSpaceList'
 
 const iconStyle = {
   color: 'var(--app-color-text-muted)',
@@ -49,9 +45,10 @@ function FirstSpaceLink({ pathname, slug, name }: FirstSpaceLinkProps): ReactEle
   )
 }
 
-export function SpaceNotFoundView({ spaces }: SpaceNotFoundViewProps): ReactElement {
+export function SpaceNotFoundView(): ReactElement {
   const { t } = useTranslation()
   const pathname = useRouterState({ select: (state) => state.location.pathname })
+  const { spaces } = useSpaceList()
   const firstSpace = spaces[0]
   if (firstSpace === undefined) {
     return <NoAccessView />

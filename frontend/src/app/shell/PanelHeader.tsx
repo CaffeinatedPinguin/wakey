@@ -3,7 +3,6 @@ import type { ReactElement } from 'react'
 import { ColorSchemeToggle } from '../../shared/ui/ColorSchemeToggle'
 import { LanguageSwitch } from '../../shared/ui/LanguageSwitch'
 import { SpaceSwitcher } from '../../features/spaces'
-import type { SpaceSwitcherDataProps } from '../../features/spaces'
 import type { Me } from '../../features/auth'
 import { Brand } from './Brand'
 import { ProfileMenu } from './ProfileMenu'
@@ -11,17 +10,16 @@ import { ProfileMenu } from './ProfileMenu'
 interface PanelHeaderProps {
   me: Me
   isMobile: boolean
-  switcher: SpaceSwitcherDataProps
 }
 
-export function PanelHeader({ me, isMobile, switcher }: PanelHeaderProps): ReactElement {
+export function PanelHeader({ me, isMobile }: PanelHeaderProps): ReactElement {
   return (
     <Group h="100%" px="md" justify="space-between" wrap="nowrap">
-      <Group gap="md" wrap="nowrap">
+      <Group gap="md" wrap="nowrap" style={{ minWidth: 0, flex: 1 }}>
         <Brand />
-        {isMobile ? null : <SpaceSwitcher {...switcher} layout="menu" />}
+        <SpaceSwitcher layout={isMobile ? 'sheet' : 'menu'} canCreate={me.admin} />
       </Group>
-      <Group gap="sm" wrap="nowrap">
+      <Group gap="sm" wrap="nowrap" style={{ flexShrink: 0 }}>
         {isMobile ? null : <LanguageSwitch />}
         {isMobile ? null : <ColorSchemeToggle />}
         <ProfileMenu me={me} />

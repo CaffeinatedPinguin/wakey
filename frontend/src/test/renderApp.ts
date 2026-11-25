@@ -14,8 +14,15 @@ export interface RenderedApp extends RenderResult {
   router: AppRouter
 }
 
-export function renderApp(path = '/'): RenderedApp {
+export interface RenderAppOptions {
+  // Runs before the first render, so a test can watch the router from the very
+  // first navigation, including the redirect that runs on mount.
+  beforeRender?: (router: AppRouter) => void
+}
+
+export function renderApp(path = '/', options: RenderAppOptions = {}): RenderedApp {
   const { router, queryClient } = createAppServices(createMemoryHistory({ initialEntries: [path] }))
+  options.beforeRender?.(router)
   const app = createElement(AppThemeProvider, {
     env: 'test',
     children: createElement(

@@ -1,5 +1,7 @@
 import { cleanup, fireEvent, screen, waitFor, within } from '@testing-library/react'
-import { afterEach, beforeEach, describe, expect, it } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import type { MockInstance } from 'vitest'
+import type { AppRouter } from '../../app/router'
 import type { Me } from '../../features/auth'
 import { appConfig } from '../../shared/config'
 import { signedInUser } from '../../test/data'
@@ -185,20 +187,47 @@ describe('space resolution', () => {
   })
 })
 
+describe('default space', () => {
+  it('the default space is put in the URL once', async () => {
+    api.spaces = [alpha, beta]
+    let navigateSpy: MockInstance<AppRouter['navigate']> | undefined
+    const { router } = renderApp('/checks', {
+      beforeRender: (created) => {
+        navigateSpy = vi.spyOn(created, 'navigate')
+      },
+    })
+
+    await waitFor(() => {
+      expect(router.state.location.search).toEqual({ space: 'alpha' })
+    })
+
+    const replaceCalls = navigateSpy?.mock.calls.filter(([options]) => options.replace === true)
+    expect(replaceCalls).toHaveLength(1)
+  })
+})
+
 describe('space shell on mobile', () => {
-  it('on mobile the more sheet contains the space switcher', async () => {
+  it('on mobile the header holds the space switcher and the more sheet does not', async () => {
     installViewport(MOBILE_WIDTH)
     api.spaces = [alpha, beta]
     renderApp('/')
 
-    fireEvent.click(await screen.findByRole('button', { name: 'Więcej' }))
-    const sheet = await screen.findByRole('dialog', { name: 'Więcej' })
-    const trigger = within(sheet).getByRole('button', { name: 'Przełącz przestrzeń' })
+    const trigger = await screen.findByRole('button', { name: 'Przełącz przestrzeń' })
+    expect(trigger.closest('header')).not.toBeNull()
     fireEvent.click(trigger)
 
     const spaceSheet = await screen.findByRole('dialog', { name: 'Przestrzeń' })
     expect(await within(spaceSheet).findByRole('button', { name: 'Alpha' })).toBeDefined()
     expect(within(spaceSheet).getByRole('button', { name: 'Beta' })).toBeDefined()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Zamknij' }))
+    await waitFor(() => {
+      expect(screen.queryByRole('dialog', { name: 'Przestrzeń' })).toBeNull()
+    })
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Więcej' }))
+    const moreSheet = await screen.findByRole('dialog', { name: 'Więcej' })
+    expect(within(moreSheet).queryByRole('button', { name: 'Przełącz przestrzeń' })).toBeNull()
   })
 })
 
