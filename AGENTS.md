@@ -27,6 +27,7 @@ Domain: backend and frontend (the maintainer's generic rules live outside this r
 
 - Dependencies: use a proven, long-supported library with a large community for anything non-trivial or security-sensitive; write trivial things yourself. Every new dependency needs the owner's approval.
 - Keep server modules separable: roles (`wakey.roles`) talk only through the queue port and the database, never shared in-memory state (ADR 0005).
+- Server conventions are tests, not review comments: controllers in `<module>.web`, no header parameters, errors as `ErrorCode` enums, interfaces only as ADR 0005 ports, `JdbcClient` only for SQL modules, Lombok constructors, no media type or header literals (`ServerConventionsTest`, Checkstyle; ADR 0005).
 - Names: root package and `groupId` `dev.wakey`, configuration prefix `wakey.*` (`WAKEY_*`), license AGPL-3.0-or-later (ADR 0002).
 - Simple arguments: a call argument carries at most one method call; extract a longer expression into a named variable (ADR 0007).
 - A rule from an ADR that can be checked statically becomes an ArchUnit or lint rule, not a review comment.

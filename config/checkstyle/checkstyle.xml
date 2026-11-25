@@ -76,5 +76,18 @@
     </module>
     <module name="VisibilityModifier"/>
     <module name="MutableException"/>
+    <!-- ADR 0005, "Reguły z review warstwy przestrzeni": media types and header names come from Spring constants. -->
+    <module name="RegexpSinglelineJava">
+      <property name="id" value="mediaTypeLiteral"/>
+      <property name="format" value="&quot;(application|text)/[a-z0-9.+-]+&quot;"/>
+      <property name="message" value="Use MediaType constants instead of a media type literal."/>
+      <property name="ignoreComments" value="true"/>
+    </module>
+    <module name="RegexpSinglelineJava">
+      <property name="id" value="headerNameLiteral"/>
+      <property name="format" value="&quot;(Accept|Authorization|Cache-Control|Content-Type|ETag|If-Match|If-None-Match|Location)&quot;"/>
+      <property name="message" value="Use HttpHeaders constants instead of a header name literal."/>
+      <property name="ignoreComments" value="true"/>
+    </module>
   </module>
 </module>

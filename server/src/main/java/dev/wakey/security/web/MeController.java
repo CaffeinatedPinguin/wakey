@@ -1,5 +1,6 @@
-package dev.wakey.security;
+package dev.wakey.security.web;
 
+import dev.wakey.security.CurrentUser;
 import dev.wakey.web.ApiPaths;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -12,8 +13,8 @@ final class MeController {
 
     @GetMapping(ME_PATH)
     MeResponse me(Authentication authentication) {
-        boolean admin = AdminAuthoritiesMapper.isAdmin(authentication);
-        return new MeResponse(authentication.getName(), admin);
+        CurrentUser user = CurrentUser.from(authentication);
+        return new MeResponse(user.subject(), user.admin());
     }
 
     record MeResponse(String subject, boolean admin) {}
