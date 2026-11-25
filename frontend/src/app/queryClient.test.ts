@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { apiClient } from '../shared/api/instances'
+import { serverClient } from '../shared/api/instances'
 import { installMockApi } from '../test/mockApi'
 import { createQueryClient } from './queryClient'
 
@@ -15,7 +15,7 @@ describe('query retry policy', () => {
     await expect(
       queryClient.query({
         queryKey: ['retry', 'unauthorized'],
-        queryFn: () => apiClient.get('/me'),
+        queryFn: () => serverClient.get('/me'),
       }),
     ).rejects.toBeTruthy()
 
@@ -33,7 +33,7 @@ describe('query retry policy', () => {
     await expect(
       queryClient.query({
         queryKey: ['retry', 'network'],
-        queryFn: () => apiClient.get('/me'),
+        queryFn: () => serverClient.get('/me'),
         retryDelay: 0,
       }),
     ).rejects.toBeTruthy()

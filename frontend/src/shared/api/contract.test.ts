@@ -24,13 +24,28 @@ describe('generated API surface', () => {
     expect(contract.getMe).toEqual({ method: 'get', path: '/api/v1/me' })
     expect(contract.putSpace).toEqual({ method: 'put', path: '/api/v1/spaces/{slug}' })
 
-    expectTypeOf<GetMeResponse>().toExtend<{ subject?: string; admin?: boolean }>()
-    expectTypeOf<GetSpaceResponse>().toExtend<{ slug?: string; name?: string }>()
+    expectTypeOf<GetMeResponse>().toEqualTypeOf<{ admin: boolean; subject: string }>()
+    expectTypeOf<GetSpaceResponse>().toEqualTypeOf<{
+      admin: boolean
+      name: string
+      role: 'EDITOR' | 'VIEWER' | null
+      slug: string
+      version: number
+    }>()
     expectTypeOf<GetSpacePath>().toEqualTypeOf<{ slug: string }>()
     expectTypeOf<ListSpacesQuery>().toExtend<{ limit?: number; cursor?: string }>()
-    expectTypeOf<ListSpacesResponse>().toExtend<{ items?: unknown[]; nextCursor?: string }>()
+    expectTypeOf<ListSpacesResponse>().toEqualTypeOf<{
+      items: GetSpaceResponse[]
+      nextCursor: string | null
+    }>()
     expectTypeOf<PutSpaceRequest>().toEqualTypeOf<{ name: string }>()
-    expectTypeOf<PutSpaceResponse>().toExtend<{ slug?: string; name?: string }>()
+    expectTypeOf<PutSpaceResponse>().toEqualTypeOf<{
+      admin: boolean
+      name: string
+      role: 'EDITOR' | 'VIEWER' | null
+      slug: string
+      version: number
+    }>()
     expectTypeOf<PutSpacePath>().toEqualTypeOf<{ slug: string }>()
     expectTypeOf<ProblemDetail>().toExtend<{ code?: string; detail?: string }>()
   })

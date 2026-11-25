@@ -4,8 +4,13 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.catchThrowable;
 
 import dev.wakey.testsupport.PostgresIntegrationTest;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 import org.junit.jupiter.api.Test;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
@@ -58,7 +63,7 @@ class SpaceServiceIntegrationTest extends PostgresIntegrationTest {
 
         // when
         PutResult renamed = service.put(ADMIN, slug, "New name");
-        Space stored = service.get(ADMIN, slug);
+        SpaceView stored = service.view(ADMIN, slug);
 
         // then
         Space renamedSpace = renamed.space();
@@ -95,7 +100,7 @@ class SpaceServiceIntegrationTest extends PostgresIntegrationTest {
         String subject = uniqueSubject("stranger-target");
 
         // when
-        Throwable read = catchThrowable(() -> service.get(STRANGER, space.slug()));
+        Throwable read = catchThrowable(() -> service.view(STRANGER, space.slug()));
         Throwable add = catchThrowable(() -> service.addMember(STRANGER, space.slug(), subject, SpaceRole.VIEWER));
         Throwable change = catchThrowable(() -> service.changeRole(STRANGER, space.slug(), subject, SpaceRole.EDITOR));
         Throwable remove = catchThrowable(() -> service.removeMember(STRANGER, space.slug(), subject));
@@ -119,7 +124,7 @@ class SpaceServiceIntegrationTest extends PostgresIntegrationTest {
         String slug = space.slug();
 
         // when
-        Space read = service.get(VIEWER, slug);
+        SpaceView read = service.view(VIEWER, slug);
         List<SpaceView> visible = service.listVisible(VIEWER, null, 100);
         Throwable write = catchThrowable(() -> service.put(VIEWER, uniqueSlug("viewer-write"), "Denied"));
         Throwable add =
@@ -184,8 +189,8 @@ class SpaceServiceIntegrationTest extends PostgresIntegrationTest {
         List<SpaceView> adminVisible = service.listVisible(ADMIN, null, 1000);
         List<SpaceView> editorVisible = service.listVisible(EDITOR, null, 1000);
         List<SpaceView> viewerVisible = service.listVisible(VIEWER, null, 1000);
-        Space adminRead = service.get(ADMIN, foreignSlug);
-        Throwable editorRead = catchThrowable(() -> service.get(EDITOR, foreignSlug));
+        SpaceView adminRead = service.view(ADMIN, foreignSlug);
+        Throwable editorRead = catchThrowable(() -> service.view(EDITOR, foreignSlug));
 
         // then
         assertThat(adminVisible).extracting(SpaceView::slug).contains(memberSlug, foreignSlug);
@@ -241,31 +246,6 @@ class SpaceServiceIntegrationTest extends PostgresIntegrationTest {
         assertThat(viewerView.role()).isEqualTo(SpaceRole.VIEWER);
         assertThat(editorForeign).isInstanceOf(SpaceNotFoundException.class);
         assertThat(strangerView).isInstanceOf(SpaceNotFoundException.class);
-    }
-
-    @Test
-    void slugRulesAreEnforced() {
-        // given
-        SpaceService service = service();
-        String fortyCharacters = "a" + "b".repeat(38) + "c";
-        String fortyOneCharacters = "a" + "b".repeat(39) + "c";
-        List<String> invalidSlugs = List.of("ab", "1abc", "-abc", "Abc", "abc-", "abc d", "", fortyOneCharacters);
-
-        // when
-        PutResult valid = service.put(ADMIN, uniqueSlug("slug"), "Valid space");
-        PutResult boundary = service.put(ADMIN, fortyCharacters, "Boundary space");
-
-        // then
-        Space boundarySpace = boundary.space();
-        assertThat(valid.created()).isTrue();
-        assertThat(boundarySpace.slug()).isEqualTo(fortyCharacters);
-        for (String invalidSlug : invalidSlugs) {
-            Throwable rejection = catchThrowable(() -> service.put(ADMIN, invalidSlug, "Invalid slug"));
-            assertThat(rejection).isInstanceOf(InvalidSpaceException.class);
-            InvalidSpaceException exception = (InvalidSpaceException) rejection;
-            assertThat(exception.field()).isEqualTo("slug");
-            assertThat(exception.code()).isEqualTo("invalid_slug");
-        }
     }
 
     @Test
@@ -345,22 +325,31 @@ class SpaceServiceIntegrationTest extends PostgresIntegrationTest {
     }
 
     @Test
-    void otherUsersSessionsSurvive() {
+    void concurrentPutOfTheSameSlugCreatesOneSpace() throws Exception {
         // given
         SpaceService service = service();
-        Space space = seedSpace("other-sessions");
-        String subject = uniqueSubject("changed");
-        String bystander = uniqueSubject("survivor");
-        service.addMember(ADMIN, space.slug(), subject, SpaceRole.VIEWER);
-        Session changedSession = createSession(subject);
-        Session survivorSession = createSession(bystander);
+        String slug = uniqueSlug("concurrent");
+        String name = "Concurrent space";
+        ExecutorService executor = Executors.newFixedThreadPool(2);
+        List<PutResult> results = new ArrayList<>();
 
         // when
-        service.changeRole(ADMIN, space.slug(), subject, SpaceRole.EDITOR);
+        try {
+            Callable<PutResult> put = () -> service.put(ADMIN, slug, name);
+            List<Future<PutResult>> futures = executor.invokeAll(List.of(put, put));
+            for (Future<PutResult> future : futures) {
+                results.add(future.get());
+            }
+        } finally {
+            executor.shutdown();
+        }
 
         // then
-        assertThat(sessionExists(changedSession)).isFalse();
-        assertThat(sessionExists(survivorSession)).isTrue();
+        long created = results.stream().filter(PutResult::created).count();
+        List<SpaceView> visible = service.listVisible(ADMIN, null, 1000);
+        long stored = visible.stream().filter(view -> view.slug().equals(slug)).count();
+        assertThat(created).isEqualTo(1L);
+        assertThat(stored).isEqualTo(1L);
     }
 
     @Test

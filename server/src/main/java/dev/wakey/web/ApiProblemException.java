@@ -1,5 +1,6 @@
 package dev.wakey.web;
 
+import java.util.List;
 import java.util.Map;
 import org.jspecify.annotations.Nullable;
 import org.springframework.http.HttpStatus;
@@ -14,10 +15,16 @@ public class ApiProblemException extends RuntimeException {
 
     private final String code;
 
+    private final List<Map<String, Object>> errors;
+
     private final Map<String, Object> params;
 
     public ApiProblemException(HttpStatus status, String code) {
         this(status, code, Map.of(), null);
+    }
+
+    public ApiProblemException(HttpStatus status, String code, @Nullable Throwable cause) {
+        this(status, code, Map.of(), cause);
     }
 
     public ApiProblemException(HttpStatus status, String code, Map<String, Object> params) {
@@ -28,7 +35,21 @@ public class ApiProblemException extends RuntimeException {
         super(code, cause);
         this.status = status;
         this.code = code;
+        this.errors = List.of();
         this.params = Map.copyOf(params);
+    }
+
+    public ApiProblemException(HttpStatus status, String code, List<Map<String, Object>> errors) {
+        this(status, code, errors, null);
+    }
+
+    public ApiProblemException(
+            HttpStatus status, String code, List<Map<String, Object>> errors, @Nullable Throwable cause) {
+        super(code, cause);
+        this.status = status;
+        this.code = code;
+        this.errors = List.copyOf(errors);
+        this.params = Map.of();
     }
 
     public HttpStatus getStatus() {
@@ -37,6 +58,10 @@ public class ApiProblemException extends RuntimeException {
 
     public String getCode() {
         return code;
+    }
+
+    public List<Map<String, Object>> getErrors() {
+        return errors;
     }
 
     public Map<String, Object> getParams() {

@@ -65,7 +65,7 @@ describe('API generator', () => {
       expect(runGenerator(['--contract', contractPath, '--out', outDir]).status).toBe(0)
 
       const document = JSON.parse(readFileSync(contractPath, 'utf8'))
-      document.components.schemas.MeResponse.properties.email = { type: 'string' }
+      document.components.schemas.CurrentUser.properties.email = { type: 'string' }
       const driftedContract = join(contractDir, 'public.json')
       writeFileSync(driftedContract, JSON.stringify(document), 'utf8')
 

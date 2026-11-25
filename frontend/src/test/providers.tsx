@@ -4,5 +4,5 @@ import { AppThemeProvider } from '../app/App'
 import '../app/i18n'
 
 export function renderWithProviders(ui: ReactElement): ReturnType<typeof render> {
-  return render(<AppThemeProvider>{ui}</AppThemeProvider>)
+  return render(<AppThemeProvider env="test">{ui}</AppThemeProvider>)
 }
