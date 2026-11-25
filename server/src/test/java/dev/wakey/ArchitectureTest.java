@@ -48,6 +48,7 @@ class ArchitectureTest {
         dependencies.put("retry", Set.of());
         dependencies.put("settings", Set.of());
         dependencies.put("spaces", Set.of());
+        dependencies.put("tokens", Set.of("spaces"));
         dependencies.put("web", Set.of());
         dependencies.put("security", Set.of("web"));
         dependencies.put("executor", Set.of("leadership", "messaging"));

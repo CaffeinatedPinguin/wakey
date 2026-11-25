@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        https://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+  <changeSet id="api-tokens" author="wakey">
+    <!-- postgres-only: native UUID and TIMESTAMPTZ column types; another database needs its own binary and timezone-aware equivalents. -->
+    <createTable tableName="api_token">
+      <column name="id" type="UUID">
+        <constraints primaryKey="true" primaryKeyName="pk_api_token" nullable="false"/>
+      </column>
+      <column name="space_id" type="UUID">
+        <constraints nullable="false"/>
+      </column>
+      <column name="owner_subject" type="VARCHAR(100)">
+        <constraints nullable="false"/>
+      </column>
+      <column name="name" type="VARCHAR(100)">
+        <constraints nullable="false"/>
+      </column>
+      <column name="scope" type="VARCHAR(16)">
+        <constraints nullable="false"/>
+      </column>
+      <column name="token_hash" type="VARCHAR(64)">
+        <constraints nullable="false" unique="true" uniqueConstraintName="uk_api_token_token_hash"/>
+      </column>
+      <column name="expires_at" type="TIMESTAMPTZ"/>
+      <column name="created_at" type="TIMESTAMPTZ">
+        <constraints nullable="false"/>
+      </column>
+      <column name="last_used_at" type="TIMESTAMPTZ"/>
+      <column name="revoked_at" type="TIMESTAMPTZ"/>
+    </createTable>
+
+    <addForeignKeyConstraint baseTableName="api_token"
+                             baseColumnNames="space_id"
+                             constraintName="fk_api_token_space"
+                             referencedTableName="space"
+                             referencedColumnNames="id"
+                             onDelete="CASCADE"/>
+    <sql>
+      ALTER TABLE api_token
+        ADD CONSTRAINT ck_api_token_scope CHECK (scope IN ('READ', 'WRITE'));
+    </sql>
+    <createIndex tableName="api_token" indexName="ix_api_token_owner_subject">
+      <column name="owner_subject"/>
+    </createIndex>
+  </changeSet>
+</databaseChangeLog>
