@@ -1,7 +1,7 @@
 import { Stack } from '@mantine/core'
 import type { ReactElement } from 'react'
 import { useTranslation } from 'react-i18next'
-import { PageFrame } from '../../../shared/ui'
+import { PageFrame, useIsMobile } from '../../../shared/ui'
 import { BulkActionBar } from './BulkActionBar'
 import { CheckCard } from './CheckCard'
 import { ChecksFilterBar } from './ChecksFilterBar'
@@ -17,7 +17,6 @@ import type {
   RowAction,
   SelectionState,
 } from './types'
-import { useMobileList } from './useMobileList'
 
 export interface ChecksListViewProps {
   rows: CheckRowData[]
@@ -88,7 +87,7 @@ function ListBody(props: ChecksListViewProps & { isMobile: boolean }): ReactElem
 
 export function ChecksListView(props: ChecksListViewProps): ReactElement {
   const { t } = useTranslation()
-  const isMobile = useMobileList()
+  const isMobile = useIsMobile()
   const hasSelection = props.selection.mode !== 'none'
 
   return (

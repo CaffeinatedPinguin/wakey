@@ -3,10 +3,10 @@ import { useDisclosure } from '@mantine/hooks'
 import { IconFilter } from '@tabler/icons-react'
 import type { ReactElement } from 'react'
 import { useTranslation } from 'react-i18next'
+import { useIsMobile } from '../../../shared/ui'
 import { withFacetToggle } from './filterUtils'
 import { sheetStyles, touchStyle } from './listStyles'
 import type { FacetKey, FacetOption, FilterFacet, ListFilters } from './types'
-import { useMobileList } from './useMobileList'
 
 const sortValues = ['name', 'state', 'lastResult']
 
@@ -149,7 +149,7 @@ function MobileFilterSheet(props: ChecksFilterBarProps): ReactElement {
 }
 
 export function ChecksFilterBar(props: ChecksFilterBarProps): ReactElement {
-  const isMobile = useMobileList()
+  const isMobile = useIsMobile()
 
   if (!isMobile) {
     return (

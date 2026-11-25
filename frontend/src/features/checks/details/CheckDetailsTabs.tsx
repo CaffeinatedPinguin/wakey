@@ -1,12 +1,12 @@
 import { Tabs, Text } from '@mantine/core'
 import type { ReactElement } from 'react'
 import { useTranslation } from 'react-i18next'
+import { useIsMobile } from '../../../shared/ui'
 import { CertificateTab } from './CertificateTab'
 import { ChangeHistoryTab } from './ChangeHistoryTab'
 import { EventsTab } from './EventsTab'
 import type { CheckDetailsData, CheckDetailsTab } from './checkDetailsTypes'
 import { tabListStyle, touchStyle } from './detailsStyles'
-import { useIsMobile } from './useIsMobile'
 
 interface TabDefinition {
   readonly key: CheckDetailsTab

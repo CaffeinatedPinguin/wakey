@@ -59,6 +59,32 @@ describe('problem details mapping', () => {
   })
 })
 
+describe('problem params', () => {
+  it('an ApiError carries the params of the problem', async () => {
+    installMockApi(() => ({
+      status: 400,
+      data: {
+        code: 'out_of_plan',
+        params: { bound: 300, key: 'check.interval', planName: 'small' },
+      },
+    }))
+
+    const error = expectApiError(await failureOf(() => createClient().get('/spaces')))
+
+    expect(error.code).toBe('out_of_plan')
+    expect(error.params).toEqual({ bound: 300, key: 'check.interval', planName: 'small' })
+  })
+
+  it('a problem without params gives an empty params object', async () => {
+    installMockApi(() => ({ status: 404, data: { code: 'not_found', detail: 'No such space' } }))
+
+    const error = expectApiError(await failureOf(() => createClient().get('/spaces/missing')))
+
+    expect(error.code).toBe('not_found')
+    expect(error.params).toEqual({})
+  })
+})
+
 describe('error classification', () => {
   it('an unauthorized error is still recognised', async () => {
     installMockApi(() => ({ status: 401, data: { code: 'unauthenticated' } }))

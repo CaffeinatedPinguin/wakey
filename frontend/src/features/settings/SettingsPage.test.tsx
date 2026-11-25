@@ -224,6 +224,15 @@ describe('settings changes', () => {
     expect(await screen.findByText('Poza planem: maksymalnie 300 s.')).toBeDefined()
     expect(api.writes).toEqual([{ key: 'check.interval', value: '400' }])
   })
+
+  it('the settings page reads the bound from the error params', async () => {
+    renderApp('/settings?space=alpha')
+    const interval = await screen.findByLabelText('Interwał')
+
+    fireEvent.change(interval, { target: { value: '400' } })
+
+    expect(await screen.findByText('Poza planem: maksymalnie 300 s.')).toBeDefined()
+  })
 })
 
 describe('settings restore actions', () => {

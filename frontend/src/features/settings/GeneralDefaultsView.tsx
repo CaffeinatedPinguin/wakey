@@ -4,6 +4,7 @@ import type { ReactElement } from 'react'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { PageFrame } from '../../shared/ui/PageFrame'
+import { useIsMobile } from '../../shared/ui/useIsMobile'
 import { RestoreAllDialog } from './RestoreAllDialog'
 import { SettingsList } from './SettingsList'
 import { SettingsSheet } from './SettingsSheet'
@@ -16,7 +17,6 @@ import type {
   SettingsGroup,
   SettingsStatus,
 } from './types'
-import { useSettingsMobile } from './useSettingsMobile'
 
 const EMPTY_FIELD_ERRORS: SettingFieldErrors = {}
 
@@ -107,7 +107,7 @@ interface ViewState {
 }
 
 function useSettingsView(props: GeneralDefaultsViewProps): ViewState {
-  const isMobile = useSettingsMobile()
+  const isMobile = useIsMobile()
   const [restoreAllOpened, setRestoreAllOpened] = useState(false)
   const [sheetKey, setSheetKey] = useState<string | null>(null)
   const rows = props.groups.flatMap((group) => group.rows)

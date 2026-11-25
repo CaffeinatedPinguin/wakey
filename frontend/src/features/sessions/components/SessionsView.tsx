@@ -2,9 +2,9 @@ import { Button, Group, Stack, Text } from '@mantine/core'
 import type { ReactElement } from 'react'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import { useIsMobile } from '../../../shared/ui'
 import { touchTargetStyle } from '../sessionStyles'
 import type { SessionListProps, SessionsViewProps } from '../sessionTypes'
-import { useMobileLayout } from '../useMobileLayout'
 import { LogoutAllDialog } from './LogoutAllDialog'
 import { SessionsEmpty, SessionsError, SessionsLoading } from './SessionsStates'
 import { SessionCards, SessionsTable } from './SessionsTable'
@@ -100,7 +100,7 @@ function ReadySessions(props: ReadySessionsProps): ReactElement {
 }
 
 export function SessionsView(props: SessionsViewProps): ReactElement {
-  const isMobile = useMobileLayout()
+  const isMobile = useIsMobile()
 
   if (props.status === 'loading') {
     return <SessionsLoading />

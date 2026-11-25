@@ -7,7 +7,7 @@ import type {
   SettingSource,
   SettingsGroup,
 } from './types'
-import { SettingsWriteError } from './api/settings.api'
+import { ApiError } from '../../shared/api/problem'
 import type { SpaceAccess, SpaceSetting } from './api/settings.schemas'
 
 type SettingsGroupKind = 'general' | 'defaults'
@@ -139,7 +139,7 @@ function boundText(key: string, bound: unknown): string | undefined {
 }
 
 export function settingFieldError(key: string, error: unknown): SettingFieldError | undefined {
-  if (!(error instanceof SettingsWriteError) || error.code !== 'out_of_plan') {
+  if (!(error instanceof ApiError) || error.code !== 'out_of_plan') {
     return undefined
   }
   const bound = boundText(key, error.params.bound)

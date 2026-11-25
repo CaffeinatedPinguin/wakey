@@ -1,33 +1,11 @@
 import { contract } from '../../../shared/api/generated/contract'
 import { serverClient } from '../../../shared/api/instances'
-import { spaceAccessSchema, spaceSettingsSchema, settingsProblemSchema } from './settings.schemas'
+import { spaceAccessSchema, spaceSettingsSchema } from './settings.schemas'
 import type { SpaceAccess, SpaceSetting } from './settings.schemas'
 
 export interface SettingChange {
   key: string
   value: string
-}
-
-export interface SettingsWriteErrorInit {
-  status: number
-  code: string
-  params: Readonly<Record<string, unknown>>
-}
-
-// A failed setting write keeps the Problem Details `params` (the plan bound),
-// which the shared ApiError drops.
-export class SettingsWriteError extends Error {
-  readonly status: number
-  readonly code: string
-  readonly params: Readonly<Record<string, unknown>>
-
-  constructor({ status, code, params }: SettingsWriteErrorInit) {
-    super(`Setting write failed with code ${code}`)
-    this.name = 'SettingsWriteError'
-    this.status = status
-    this.code = code
-    this.params = params
-  }
 }
 
 function pathWith(path: string, name: string, value: string): string {
@@ -40,23 +18,6 @@ function spacePath(path: string, slug: string): string {
 
 function settingPath(path: string, slug: string, key: string): string {
   return pathWith(spacePath(path, slug), 'key', key)
-}
-
-function failureFrom(data: unknown, status: number): SettingsWriteError {
-  const parsed = settingsProblemSchema.safeParse(data)
-  if (!parsed.success) {
-    return new SettingsWriteError({ status, code: 'unknown', params: {} })
-  }
-  const field = parsed.data.errors[0]
-  return new SettingsWriteError({
-    status,
-    code: parsed.data.code,
-    params: { ...field?.params, ...parsed.data.params },
-  })
-}
-
-function acceptsSettingWrite(status: number): boolean {
-  return status === 204 || status === 400
 }
 
 export async function fetchSpaceSettings(
@@ -76,15 +37,7 @@ export async function fetchSpaceAccess(slug: string, signal: AbortSignal): Promi
 
 export async function updateSpaceSetting(slug: string, change: SettingChange): Promise<void> {
   const url = settingPath(contract.putSpaceSetting.path, slug, change.key)
-  const response = await serverClient.put<unknown>(
-    url,
-    { value: change.value },
-    { validateStatus: acceptsSettingWrite },
-  )
-  if (response.status === 204) {
-    return
-  }
-  throw failureFrom(response.data, response.status)
+  await serverClient.put<unknown>(url, { value: change.value })
 }
 
 export async function deleteSpaceSetting(slug: string, key: string): Promise<void> {

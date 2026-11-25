@@ -11,9 +11,9 @@ import {
 import type { ComponentType, ReactElement } from 'react'
 import { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import { useIsMobile } from '../../../shared/ui'
 import type { CheckAction } from './checkDetailsTypes'
 import { touchStyle } from './detailsStyles'
-import { useIsMobile } from './useIsMobile'
 
 interface CheckActionBarProps {
   readonly paused: boolean
