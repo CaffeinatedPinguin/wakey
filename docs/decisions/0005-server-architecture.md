@@ -113,6 +113,22 @@ Obraz produkcyjny ustawia `LOGGING_STRUCTURED_FORMAT_CONSOLE=ecs`, więc każdy 
 
 Testy integracyjne korzystają z jednego współdzielonego kontenera PostgreSQL i jednego kontekstu Springa na przebieg. Wzorzec to singleton container: statyczne pole z kontenerem w abstrakcyjnej klasie bazowej (`dev.wakey.testsupport`), start w bloku statycznym i `@ServiceConnection`; bez `@Testcontainers`/`@Container`, bo ich cykl życia zatrzymuje współdzielony kontener po pierwszej klasie testowej.
 
+### Reguły z review warstwy przestrzeni (2026-11-25)
+
+Uwagi z review, które da się sprawdzić statycznie, pilnuje `ServerConventionsTest` (ArchUnit) i `config/checkstyle/checkstyle.xml`, a nie komentarze w kolejnych PR-ach:
+
+| Reguła | Narzędzie | Dlaczego |
+|---|---|---|
+| `@RestController` tylko w podpakiecie `dev.wakey.<moduł>.web` | ArchUnit | Adapter HTTP to prywatny podpakiet modułu, a nie globalna warstwa kontrolerów. |
+| Metody kontrolerów nie przyjmują `HttpHeaders` ani `@RequestHeader` | ArchUnit | Operacja przyjmuje dane w ścieżce, query albo body ([0006](0006-api-contract.md)). |
+| Klasy wyjątków tylko w `dev.wakey.web`; implementacje `ErrorCode` to enumy | ArchUnit | Moduł deklaruje swoje kody w enumie i rzuca jeden `ApiException`, zamiast mnożyć klasy wyjątków i literały kodów. |
+| Interfejs ma co najmniej dwie implementacje albo jest portem z listy tego ADR (`LeaderLease`, port kolejki, `CheckExecutor`, `NotificationChannel`, `RateLimiter`); repozytoria Spring Data są wyjątkiem | ArchUnit | Reguła portów z sekcji „Porty”: bez interfejsów z jedną implementacją. |
+| `JdbcClient` tylko w `leadership`, `messaging` i `results` | ArchUnit | Agregaty to repozytoria Spring Data JDBC; ręczny SQL zostaje tam, gdzie są blokady i wyniki pomiarów. |
+| Bean Springa (`@Component` i pochodne) dostaje zależności z `@RequiredArgsConstructor`; ręczny konstruktor tylko z parametrem `@Qualifier` albo `@Value` | ArchUnit | Mniej kodu do utrzymania; `lombok.config` nie kopiuje tych adnotacji, więc to jedyny wyjątek. |
+| `@ConfigurationProperties` nie zależy od `org.springframework.http`, `org.springframework.web` ani `dev.wakey.web` | ArchUnit | Konfiguracja trzyma wartości; błąd żądania HTTP należy do warstwy web. |
+| Adnotacje OpenAPI (`io.swagger.v3.oas.annotations`) tylko w `dev.wakey.web` i `dev.wakey.<moduł>.web` | ArchUnit | DTO API to osobne rekordy warstwy web ([0006](0006-api-contract.md)). |
+| Bez literałów typów mediów (`"application/json"`) i nazw nagłówków (`"If-Match"`, `"Location"` …) | Checkstyle `RegexpSinglelineJava` | Stałe `MediaType` i `HttpHeaders` ze Springa. |
+
 ## Consequences
 
 - Port kolejki to świadomy wyjątek od reguły portów: wymiana na Redis albo inną kolejkę jest znaną ścieżką rozwoju, a koszt portu jest mały.
