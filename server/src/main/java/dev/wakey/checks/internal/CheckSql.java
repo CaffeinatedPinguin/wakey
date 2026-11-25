@@ -112,7 +112,20 @@ final class CheckSql {
             UPDATE "check"
             SET paused = FALSE, paused_reason = NULL, version = version + 1,
                 updated_at = CURRENT_TIMESTAMP
-            WHERE space_id = :spaceId AND id = :id
+            WHERE space_id = :spaceId AND id = :id AND paused = TRUE
+            """;
+
+    private static final String LOCK_SPACE_SQL = """
+            SELECT id
+            FROM space
+            WHERE id = :spaceId
+            FOR UPDATE
+            """;
+
+    private static final String COUNT_CHECKS_SQL = """
+            SELECT COUNT(*)
+            FROM "check"
+            WHERE space_id = :spaceId
             """;
 
     private static final String DELETE_SQL = """
@@ -229,6 +242,17 @@ final class CheckSql {
 
     int resume(UUID spaceId, UUID id) {
         return jdbc.sql(RESUME_SQL).param("spaceId", spaceId).param("id", id).update();
+    }
+
+    void lockSpace(UUID spaceId) {
+        jdbc.sql(LOCK_SPACE_SQL).param("spaceId", spaceId).query(UUID.class).optional();
+    }
+
+    long count(UUID spaceId) {
+        return jdbc.sql(COUNT_CHECKS_SQL)
+                .param("spaceId", spaceId)
+                .query(Long.class)
+                .single();
     }
 
     int delete(UUID spaceId, UUID id) {

@@ -62,18 +62,12 @@ public record RetryPolicy(
     }
 
     private Duration nextDelay(int failedAttempts, RandomGenerator random) {
-        long cappedNanos = cappedDelayNanos(failedAttempts);
-        double variation = random.nextDouble() * 2.0 - 1.0;
-        double jitteredNanos = cappedNanos * (1.0 + jitterRatio * variation);
-        return Duration.ofNanos(Math.round(jitteredNanos));
-    }
-
-    private long cappedDelayNanos(int failedAttempts) {
         double exponent = failedAttempts - 1;
-        double growth = Math.pow(multiplier, exponent);
-        double uncappedNanos = baseDelay.toNanos() * growth;
-        double cappedNanos = Math.min(maxDelay.toNanos(), uncappedNanos);
-        return (long) cappedNanos;
+        double uncappedNanos = baseDelay.toNanos() * Math.pow(multiplier, exponent);
+        double variation = random.nextDouble() * 2.0 - 1.0;
+        double jitteredNanos = uncappedNanos * (1.0 + jitterRatio * variation);
+        double cappedNanos = Math.min(maxDelay.toNanos(), jitteredNanos);
+        return Duration.ofNanos(Math.round(cappedNanos));
     }
 
     private static void requirePositive(@Nullable Duration value, String name) {

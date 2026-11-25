@@ -14,5 +14,6 @@
   <include file="changes/0007-space-settings.xml" relativeToChangelogFile="true"/>
   <include file="changes/0008-checks.xml" relativeToChangelogFile="true"/>
   <include file="changes/0009-space-plan.xml" relativeToChangelogFile="true"/>
+  <include file="changes/0010-check-result-index.xml" relativeToChangelogFile="true"/>
   <!-- SPRING_SESSION and SPRING_SESSION_ATTRIBUTES are created in changes/0003-spring-session.xml. -->
 </databaseChangeLog>

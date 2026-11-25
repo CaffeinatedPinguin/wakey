@@ -52,6 +52,25 @@ class RetryPolicyTest {
     }
 
     @Test
+    void retryDelayNeverExceedsTheMaximum() {
+        // given
+        RetryPolicy policy = new RetryPolicy(100, null, Duration.ofSeconds(8), 2.0, Duration.ofSeconds(8), 0.5);
+        RandomGenerator random = new Random(11L);
+        Duration maximum = Duration.ofSeconds(8);
+
+        // when
+        List<Duration> delays = new ArrayList<>();
+        for (int failedAttempts = 1; failedAttempts <= 50; failedAttempts++) {
+            RetryDecision decision = policy.decide(failedAttempts, Duration.ZERO, random);
+            RetryDecision.RetryAfter retry = (RetryDecision.RetryAfter) decision;
+            delays.add(retry.delay());
+        }
+
+        // then
+        assertThat(delays).allSatisfy(delay -> assertThat(delay).isLessThanOrEqualTo(maximum));
+    }
+
+    @Test
     void givesUpAfterMaxAttempts() {
         // given
         RetryPolicy policy = new RetryPolicy(3, null, Duration.ofSeconds(1), 2.0, Duration.ofSeconds(8), 0.0);

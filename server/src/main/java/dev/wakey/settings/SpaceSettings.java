@@ -28,4 +28,7 @@ public interface SpaceSettings {
 
     /** Resolves an assigned plan name; a null name means the instance default plan. */
     String resolvePlanName(@Nullable String planName);
+
+    /** The resolved plan with its bounds; a null name means the instance default plan. */
+    PlanProperties plan(@Nullable String planName);
 }

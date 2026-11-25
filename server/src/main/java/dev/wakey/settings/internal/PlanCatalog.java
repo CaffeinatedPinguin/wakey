@@ -1,9 +1,9 @@
 package dev.wakey.settings.internal;
 
+import dev.wakey.settings.BoundDirection;
 import dev.wakey.settings.InstanceDefaultsProperties;
 import dev.wakey.settings.PlanProperties;
 import dev.wakey.settings.SettingDefinition;
-import dev.wakey.settings.SettingKey;
 import dev.wakey.settings.SettingOutOfPlanException;
 import dev.wakey.settings.UnknownPlanException;
 import java.util.Map;
@@ -11,7 +11,8 @@ import org.jspecify.annotations.Nullable;
 
 /**
  * The resolved plans of this instance: configured plans, or the built-in {@code default} plan with
- * no restrictions beyond the catalog when nothing is configured. Bounds are also plan values.
+ * no restrictions beyond the catalog when nothing is configured. A plan defines bounds, never the
+ * default value of a setting.
  */
 final class PlanCatalog {
 
@@ -70,33 +71,29 @@ final class PlanCatalog {
         return planName == null ? defaultPlanName() : planName;
     }
 
-    /** The plan value of a setting: the bound associated with its key, when the plan defines it. */
-    @Nullable
-    String planValue(SettingDefinition definition, PlanProperties plan) {
-        return number(definition.bound(plan));
-    }
-
     /** The instance default of a setting from {@code wakey.defaults.*}. */
     @Nullable
     String instanceValue(SettingDefinition definition) {
         return definition.instanceValue().apply(instanceDefaults);
     }
 
+    /** Whether a value respects the plan bound of its setting; an absent bound accepts everything. */
+    boolean withinBound(PlanProperties plan, SettingDefinition definition, String value) {
+        Integer bound = definition.bound(plan);
+        if (bound == null) {
+            return true;
+        }
+        long parsed = Long.parseLong(value);
+        boolean meetsBound = definition.direction() == BoundDirection.MIN ? parsed >= bound : parsed <= bound;
+        return meetsBound;
+    }
+
     /** Rejects a numeric value outside the plan bound with the bound in the exception. */
     void checkWithinBound(PlanProperties plan, String planName, SettingDefinition definition, String value) {
         Integer bound = definition.bound(plan);
-        if (bound == null) {
-            return;
-        }
-        long parsed = Long.parseLong(value);
-        boolean outside = definition.key() == SettingKey.CHECK_INTERVAL ? parsed < bound : parsed > bound;
-        if (outside) {
+        if (bound != null && !withinBound(plan, definition, value)) {
             String key = definition.key().key();
-            throw new SettingOutOfPlanException(key, parsed, bound, planName);
+            throw new SettingOutOfPlanException(key, Long.parseLong(value), bound, planName);
         }
-    }
-
-    private static @Nullable String number(@Nullable Integer value) {
-        return value == null ? null : String.valueOf(value);
     }
 }

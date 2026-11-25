@@ -67,8 +67,8 @@ class SettingsControllerIntegrationTest extends SecurityIntegrationTest {
         JsonNode interval = requiredSetting(settingsOf(body), "check.interval");
         assertThat(statusOf(result)).isEqualTo(200);
         assertThat(planNamesOf(body)).containsOnly("small");
-        assertThat(text(interval, "value")).isEqualTo("30");
-        assertThat(text(interval, "source")).isEqualTo("PLAN");
+        assertThat(text(interval, "value")).isEqualTo("60");
+        assertThat(text(interval, "source")).isEqualTo("DEFAULT");
     }
 
     @Test
@@ -228,8 +228,8 @@ class SettingsControllerIntegrationTest extends SecurityIntegrationTest {
         assertThat(text(interval, "source")).isEqualTo("SPACE");
         assertThat(text(timezone, "source")).isEqualTo("INSTANCE");
         assertThat(text(timezone, "value")).isEqualTo("Europe/Warsaw");
-        assertThat(text(timeout, "source")).isEqualTo("PLAN");
-        assertThat(text(timeout, "value")).isEqualTo("20");
+        assertThat(text(timeout, "source")).isEqualTo("DEFAULT");
+        assertThat(text(timeout, "value")).isEqualTo("10");
         assertThat(text(language, "source")).isEqualTo("DEFAULT");
         assertThat(text(language, "value")).isEqualTo("pl");
     }
@@ -272,6 +272,106 @@ class SettingsControllerIntegrationTest extends SecurityIntegrationTest {
         assertThat(codeOf(read)).isEqualTo("not_found");
         assertThat(statusOf(write)).isEqualTo(404);
         assertThat(codeOf(write)).isEqualTo("not_found");
+    }
+
+    @Test
+    void anOverrideOutsideTheCurrentPlanIsIgnored() throws Exception {
+        // given
+        String admin = uniqueSubject("narrowing-admin");
+        String editor = uniqueSubject("narrowing-editor");
+        String slug = uniqueSlug("narrowing");
+        createSpace(slug);
+        addMember(slug, editor, SpaceRole.EDITOR);
+        putPlan(admin, true, slug, "large");
+        putSetting(editor, false, slug, "check.interval", "10");
+
+        // when
+        putPlan(admin, true, slug, "small");
+        JsonNode narrowed = jsonOf(getSettings(editor, false, slug));
+        putPlan(admin, true, slug, "large");
+        JsonNode widened = jsonOf(getSettings(editor, false, slug));
+
+        // then
+        JsonNode narrowedInterval = requiredSetting(settingsOf(narrowed), "check.interval");
+        JsonNode widenedInterval = requiredSetting(settingsOf(widened), "check.interval");
+        assertThat(text(narrowedInterval, "value")).isEqualTo("60");
+        assertThat(text(narrowedInterval, "source")).isEqualTo("DEFAULT");
+        assertThat(text(widenedInterval, "value")).isEqualTo("10");
+        assertThat(text(widenedInterval, "source")).isEqualTo("SPACE");
+    }
+
+    @Test
+    void aPlanBoundIsNeverTheDefaultValue() throws Exception {
+        // given
+        String admin = uniqueSubject("bound-default");
+        String slug = uniqueSlug("bound-default");
+        createSpace(slug);
+
+        // when
+        JsonNode body = jsonOf(getSettings(admin, true, slug));
+        Map<String, JsonNode> settings = settingsOf(body);
+
+        // then
+        JsonNode interval = requiredSetting(settings, "check.interval");
+        JsonNode timeout = requiredSetting(settings, "check.timeout");
+        JsonNode retries = requiredSetting(settings, "check.retries");
+        assertThat(text(interval, "value")).isEqualTo("60");
+        assertThat(text(interval, "source")).isEqualTo("DEFAULT");
+        assertThat(text(timeout, "value")).isEqualTo("10");
+        assertThat(text(timeout, "source")).isEqualTo("DEFAULT");
+        assertThat(text(retries, "value")).isEqualTo("1");
+        assertThat(text(retries, "source")).isEqualTo("DEFAULT");
+    }
+
+    @Test
+    void timeoutCannotExceedTheIntervalInSettings() throws Exception {
+        // given
+        String admin = uniqueSubject("pair-admin");
+        String editor = uniqueSubject("pair-editor");
+        String slug = uniqueSlug("pair");
+        createSpace(slug);
+        addMember(slug, editor, SpaceRole.EDITOR);
+        putPlan(admin, true, slug, "open");
+
+        // when
+        MvcResult timeout = putSetting(editor, false, slug, "check.timeout", "70");
+        MvcResult interval = putSetting(editor, false, slug, "check.interval", "5");
+        JsonNode timeoutBody = jsonOf(timeout);
+        JsonNode intervalBody = jsonOf(interval);
+
+        // then
+        JsonNode timeoutError = timeoutBody.path("errors").path(0);
+        JsonNode intervalError = intervalBody.path("errors").path(0);
+        assertThat(statusOf(timeout)).isEqualTo(400);
+        assertThat(codeOf(timeout)).isEqualTo("validation_failed");
+        assertThat(text(timeoutError, "code")).isEqualTo("timeout_exceeds_interval");
+        assertThat(statusOf(interval)).isEqualTo(400);
+        assertThat(codeOf(interval)).isEqualTo("validation_failed");
+        assertThat(text(intervalError, "code")).isEqualTo("timeout_exceeds_interval");
+    }
+
+    @Test
+    void settingValueIsCappedAndCanonical() throws Exception {
+        // given
+        String admin = uniqueSubject("canonical");
+        String slug = uniqueSlug("canonical");
+        createSpace(slug);
+        putPlan(admin, true, slug, "open");
+
+        // when
+        MvcResult saved = putSetting(admin, true, slug, "check.interval", "0060");
+        JsonNode read = jsonOf(getSettings(admin, true, slug));
+        MvcResult tooLong = putSetting(admin, true, slug, "timezone", "x".repeat(300));
+        JsonNode tooLongBody = jsonOf(tooLong);
+
+        // then
+        JsonNode interval = requiredSetting(settingsOf(read), "check.interval");
+        JsonNode tooLongError = tooLongBody.path("errors").path(0);
+        assertThat(statusOf(saved)).isEqualTo(204);
+        assertThat(text(interval, "value")).isEqualTo("60");
+        assertThat(text(interval, "source")).isEqualTo("SPACE");
+        assertThat(statusOf(tooLong)).isEqualTo(400);
+        assertThat(text(tooLongError, "code")).isEqualTo("size");
     }
 
     private MvcResult getSettings(String subject, boolean admin, String slug) throws Exception {

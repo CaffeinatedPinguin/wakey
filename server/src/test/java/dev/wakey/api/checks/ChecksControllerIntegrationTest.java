@@ -16,6 +16,7 @@ import dev.wakey.checks.CheckService;
 import dev.wakey.checks.CheckState;
 import dev.wakey.checks.CheckType;
 import dev.wakey.checks.ErrorCategory;
+import dev.wakey.checks.PlanLimits;
 import dev.wakey.spaces.PutResult;
 import dev.wakey.spaces.Space;
 import dev.wakey.spaces.SpacePrincipal;
@@ -49,6 +50,8 @@ class ChecksControllerIntegrationTest extends SecurityIntegrationTest {
     private static final Instant CHECKED_AT = Instant.parse("2026-01-01T00:00:00Z");
 
     private static final SpacePrincipal FIXTURE_ADMIN = new SpacePrincipal("fixture-admin", true);
+
+    private static final PlanLimits UNLIMITED = new PlanLimits(null, null, null, null, "default");
 
     @Test
     void editorCreatesACheckAndReadsItBack() throws Exception {
@@ -299,13 +302,13 @@ class ChecksControllerIntegrationTest extends SecurityIntegrationTest {
 
     private Check seedCheck(Space space, String name, CheckType type, String target) {
         CheckDraft draft = new CheckDraft(name, type, target, 60, 10, 1, null, null, null, List.of());
-        return bean(CheckService.class).create(space.id(), draft);
+        return bean(CheckService.class).create(space.id(), draft, UNLIMITED);
     }
 
     private Check seedCheck(Space space, String name, CheckType type, String target, String group, String tag) {
         List<String> tags = List.of(tag);
         CheckDraft draft = new CheckDraft(name, type, target, 60, 10, 1, group, null, null, tags);
-        return bean(CheckService.class).create(space.id(), draft);
+        return bean(CheckService.class).create(space.id(), draft, UNLIMITED);
     }
 
     private void recordResult(Check check, CheckState state) {

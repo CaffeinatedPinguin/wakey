@@ -21,6 +21,8 @@ class CheckServiceIntegrationTest extends PostgresIntegrationTest {
 
     private static final SpacePrincipal ADMIN = new SpacePrincipal("checks-admin", true);
 
+    private static final PlanLimits UNLIMITED = new PlanLimits(null, null, null, null, "default");
+
     private CheckService checks;
 
     private CheckResults results;
@@ -44,7 +46,7 @@ class CheckServiceIntegrationTest extends PostgresIntegrationTest {
         CheckDraft draft = newCheck("api health", CheckType.HTTP, "https://api.example.test/health");
 
         // when
-        Check created = checks.create(spaceA, draft);
+        Check created = create(draft);
         Check read = checks.get(spaceA, created.id());
 
         // then
@@ -62,13 +64,14 @@ class CheckServiceIntegrationTest extends PostgresIntegrationTest {
     void aCheckOfAnotherSpaceIsNotFound() {
         // given
         CheckDraft draft = newCheck("foreign", CheckType.TCP, "db.example.test:5432");
-        Check created = checks.create(spaceA, draft);
+        Check created = create(draft);
         UUID id = created.id();
         CheckDraft updateChanges = changes("foreign renamed", "db.example.test:5432");
 
         // when
         Throwable read = catchThrowable(() -> checks.get(spaceB, id));
-        Throwable update = catchThrowable(() -> checks.update(spaceB, id, updateChanges, 1L));
+        Throwable update =
+                catchThrowable(() -> checks.update(spaceB, new CheckUpdate(id, updateChanges, 1L, UNLIMITED)));
         Throwable paused = catchThrowable(() -> checks.pause(spaceB, id, PausedReason.MANUAL));
         Throwable deleted = catchThrowable(() -> checks.delete(spaceB, id));
         CheckPage visible = checks.list(spaceB, CheckFilter.all(), null, 100);
@@ -85,15 +88,16 @@ class CheckServiceIntegrationTest extends PostgresIntegrationTest {
     void updateWithAStaleVersionIsRejected() {
         // given
         CheckDraft draft = newCheck("versioned", CheckType.HTTP, "https://v.example.test");
-        Check created = checks.create(spaceA, draft);
+        Check created = create(draft);
         long version = created.version();
         CheckDraft firstChanges = changes("versioned renamed", "https://v.example.test");
         CheckDraft staleChanges = changes("stale", "https://v.example.test");
         UUID id = created.id();
 
         // when
-        Check updated = checks.update(spaceA, id, firstChanges, version);
-        Throwable stale = catchThrowable(() -> checks.update(spaceA, id, staleChanges, version));
+        Check updated = checks.update(spaceA, new CheckUpdate(id, firstChanges, version, UNLIMITED));
+        Throwable stale =
+                catchThrowable(() -> checks.update(spaceA, new CheckUpdate(id, staleChanges, version, UNLIMITED)));
 
         // then
         assertThat(updated.name()).isEqualTo("versioned renamed");
@@ -117,7 +121,7 @@ class CheckServiceIntegrationTest extends PostgresIntegrationTest {
         // when
         List<Throwable> rejections = new ArrayList<>();
         for (CheckDraft candidate : invalid) {
-            rejections.add(catchThrowable(() -> checks.create(spaceA, candidate)));
+            rejections.add(catchThrowable(() -> create(candidate)));
         }
 
         // then
@@ -136,7 +140,7 @@ class CheckServiceIntegrationTest extends PostgresIntegrationTest {
     void pausingStoresTheReasonAndResumingClearsIt() {
         // given
         CheckDraft draft = newCheck("paused", CheckType.HTTP, "https://p.test");
-        Check created = checks.create(spaceA, draft);
+        Check created = create(draft);
         UUID id = created.id();
 
         // when
@@ -159,10 +163,10 @@ class CheckServiceIntegrationTest extends PostgresIntegrationTest {
         CheckDraft alpha = newCheck("alpha", CheckType.HTTP, "https://a.test");
         CheckDraft delta = newCheck("delta", CheckType.HTTP, "https://d.test");
         CheckDraft charlie = newCheck("charlie", CheckType.HTTP, "https://c.test");
-        checks.create(spaceA, bravo);
-        checks.create(spaceA, alpha);
-        checks.create(spaceA, delta);
-        checks.create(spaceA, charlie);
+        create(bravo);
+        create(alpha);
+        create(delta);
+        create(charlie);
 
         // when
         CheckPage first = checks.list(spaceA, CheckFilter.all(), null, 2);
@@ -184,9 +188,9 @@ class CheckServiceIntegrationTest extends PostgresIntegrationTest {
         CheckDraft alpha = newCheck("Alpha service", CheckType.HTTP, "https://alpha.test", "web", "prod");
         CheckDraft bravo = newCheck("Bravo database", CheckType.TCP, "db.example.test:5432", "data", "db");
         CheckDraft charlie = newCheck("Charlie certificate", CheckType.CERTIFICATE, "cert.example.test");
-        Check alphaCheck = checks.create(spaceA, alpha);
-        Check bravoCheck = checks.create(spaceA, bravo);
-        checks.create(spaceA, charlie);
+        Check alphaCheck = create(alpha);
+        Check bravoCheck = create(bravo);
+        create(charlie);
         CheckResult alphaResult = result(CheckState.UP, null, instant("2026-01-01T00:00:00Z"));
         CheckResult bravoResult = result(CheckState.DOWN, ErrorCategory.TARGET_DOWN, instant("2026-01-01T00:00:01Z"));
         results.record(alphaCheck.id(), alphaResult);
@@ -223,10 +227,10 @@ class CheckServiceIntegrationTest extends PostgresIntegrationTest {
         CheckDraft percentOther = newCheck("percent 50x", CheckType.HTTP, "https://q.test");
         CheckDraft underscoreLiteral = newCheck("under_score", CheckType.HTTP, "https://r.test");
         CheckDraft underscoreOther = newCheck("underXscore", CheckType.HTTP, "https://s.test");
-        checks.create(spaceA, percentLiteral);
-        checks.create(spaceA, percentOther);
-        checks.create(spaceA, underscoreLiteral);
-        checks.create(spaceA, underscoreOther);
+        create(percentLiteral);
+        create(percentOther);
+        create(underscoreLiteral);
+        create(underscoreOther);
 
         // when
         CheckPage percentPage = checks.list(spaceA, textFilter("%"), null, 100);
@@ -246,10 +250,10 @@ class CheckServiceIntegrationTest extends PostgresIntegrationTest {
         CheckDraft downDraft = newCheck("Bravo web", CheckType.HTTP, "https://b.test", "web", "prod");
         CheckDraft unknownDraft = newCheck("Charlie web", CheckType.HTTP, "https://c.test", "web", "prod");
         CheckDraft otherDraft = newCheck("Delta data", CheckType.TCP, "db.example.test:5432", "data", "db");
-        Check up = checks.create(spaceA, upDraft);
-        Check down = checks.create(spaceA, downDraft);
-        checks.create(spaceA, unknownDraft);
-        checks.create(spaceA, otherDraft);
+        Check up = create(upDraft);
+        Check down = create(downDraft);
+        create(unknownDraft);
+        create(otherDraft);
         CheckResult upResult = result(CheckState.UP, null, instant("2026-01-01T00:00:00Z"));
         CheckResult downResult = result(CheckState.DOWN, ErrorCategory.TARGET_DOWN, instant("2026-01-01T00:00:01Z"));
         results.record(up.id(), upResult);
@@ -271,7 +275,7 @@ class CheckServiceIntegrationTest extends PostgresIntegrationTest {
     void latestResultDecidesTheState() {
         // given
         CheckDraft draft = newCheck("latest", CheckType.HTTP, "https://l.test");
-        Check check = checks.create(spaceA, draft);
+        Check check = create(draft);
         UUID id = check.id();
         CheckResult first = result(CheckState.DOWN, ErrorCategory.TARGET_DOWN, instant("2026-01-01T00:00:00Z"));
         CheckResult second = result(CheckState.UP, null, instant("2026-01-01T00:00:10Z"));
@@ -296,7 +300,7 @@ class CheckServiceIntegrationTest extends PostgresIntegrationTest {
     void listAndDetailsAgreeOnTheLatestResultOnATie() {
         // given
         CheckDraft draft = newCheck("tie", CheckType.HTTP, "https://tie.test");
-        Check check = checks.create(spaceA, draft);
+        Check check = create(draft);
         UUID checkId = check.id();
         Instant checkedAt = instant("2026-01-01T00:00:00Z");
         UUID lowerId = UUID.fromString("00000000-0000-0000-0000-000000000001");
@@ -319,7 +323,7 @@ class CheckServiceIntegrationTest extends PostgresIntegrationTest {
     void pausingAPausedCheckKeepsItsVersion() {
         // given
         CheckDraft draft = newCheck("paused twice", CheckType.HTTP, "https://pt.test");
-        Check created = checks.create(spaceA, draft);
+        Check created = create(draft);
         UUID id = created.id();
         checks.pause(spaceA, id, PausedReason.MANUAL);
         Check firstPause = checks.get(spaceA, id);
@@ -335,10 +339,29 @@ class CheckServiceIntegrationTest extends PostgresIntegrationTest {
     }
 
     @Test
+    void resumingARunningCheckKeepsItsVersion() {
+        // given
+        CheckDraft draft = newCheck("running", CheckType.HTTP, "https://running.test");
+        Check created = create(draft);
+        UUID id = created.id();
+        long version = created.version();
+
+        // when
+        checks.resume(spaceA, id);
+        Check resumed = checks.get(spaceA, id);
+        Throwable missing = catchThrowable(() -> checks.resume(spaceA, UUID.randomUUID()));
+
+        // then
+        assertThat(resumed.version()).isEqualTo(version);
+        assertThat(resumed.paused()).isFalse();
+        assertThat(missing).isInstanceOf(CheckNotFoundException.class);
+    }
+
+    @Test
     void aCheckWithoutResultsIsUnknown() {
         // given
         CheckDraft draft = newCheck("unknown", CheckType.HTTP, "https://u.test");
-        Check check = checks.create(spaceA, draft);
+        Check check = create(draft);
 
         // when
         Check read = checks.get(spaceA, check.id());
@@ -355,7 +378,7 @@ class CheckServiceIntegrationTest extends PostgresIntegrationTest {
     void locationNetworkErrorCannotBeDown() {
         // given
         CheckDraft draft = newCheck("network", CheckType.HTTP, "https://n.test");
-        Check check = checks.create(spaceA, draft);
+        Check check = create(draft);
         UUID id = check.id();
         CheckResult rejectedResult =
                 result(CheckState.DOWN, ErrorCategory.LOCATION_NETWORK, instant("2026-01-01T00:00:00Z"));
@@ -381,7 +404,7 @@ class CheckServiceIntegrationTest extends PostgresIntegrationTest {
         // given
         List<String> tags = List.of("alpha", "beta");
         CheckDraft draft = newCheckWithTags("deleted", CheckType.HTTP, "https://d.test", tags);
-        Check check = checks.create(spaceA, draft);
+        Check check = create(draft);
         UUID id = check.id();
         CheckResult recorded = result(CheckState.UP, null, instant("2026-01-01T00:00:00Z"));
         results.record(id, recorded);
@@ -424,6 +447,10 @@ class CheckServiceIntegrationTest extends PostgresIntegrationTest {
                 .param("checkId", checkId)
                 .query(Long.class)
                 .single();
+    }
+
+    private Check create(CheckDraft draft) {
+        return checks.create(spaceA, draft, UNLIMITED);
     }
 
     private static List<String> names(List<Check> checks) {

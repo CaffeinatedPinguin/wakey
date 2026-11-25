@@ -3,6 +3,7 @@ package dev.wakey.api.checks;
 import dev.wakey.checks.CheckFilter;
 import dev.wakey.checks.CheckState;
 import dev.wakey.checks.CheckType;
+import dev.wakey.checks.InvalidCheckException;
 import dev.wakey.checks.PausedReason;
 import io.swagger.v3.oas.annotations.media.Schema;
 import org.jspecify.annotations.Nullable;
@@ -10,6 +11,8 @@ import org.jspecify.annotations.Nullable;
 /** The filters shared by the check list and its state counters; a missing field narrows nothing. */
 @Schema(description = "The filters shared by the check list and its counters")
 public class CheckFilterQuery {
+
+    private static final int MAX_Q_LENGTH = 100;
 
     @Schema(description = "Text matched against the name and the target")
     private @Nullable String q;
@@ -30,6 +33,9 @@ public class CheckFilterQuery {
     private @Nullable PausedReason pausedReason;
 
     CheckFilter toFilter() {
+        if (q != null && q.length() > MAX_Q_LENGTH) {
+            throw new InvalidCheckException("q", "invalid_q", "The search text must have at most 100 characters");
+        }
         return new CheckFilter(q, state, type, tag, group, pausedReason);
     }
 

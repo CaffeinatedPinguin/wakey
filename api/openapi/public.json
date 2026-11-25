@@ -377,7 +377,8 @@
           "value" : {
             "description" : "The desired value",
             "example" : "60",
-            "minLength" : 1,
+            "maxLength" : 255,
+            "minLength" : 0,
             "type" : "string"
           }
         },

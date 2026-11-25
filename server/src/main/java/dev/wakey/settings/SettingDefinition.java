@@ -4,12 +4,16 @@ import java.util.function.Function;
 import java.util.function.Predicate;
 import org.jspecify.annotations.Nullable;
 
-/** One catalog entry: its key, value shape, default, validation rule, plan bound and instance default. */
+/**
+ * One catalog entry: its key, value shape, default, validation rule, the side of its plan bound and
+ * the instance default.
+ */
 public record SettingDefinition(
         SettingKey key,
         SettingType type,
         String defaultValue,
         Predicate<String> validator,
+        BoundDirection direction,
         Function<PlanProperties, @Nullable Integer> planBound,
         Function<InstanceDefaultsProperties, @Nullable String> instanceValue) {
 

@@ -6,9 +6,12 @@ import dev.wakey.checks.CheckDraft;
 import dev.wakey.checks.CheckFilter;
 import dev.wakey.checks.CheckNotFoundException;
 import dev.wakey.checks.CheckPage;
+import dev.wakey.checks.CheckPlanLimitException;
 import dev.wakey.checks.CheckService;
+import dev.wakey.checks.CheckUpdate;
 import dev.wakey.checks.CheckVersionConflictException;
 import dev.wakey.checks.PausedReason;
+import dev.wakey.checks.PlanLimits;
 import dev.wakey.checks.StateCounts;
 import java.util.List;
 import java.util.Map;
@@ -33,8 +36,10 @@ class JdbcCheckService implements CheckService {
 
     @Override
     @Transactional
-    public Check create(UUID spaceId, CheckDraft check) {
-        CheckDraft validated = CheckValidator.validate(check);
+    public Check create(UUID spaceId, CheckDraft check, PlanLimits limits) {
+        CheckDraft validated = CheckValidator.validate(check, limits);
+        sql.lockSpace(spaceId);
+        requireCheckCapacity(spaceId, limits);
         UUID id = UUID.randomUUID();
         sql.insert(spaceId, id, validated);
         return get(spaceId, id);
@@ -42,15 +47,20 @@ class JdbcCheckService implements CheckService {
 
     @Override
     @Transactional
-    public Check update(UUID spaceId, UUID id, CheckDraft changes, long expectedVersion) {
+    public Check update(UUID spaceId, CheckUpdate update) {
+        UUID id = update.id();
         CheckRow existing = findRequiredRow(spaceId, id);
-        if (existing.version() != expectedVersion) {
-            throw new CheckVersionConflictException(id, expectedVersion, existing.version());
+        long expectedVersion = update.expectedVersion();
+        long currentVersion = existing.version();
+        if (currentVersion != expectedVersion) {
+            throw new CheckVersionConflictException(id, expectedVersion, currentVersion);
         }
-        CheckDraft validated = CheckValidator.validate(changes);
+        CheckDraft changes = update.changes();
+        PlanLimits limits = update.limits();
+        CheckDraft validated = CheckValidator.validate(changes, limits);
         int updated = sql.update(spaceId, id, validated, expectedVersion);
         if (updated == 0) {
-            throw new CheckVersionConflictException(id, expectedVersion, existing.version());
+            throw new CheckVersionConflictException(id, expectedVersion, currentVersion);
         }
         return get(spaceId, id);
     }
@@ -89,7 +99,7 @@ class JdbcCheckService implements CheckService {
     public void resume(UUID spaceId, UUID id) {
         int updated = sql.resume(spaceId, id);
         if (updated == 0) {
-            throw new CheckNotFoundException(id);
+            findRequiredRow(spaceId, id);
         }
     }
 
@@ -99,6 +109,17 @@ class JdbcCheckService implements CheckService {
         int deleted = sql.delete(spaceId, id);
         if (deleted == 0) {
             throw new CheckNotFoundException(id);
+        }
+    }
+
+    private void requireCheckCapacity(UUID spaceId, PlanLimits limits) {
+        Integer maxChecks = limits.maxChecks();
+        if (maxChecks == null) {
+            return;
+        }
+        long count = sql.count(spaceId);
+        if (count >= maxChecks) {
+            throw new CheckPlanLimitException(maxChecks, limits.planName());
         }
     }
 

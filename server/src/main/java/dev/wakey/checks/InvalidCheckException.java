@@ -15,6 +15,12 @@ public final class InvalidCheckException extends RuntimeException {
         this.code = code;
     }
 
+    public InvalidCheckException(String field, String code, String message, Throwable cause) {
+        super(message, cause);
+        this.field = field;
+        this.code = code;
+    }
+
     public String field() {
         return field;
     }

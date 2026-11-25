@@ -1,4 +1,4 @@
-package dev.wakey.settings;
+package dev.wakey.checks;
 
 /**
  * The numeric rules shared by a check and its settings. Both the check validator and the settings

@@ -6,7 +6,9 @@ import dev.wakey.settings.SettingCatalog;
 import dev.wakey.settings.SettingDefinition;
 import dev.wakey.settings.SettingKey;
 import dev.wakey.settings.SettingSource;
+import dev.wakey.settings.SettingType;
 import dev.wakey.settings.SpaceSettings;
+import dev.wakey.settings.TimeoutExceedsIntervalException;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -79,11 +81,13 @@ final class JdbcSpaceSettings implements SpaceSettings {
         PlanProperties plan = plans.plan(resolvedPlanName);
         SettingDefinition definition = SettingCatalog.require(key);
         definition.validate(value);
-        plans.checkWithinBound(plan, resolvedPlanName, definition, value);
+        String canonical = canonicalValue(definition, value);
+        plans.checkWithinBound(plan, resolvedPlanName, definition, canonical);
+        requireTimeoutWithinInterval(spaceId, definition, canonical, plan);
         jdbc.sql(UPSERT_OVERRIDE_SQL)
                 .param("spaceId", spaceId)
                 .param("key", key)
-                .param("value", value)
+                .param("value", canonical)
                 .update();
     }
 
@@ -106,33 +110,67 @@ final class JdbcSpaceSettings implements SpaceSettings {
         return plans.resolvePlanName(planName);
     }
 
-    private PlanProperties plan(@Nullable String planName) {
+    @Override
+    public PlanProperties plan(@Nullable String planName) {
         return plans.plan(plans.resolvePlanName(planName));
     }
 
     private EffectiveSetting resolve(SettingDefinition definition, PlanProperties plan, @Nullable String override) {
-        EffectiveSetting result;
-        if (override != null) {
-            result = new EffectiveSetting(override, SettingSource.SPACE);
-        } else {
-            result = configuredValue(definition, plan);
+        if (override != null && plans.withinBound(plan, definition, override)) {
+            return new EffectiveSetting(override, SettingSource.SPACE);
         }
-        return result;
+        return configuredValue(definition, plan);
     }
 
     private EffectiveSetting configuredValue(SettingDefinition definition, PlanProperties plan) {
-        String planValue = plans.planValue(definition, plan);
         String instanceValue = plans.instanceValue(definition);
-        EffectiveSetting result;
-        if (planValue != null) {
-            result = new EffectiveSetting(planValue, SettingSource.PLAN);
-        } else if (instanceValue != null) {
-            result = new EffectiveSetting(instanceValue, SettingSource.INSTANCE);
-        } else {
-            String defaultValue = definition.defaultValue();
-            result = new EffectiveSetting(defaultValue, SettingSource.DEFAULT);
+        if (instanceValue != null) {
+            return valueOrBound(definition, plan, instanceValue, SettingSource.INSTANCE);
         }
-        return result;
+        return valueOrBound(definition, plan, definition.defaultValue(), SettingSource.DEFAULT);
+    }
+
+    private EffectiveSetting valueOrBound(
+            SettingDefinition definition, PlanProperties plan, String value, SettingSource source) {
+        Integer bound = definition.bound(plan);
+        if (bound != null && !plans.withinBound(plan, definition, value)) {
+            return new EffectiveSetting(String.valueOf(bound), SettingSource.PLAN);
+        }
+        return new EffectiveSetting(value, source);
+    }
+
+    private void requireTimeoutWithinInterval(
+            UUID spaceId, SettingDefinition definition, String value, PlanProperties plan) {
+        if (definition.key() == SettingKey.CHECK_TIMEOUT) {
+            requireTimeoutNotAboveInterval(spaceId, Long.parseLong(value), plan);
+        } else if (definition.key() == SettingKey.CHECK_INTERVAL) {
+            requireIntervalNotBelowTimeout(spaceId, Long.parseLong(value), plan);
+        }
+    }
+
+    private void requireTimeoutNotAboveInterval(UUID spaceId, long timeout, PlanProperties plan) {
+        long interval = effectiveNumber(spaceId, SettingKey.CHECK_INTERVAL, plan);
+        if (timeout > interval) {
+            throw new TimeoutExceedsIntervalException();
+        }
+    }
+
+    private void requireIntervalNotBelowTimeout(UUID spaceId, long interval, PlanProperties plan) {
+        long timeout = effectiveNumber(spaceId, SettingKey.CHECK_TIMEOUT, plan);
+        if (interval < timeout) {
+            throw new TimeoutExceedsIntervalException();
+        }
+    }
+
+    private long effectiveNumber(UUID spaceId, SettingKey key, PlanProperties plan) {
+        SettingDefinition definition = SettingCatalog.require(key.key());
+        String override = findOverride(spaceId, key.key());
+        EffectiveSetting effective = resolve(definition, plan, override);
+        return Long.parseLong(effective.value());
+    }
+
+    private static String canonicalValue(SettingDefinition definition, String value) {
+        return definition.type() == SettingType.INTEGER ? String.valueOf(Long.parseLong(value)) : value;
     }
 
     private @Nullable String findOverride(UUID spaceId, String key) {

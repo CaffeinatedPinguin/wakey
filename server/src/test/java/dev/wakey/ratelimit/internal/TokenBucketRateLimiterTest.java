@@ -109,6 +109,34 @@ class TokenBucketRateLimiterTest {
     }
 
     @Test
+    void theRateLimiterEvictsInAmortizedConstantTime() {
+        // given
+        RateLimiter bounded = new TokenBucketRateLimiter(1_000, clock);
+        RateLimit limit = new RateLimit(1, 1.0);
+        bounded.tryAcquire("hot", limit);
+        long startedNanos = System.nanoTime();
+
+        // when
+        for (int index = 0; index < 100_000; index++) {
+            bounded.tryAcquire("key-" + index, limit);
+        }
+        Duration elapsed = Duration.ofNanos(System.nanoTime() - startedNanos);
+
+        // then the many inserts finish without a linear scan per key
+        assertThat(elapsed).isLessThan(Duration.ofSeconds(5));
+
+        // and a cheap insert does not reset the capacity of an active key
+        RateLimiter small = new TokenBucketRateLimiter(2, clock);
+        small.tryAcquire("older", limit);
+        small.tryAcquire("active", limit);
+        Decision activeDenied = small.tryAcquire("active", limit);
+        small.tryAcquire("newcomer", limit);
+        Decision afterBypass = small.tryAcquire("active", limit);
+        assertThat(activeDenied.allowed()).isFalse();
+        assertThat(afterBypass.allowed()).isFalse();
+    }
+
+    @Test
     void concurrentCallsNeverExceedTheCapacity() throws Exception {
         // given
         int capacity = 100;

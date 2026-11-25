@@ -1,5 +1,6 @@
 package dev.wakey.settings;
 
+import dev.wakey.checks.CheckLimits;
 import java.time.DateTimeException;
 import java.time.ZoneId;
 import java.util.LinkedHashMap;
@@ -18,6 +19,7 @@ public final class SettingCatalog {
                     SettingType.STRING,
                     "UTC",
                     SettingCatalog::isTimeZone,
+                    BoundDirection.MAX,
                     plan -> null,
                     InstanceDefaultsProperties::timezone),
             new SettingDefinition(
@@ -25,6 +27,7 @@ public final class SettingCatalog {
                     SettingType.STRING,
                     "pl",
                     SettingCatalog::isLanguage,
+                    BoundDirection.MAX,
                     plan -> null,
                     InstanceDefaultsProperties::language),
             new SettingDefinition(
@@ -32,6 +35,7 @@ public final class SettingCatalog {
                     SettingType.INTEGER,
                     "60",
                     value -> isIntegerAtLeast(value, CheckLimits.MIN_INTERVAL_SECONDS),
+                    BoundDirection.MIN,
                     PlanProperties::minInterval,
                     SettingCatalog::intervalDefault),
             new SettingDefinition(
@@ -39,6 +43,7 @@ public final class SettingCatalog {
                     SettingType.INTEGER,
                     "10",
                     value -> isIntegerAtLeast(value, CheckLimits.MIN_TIMEOUT_SECONDS),
+                    BoundDirection.MAX,
                     PlanProperties::maxTimeout,
                     SettingCatalog::timeoutDefault),
             new SettingDefinition(
@@ -46,6 +51,7 @@ public final class SettingCatalog {
                     SettingType.INTEGER,
                     "1",
                     value -> isIntegerBetween(value, 0, CheckLimits.MAX_RETRIES),
+                    BoundDirection.MAX,
                     PlanProperties::maxRetries,
                     SettingCatalog::retriesDefault));
 

@@ -2,6 +2,7 @@ package dev.wakey.api.settings;
 
 import dev.wakey.api.SpacePrincipals;
 import dev.wakey.settings.SpaceSettings;
+import dev.wakey.settings.TimeoutExceedsIntervalException;
 import dev.wakey.spaces.SpaceAccessDeniedException;
 import dev.wakey.spaces.SpaceService;
 import dev.wakey.spaces.SpaceView;
@@ -41,8 +42,6 @@ final class SettingsController {
     private static final String PROBLEM_JSON = "application/problem+json";
 
     private static final String WRITE_DENIED = "Only an editor or an administrator can change settings";
-
-    private static final String ADMIN_DENIED = "Only an administrator can assign a plan";
 
     private final SpaceService spaces;
 
@@ -109,7 +108,11 @@ final class SettingsController {
         var actor = SpacePrincipals.forSpace(authentication, slug);
         var view = spaces.view(actor, slug);
         requireWriter(view);
-        settings.set(view.id(), view.planName(), key, request.value());
+        try {
+            settings.set(view.id(), view.planName(), key, request.value());
+        } catch (TimeoutExceedsIntervalException exception) {
+            throw SettingProblems.timeoutExceedsInterval(exception);
+        }
         return ResponseEntity.noContent().build();
     }
 
@@ -163,8 +166,6 @@ final class SettingsController {
     ResponseEntity<Void> putSpacePlan(
             @PathVariable String slug, @Valid @RequestBody PutSpacePlanRequest request, Authentication authentication) {
         var actor = SpacePrincipals.forSpace(authentication, slug);
-        var view = spaces.view(actor, slug);
-        requireAdmin(view);
         String planName = settings.requireExisting(request.plan());
         spaces.assignPlan(actor, slug, planName);
         return ResponseEntity.noContent().build();
@@ -173,12 +174,6 @@ final class SettingsController {
     private static void requireWriter(SpaceView view) {
         if (!view.canWrite()) {
             throw new SpaceAccessDeniedException(WRITE_DENIED);
-        }
-    }
-
-    private static void requireAdmin(SpaceView view) {
-        if (!view.admin()) {
-            throw new SpaceAccessDeniedException(ADMIN_DENIED);
         }
     }
 }

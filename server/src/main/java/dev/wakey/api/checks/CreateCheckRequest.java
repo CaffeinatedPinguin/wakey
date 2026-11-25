@@ -36,5 +36,5 @@ public record CreateCheckRequest(
         @Schema(description = "The optional runbook address") @Nullable
         String runbookUrl,
 
-        @Schema(description = "The optional tags") @NotNull List<String> tags)
+        @Schema(description = "The optional tags") @NotNull List<@NotNull String> tags)
         implements CheckRequestFields {}

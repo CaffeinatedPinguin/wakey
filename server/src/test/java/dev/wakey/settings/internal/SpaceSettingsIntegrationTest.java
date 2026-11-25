@@ -45,7 +45,7 @@ class SpaceSettingsIntegrationTest extends PostgresIntegrationTest {
     @Test
     void planValueOverridesTheInstanceDefault() {
         // given
-        InstanceDefaultsProperties.CheckDefaults check = new InstanceDefaultsProperties.CheckDefaults(45, 8, 1);
+        InstanceDefaultsProperties.CheckDefaults check = new InstanceDefaultsProperties.CheckDefaults(45, 25, 5);
         InstanceDefaultsProperties defaults = new InstanceDefaultsProperties(null, null, check);
         PlanProperties plan = new PlanProperties(true, 30, 20, 3, 10);
         SpaceSettings settings = settings(Map.of("default", plan), defaults);
@@ -57,7 +57,7 @@ class SpaceSettingsIntegrationTest extends PostgresIntegrationTest {
         EffectiveSetting retries = settings.effective(spaceId, "default", "check.retries");
 
         // then
-        assertThat(interval).isEqualTo(new EffectiveSetting("30", SettingSource.PLAN));
+        assertThat(interval).isEqualTo(new EffectiveSetting("45", SettingSource.INSTANCE));
         assertThat(timeout).isEqualTo(new EffectiveSetting("20", SettingSource.PLAN));
         assertThat(retries).isEqualTo(new EffectiveSetting("3", SettingSource.PLAN));
     }
@@ -116,9 +116,40 @@ class SpaceSettingsIntegrationTest extends PostgresIntegrationTest {
         // then
         assertThat(timezone).isEqualTo(new EffectiveSetting("Europe/Warsaw", SettingSource.INSTANCE));
         assertThat(language).isEqualTo(new EffectiveSetting("en", SettingSource.SPACE));
-        assertThat(interval).isEqualTo(new EffectiveSetting("30", SettingSource.PLAN));
-        assertThat(timeout).isEqualTo(new EffectiveSetting("20", SettingSource.PLAN));
+        assertThat(interval).isEqualTo(new EffectiveSetting("60", SettingSource.DEFAULT));
+        assertThat(timeout).isEqualTo(new EffectiveSetting("10", SettingSource.DEFAULT));
         assertThat(retries).isEqualTo(new EffectiveSetting("1", SettingSource.DEFAULT));
+    }
+
+    @Test
+    void aPlanBoundIsNeverTheDefaultValue() {
+        // given
+        PlanProperties plan = new PlanProperties(true, 10, 30, 5, 10);
+        SpaceSettings settings = settings(Map.of("default", plan), NO_DEFAULTS);
+        UUID spaceId = createSpace();
+
+        // when
+        EffectiveSetting interval = settings.effective(spaceId, "default", "check.interval");
+        EffectiveSetting timeout = settings.effective(spaceId, "default", "check.timeout");
+        EffectiveSetting retries = settings.effective(spaceId, "default", "check.retries");
+
+        // then
+        assertThat(interval).isEqualTo(new EffectiveSetting("60", SettingSource.DEFAULT));
+        assertThat(timeout).isEqualTo(new EffectiveSetting("10", SettingSource.DEFAULT));
+        assertThat(retries).isEqualTo(new EffectiveSetting("1", SettingSource.DEFAULT));
+
+        // when the instance defaults fall outside the bounds
+        InstanceDefaultsProperties.CheckDefaults check = new InstanceDefaultsProperties.CheckDefaults(5, 40, 8);
+        InstanceDefaultsProperties defaults = new InstanceDefaultsProperties(null, null, check);
+        SpaceSettings clamped = settings(Map.of("default", plan), defaults);
+        EffectiveSetting clampedInterval = clamped.effective(spaceId, "default", "check.interval");
+        EffectiveSetting clampedTimeout = clamped.effective(spaceId, "default", "check.timeout");
+        EffectiveSetting clampedRetries = clamped.effective(spaceId, "default", "check.retries");
+
+        // then the nearest bound wins with the PLAN source
+        assertThat(clampedInterval).isEqualTo(new EffectiveSetting("10", SettingSource.PLAN));
+        assertThat(clampedTimeout).isEqualTo(new EffectiveSetting("30", SettingSource.PLAN));
+        assertThat(clampedRetries).isEqualTo(new EffectiveSetting("5", SettingSource.PLAN));
     }
 
     @Test
@@ -135,7 +166,7 @@ class SpaceSettingsIntegrationTest extends PostgresIntegrationTest {
 
         // then
         assertThat(before).isEqualTo(new EffectiveSetting("2", SettingSource.SPACE));
-        assertThat(after).isEqualTo(new EffectiveSetting("3", SettingSource.PLAN));
+        assertThat(after).isEqualTo(new EffectiveSetting("1", SettingSource.DEFAULT));
     }
 
     @Test
