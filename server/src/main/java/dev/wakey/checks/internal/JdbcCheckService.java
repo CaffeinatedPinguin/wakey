@@ -1,17 +1,17 @@
 package dev.wakey.checks.internal;
 
 import dev.wakey.checks.Check;
-import dev.wakey.checks.CheckChanges;
 import dev.wakey.checks.CheckCursor;
+import dev.wakey.checks.CheckDraft;
 import dev.wakey.checks.CheckFilter;
 import dev.wakey.checks.CheckNotFoundException;
 import dev.wakey.checks.CheckPage;
 import dev.wakey.checks.CheckService;
 import dev.wakey.checks.CheckVersionConflictException;
-import dev.wakey.checks.NewCheck;
 import dev.wakey.checks.PausedReason;
 import dev.wakey.checks.StateCounts;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import org.jspecify.annotations.Nullable;
 import org.springframework.transaction.annotation.Transactional;
@@ -33,8 +33,8 @@ class JdbcCheckService implements CheckService {
 
     @Override
     @Transactional
-    public Check create(UUID spaceId, NewCheck check) {
-        ValidatedCheck validated = CheckValidator.validate(check);
+    public Check create(UUID spaceId, CheckDraft check) {
+        CheckDraft validated = CheckValidator.validate(check);
         UUID id = UUID.randomUUID();
         sql.insert(spaceId, id, validated);
         return get(spaceId, id);
@@ -42,12 +42,12 @@ class JdbcCheckService implements CheckService {
 
     @Override
     @Transactional
-    public Check update(UUID spaceId, UUID id, CheckChanges changes, long expectedVersion) {
+    public Check update(UUID spaceId, UUID id, CheckDraft changes, long expectedVersion) {
         CheckRow existing = findRequiredRow(spaceId, id);
         if (existing.version() != expectedVersion) {
             throw new CheckVersionConflictException(id, expectedVersion, existing.version());
         }
-        ValidatedCheck validated = CheckValidator.validate(changes);
+        CheckDraft validated = CheckValidator.validate(changes);
         int updated = sql.update(spaceId, id, validated, expectedVersion);
         if (updated == 0) {
             throw new CheckVersionConflictException(id, expectedVersion, existing.version());
@@ -80,7 +80,7 @@ class JdbcCheckService implements CheckService {
     public void pause(UUID spaceId, UUID id, PausedReason reason) {
         int updated = sql.pause(spaceId, id, reason);
         if (updated == 0) {
-            throw new CheckNotFoundException(id);
+            findRequiredRow(spaceId, id);
         }
     }
 
@@ -115,9 +115,17 @@ class JdbcCheckService implements CheckService {
     private CheckPage pageOf(List<CheckRow> rows, int limit) {
         boolean hasMore = rows.size() > limit;
         List<CheckRow> pageRows = hasMore ? rows.subList(0, limit) : rows;
-        List<Check> items = pageRows.stream().map(this::toCheck).toList();
+        List<UUID> ids = pageRows.stream().map(CheckRow::id).toList();
+        Map<UUID, List<String>> tags = sql.tagsFor(ids);
+        List<Check> items =
+                pageRows.stream().map(row -> toCheckWithTags(row, tags)).toList();
         @Nullable CheckCursor next = hasMore ? cursorOf(pageRows.getLast()) : null;
         return new CheckPage(List.copyOf(items), next);
+    }
+
+    private static Check toCheckWithTags(CheckRow row, Map<UUID, List<String>> tags) {
+        List<String> rowTags = tags.getOrDefault(row.id(), List.of());
+        return row.toCheck(rowTags);
     }
 
     private static CheckCursor cursorOf(CheckRow row) {

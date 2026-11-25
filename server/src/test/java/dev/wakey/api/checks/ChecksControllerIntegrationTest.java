@@ -9,13 +9,13 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 
 import dev.wakey.checks.Check;
+import dev.wakey.checks.CheckDraft;
 import dev.wakey.checks.CheckResult;
 import dev.wakey.checks.CheckResults;
 import dev.wakey.checks.CheckService;
 import dev.wakey.checks.CheckState;
 import dev.wakey.checks.CheckType;
 import dev.wakey.checks.ErrorCategory;
-import dev.wakey.checks.NewCheck;
 import dev.wakey.spaces.PutResult;
 import dev.wakey.spaces.Space;
 import dev.wakey.spaces.SpacePrincipal;
@@ -37,6 +37,7 @@ import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
 import tools.jackson.databind.json.JsonMapper;
 
+/** Keeps the HTTP checks to error mapping, access rules and response shape; the domain rules live in the module tests. */
 class ChecksControllerIntegrationTest extends SecurityIntegrationTest {
 
     private static final ObjectMapper MAPPER = JsonMapper.builder().build();
@@ -118,58 +119,6 @@ class ChecksControllerIntegrationTest extends SecurityIntegrationTest {
         assertThat(groupNames).containsExactly("alpha", "charlie", "delta", "echo");
         assertThat(stateNames).containsExactly("bravo");
         assertThat(textNames).containsExactly("alpha");
-    }
-
-    @Test
-    void countsFollowTheSameFiltersAsTheList() throws Exception {
-        // given
-        String editor = uniqueSubject("editor");
-        String slug = uniqueSlug("counts");
-        Space space = seedSpace(slug, editor, SpaceRole.EDITOR);
-        Check up = seedCheck(space, "up", CheckType.HTTP, "https://up.test", "web", "prod");
-        Check down = seedCheck(space, "down", CheckType.HTTP, "https://down.test", "web", "prod");
-        seedCheck(space, "unknown", CheckType.HTTP, "https://unknown.test", "web", "prod");
-        seedCheck(space, "other", CheckType.TCP, "db.example.test:5432", "data", "db");
-        recordResult(up, CheckState.UP);
-        recordResult(down, CheckState.DOWN);
-
-        // when
-        MvcResult counts = countChecks(editor, slug, "group=web");
-        MvcResult list = listChecks(editor, slug, "group=web");
-        JsonNode countsBody = jsonOf(counts);
-        List<String> listed = namesOf(jsonOf(list));
-
-        // then
-        assertThat(statusOf(counts)).isEqualTo(200);
-        assertThat(number(countsBody, "up")).isEqualTo(1L);
-        assertThat(number(countsBody, "degraded")).isZero();
-        assertThat(number(countsBody, "down")).isEqualTo(1L);
-        assertThat(number(countsBody, "unknown")).isEqualTo(1L);
-        assertThat(listed).containsExactly("down", "unknown", "up");
-    }
-
-    @Test
-    void updateWithAStaleVersionIsAConflictProblem() throws Exception {
-        // given
-        String editor = uniqueSubject("editor");
-        String slug = uniqueSlug("update");
-        Space space = seedSpace(slug, editor, SpaceRole.EDITOR);
-        Check check = seedCheck(space, "versioned", CheckType.HTTP, "https://versioned.test");
-        String id = check.id().toString();
-
-        // when
-        MvcResult updated = putCheck(editor, slug, id, updateBody("renamed", "https://versioned.test", 1L));
-        MvcResult stale = putCheck(editor, slug, id, updateBody("stale", "https://versioned.test", 1L));
-        JsonNode updatedBody = jsonOf(updated);
-        JsonNode staleBody = jsonOf(stale);
-
-        // then
-        assertThat(statusOf(updated)).isEqualTo(200);
-        assertThat(text(updatedBody, "name")).isEqualTo("renamed");
-        assertThat(number(updatedBody, "version")).isEqualTo(2L);
-        assertThat(statusOf(stale)).isEqualTo(409);
-        assertThat(contentTypeOf(stale)).isEqualTo(PROBLEM_JSON);
-        assertThat(text(staleBody, "code")).isEqualTo("version_conflict");
     }
 
     @Test
@@ -295,30 +244,6 @@ class ChecksControllerIntegrationTest extends SecurityIntegrationTest {
         assertThat(text(readBody, "code")).isEqualTo("not_found");
     }
 
-    @Test
-    void aCheckOfAnotherSpaceIsNotFoundEvenWithItsId() throws Exception {
-        // given
-        String other = uniqueSubject("other");
-        String ownSlug = uniqueSlug("own");
-        String foreignSlug = uniqueSlug("foreign");
-        Space ownSpace = seedSpace(ownSlug, uniqueSubject("owner"), SpaceRole.EDITOR);
-        seedSpace(foreignSlug, other, SpaceRole.EDITOR);
-        Check check = seedCheck(ownSpace, "foreign", CheckType.HTTP, "https://foreign.test");
-        String id = check.id().toString();
-
-        // when
-        MvcResult read = getCheck(other, foreignSlug, id);
-        MvcResult deleted = deleteCheck(other, foreignSlug, id);
-        JsonNode readBody = jsonOf(read);
-        JsonNode deletedBody = jsonOf(deleted);
-
-        // then
-        assertThat(statusOf(read)).isEqualTo(404);
-        assertThat(text(readBody, "code")).isEqualTo("not_found");
-        assertThat(statusOf(deleted)).isEqualTo(404);
-        assertThat(text(deletedBody, "code")).isEqualTo("not_found");
-    }
-
     private MvcResult listChecks(String subject, String slug, String query) throws Exception {
         String path = checksPath(slug);
         String url = query.isEmpty() ? path : path + "?" + query;
@@ -373,13 +298,13 @@ class ChecksControllerIntegrationTest extends SecurityIntegrationTest {
     }
 
     private Check seedCheck(Space space, String name, CheckType type, String target) {
-        NewCheck draft = new NewCheck(name, type, target, 60, 10, 1, null, null, null, List.of());
+        CheckDraft draft = new CheckDraft(name, type, target, 60, 10, 1, null, null, null, List.of());
         return bean(CheckService.class).create(space.id(), draft);
     }
 
     private Check seedCheck(Space space, String name, CheckType type, String target, String group, String tag) {
         List<String> tags = List.of(tag);
-        NewCheck draft = new NewCheck(name, type, target, 60, 10, 1, group, null, null, tags);
+        CheckDraft draft = new CheckDraft(name, type, target, 60, 10, 1, group, null, null, tags);
         return bean(CheckService.class).create(space.id(), draft);
     }
 

@@ -1,6 +1,7 @@
 package dev.wakey.checks.internal;
 
 import dev.wakey.checks.CheckCursor;
+import dev.wakey.checks.CheckDraft;
 import dev.wakey.checks.CheckFilter;
 import dev.wakey.checks.CheckState;
 import dev.wakey.checks.CheckType;
@@ -10,7 +11,10 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.time.Instant;
 import java.time.OffsetDateTime;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 import org.jspecify.annotations.Nullable;
@@ -23,7 +27,7 @@ final class CheckSql {
     private static final String PLACEHOLDER = "{{latestState}}";
 
     private static final String LATEST_STATE = "COALESCE((SELECT r.state FROM check_result r WHERE r.check_id = c.id"
-            + " ORDER BY r.checked_at DESC LIMIT 1), 'UNKNOWN')";
+            + " ORDER BY r." + LatestResultOrder.NEWEST_FIRST + " LIMIT 1), 'UNKNOWN')";
 
     private static final String FILTER_PREDICATES = """
             AND (CAST(:q AS VARCHAR) IS NULL
@@ -101,6 +105,7 @@ final class CheckSql {
             SET paused = TRUE, paused_reason = :pausedReason, version = version + 1,
                 updated_at = CURRENT_TIMESTAMP
             WHERE space_id = :spaceId AND id = :id
+              AND (paused = FALSE OR paused_reason IS DISTINCT FROM :pausedReason)
             """;
 
     private static final String RESUME_SQL = """
@@ -120,6 +125,13 @@ final class CheckSql {
             FROM check_tag
             WHERE check_id = :checkId
             ORDER BY tag
+            """;
+
+    private static final String SELECT_PAGE_TAGS_SQL = """
+            SELECT check_id, tag
+            FROM check_tag
+            WHERE check_id IN (:checkIds)
+            ORDER BY check_id, tag
             """;
 
     private static final String INSERT_TAG_SQL = """
@@ -167,7 +179,7 @@ final class CheckSql {
                 .single();
     }
 
-    void insert(UUID spaceId, UUID id, ValidatedCheck check) {
+    void insert(UUID spaceId, UUID id, CheckDraft check) {
         String type = check.type().name();
         jdbc.sql(INSERT_CHECK_SQL)
                 .param("id", id)
@@ -185,7 +197,7 @@ final class CheckSql {
         insertTags(id, check.tags());
     }
 
-    int update(UUID spaceId, UUID id, ValidatedCheck check, long expectedVersion) {
+    int update(UUID spaceId, UUID id, CheckDraft check, long expectedVersion) {
         String type = check.type().name();
         int updated = jdbc.sql(UPDATE_CHECK_SQL)
                 .param("name", check.name())
@@ -228,6 +240,21 @@ final class CheckSql {
                 .param("checkId", checkId)
                 .query((rs, unusedRowNum) -> rs.getString("tag"))
                 .list();
+    }
+
+    Map<UUID, List<String>> tagsFor(List<UUID> checkIds) {
+        Map<UUID, List<String>> tags = new LinkedHashMap<>();
+        if (checkIds.isEmpty()) {
+            return tags;
+        }
+        List<StoredTag> rows = jdbc.sql(SELECT_PAGE_TAGS_SQL)
+                .param("checkIds", checkIds)
+                .query((rs, unusedRowNum) -> new StoredTag(rs.getObject("check_id", UUID.class), rs.getString("tag")))
+                .list();
+        for (StoredTag row : rows) {
+            tags.computeIfAbsent(row.checkId(), unusedId -> new ArrayList<>()).add(row.tag());
+        }
+        return tags;
     }
 
     private void replaceTags(UUID checkId, List<String> tags) {
@@ -319,4 +346,6 @@ final class CheckSql {
     private static @Nullable PausedReason pausedReason(String value) {
         return value == null ? null : PausedReason.valueOf(value);
     }
+
+    private record StoredTag(UUID checkId, String tag) {}
 }

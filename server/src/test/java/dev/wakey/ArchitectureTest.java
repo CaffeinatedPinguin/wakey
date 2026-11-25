@@ -41,7 +41,7 @@ class ArchitectureTest {
         Map<String, Set<String>> dependencies = new HashMap<>();
         dependencies.put("api", Set.of("checks", "spaces", "settings", "web", "security", "tokens"));
         dependencies.put("audit", Set.of());
-        dependencies.put("checks", Set.of());
+        dependencies.put("checks", Set.of("settings"));
         dependencies.put("config", Set.of());
         dependencies.put("leadership", Set.of());
         dependencies.put("messaging", Set.of());

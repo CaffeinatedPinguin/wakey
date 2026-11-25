@@ -34,18 +34,18 @@ final class JdbcCheckResults implements CheckResults {
                    protocol_version, phases
             FROM check_result
             WHERE check_id = :checkId
-            ORDER BY checked_at DESC, id DESC
+            ORDER BY %s
             LIMIT 1
-            """;
+            """.formatted(LatestResultOrder.NEWEST_FIRST);
 
     private static final String RECENT_SQL = """
             SELECT location_id, checked_at, state, error_category, http_status, duration_ms,
                    protocol_version, phases
             FROM check_result
             WHERE check_id = :checkId
-            ORDER BY checked_at DESC, id DESC
+            ORDER BY %s
             LIMIT :rowLimit
-            """;
+            """.formatted(LatestResultOrder.NEWEST_FIRST);
 
     private static final RowMapper<CheckResult> RESULT_MAPPER = (rs, unusedRowNum) -> {
         String locationId = rs.getString("location_id");

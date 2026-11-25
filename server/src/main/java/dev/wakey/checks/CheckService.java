@@ -11,10 +11,10 @@ import org.jspecify.annotations.Nullable;
 public interface CheckService {
 
     /** Creates a check in the given space after validation. */
-    Check create(UUID spaceId, NewCheck check);
+    Check create(UUID spaceId, CheckDraft check);
 
     /** Replaces the editable fields; a version other than {@code expectedVersion} is a conflict. */
-    Check update(UUID spaceId, UUID id, CheckChanges changes, long expectedVersion);
+    Check update(UUID spaceId, UUID id, CheckDraft changes, long expectedVersion);
 
     /** Reads one check of the space; a missing or foreign check is {@link CheckNotFoundException}. */
     Check get(UUID spaceId, UUID id);

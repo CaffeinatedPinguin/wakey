@@ -1,6 +1,5 @@
 package dev.wakey.settings.internal;
 
-import dev.wakey.settings.PlanCatalog;
 import dev.wakey.settings.SpaceSettings;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;

@@ -1,7 +1,6 @@
 package dev.wakey.settings.internal;
 
 import dev.wakey.settings.InstanceDefaultsProperties;
-import dev.wakey.settings.PlanCatalog;
 import dev.wakey.settings.PlanProperties;
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -11,7 +10,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 /** Binds the plan definitions and validates them once, when the application starts. */
-@Configuration
+@Configuration(proxyBeanMethods = false)
 @EnableConfigurationProperties(InstanceDefaultsProperties.class)
 class PlansConfiguration {
 
@@ -22,7 +21,7 @@ class PlansConfiguration {
     }
 
     @Bean
-    PlanCatalog planCatalog(InstanceDefaultsProperties instanceDefaults) {
-        return PlanCatalog.from(plans(), instanceDefaults);
+    PlanCatalog planCatalog(Map<String, PlanProperties> plans, InstanceDefaultsProperties instanceDefaults) {
+        return PlanCatalog.from(plans, instanceDefaults);
     }
 }

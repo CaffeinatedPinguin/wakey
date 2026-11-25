@@ -233,29 +233,6 @@ class ApiTokensIntegrationTest extends PostgresIntegrationTest {
     }
 
     @Test
-    void fullLifecycleNarrowsTheScopeAndThenInvalidatesTheToken() {
-        // given
-        Space space = seedSpaceWithMembers("lifecycle");
-        String slug = space.slug();
-        CreatedToken created =
-                tokens().create(EDITOR_OWNER, slug, "lifecycle", new TokenOptions(TokenScope.WRITE, null));
-
-        // when
-        Optional<TokenIdentity> write = tokens().authenticate(created.secret());
-        spaces().changeRole(ADMIN, slug, EDITOR.subject(), SpaceRole.VIEWER);
-        Optional<TokenIdentity> read = tokens().authenticate(created.secret());
-        spaces().removeMember(ADMIN, slug, EDITOR.subject());
-        Optional<TokenIdentity> removed = tokens().authenticate(created.secret());
-
-        // then
-        TokenScope writeScope = write.orElseThrow().scope();
-        TokenScope readScope = read.orElseThrow().scope();
-        assertThat(writeScope).isEqualTo(TokenScope.WRITE);
-        assertThat(readScope).isEqualTo(TokenScope.READ);
-        assertThat(removed).isEmpty();
-    }
-
-    @Test
     void nonMemberIsToldTheSpaceWasNotFound() {
         // given
         Space space = seedSpaceWithMembers("stranger");

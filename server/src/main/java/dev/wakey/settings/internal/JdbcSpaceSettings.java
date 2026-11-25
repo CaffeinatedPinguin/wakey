@@ -1,7 +1,6 @@
 package dev.wakey.settings.internal;
 
 import dev.wakey.settings.EffectiveSetting;
-import dev.wakey.settings.PlanCatalog;
 import dev.wakey.settings.PlanProperties;
 import dev.wakey.settings.SettingCatalog;
 import dev.wakey.settings.SettingDefinition;
@@ -13,13 +12,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
-import org.springframework.dao.DuplicateKeyException;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.jdbc.core.simple.JdbcClient;
 
-@Slf4j
 @RequiredArgsConstructor
 final class JdbcSpaceSettings implements SpaceSettings {
 
@@ -38,15 +34,12 @@ final class JdbcSpaceSettings implements SpaceSettings {
             WHERE space_id = :spaceId
             """;
 
-    private static final String UPDATE_OVERRIDE_SQL = """
-            UPDATE space_setting
-            SET value = :value, updated_at = CURRENT_TIMESTAMP
-            WHERE space_id = :spaceId AND key = :key
-            """;
-
-    private static final String INSERT_OVERRIDE_SQL = """
+    // The composite primary key makes this the one-statement upsert of a space setting.
+    private static final String UPSERT_OVERRIDE_SQL = """
             INSERT INTO space_setting (space_id, key, value, updated_at)
             VALUES (:spaceId, :key, :value, CURRENT_TIMESTAMP)
+            ON CONFLICT (space_id, key) DO UPDATE
+            SET value = EXCLUDED.value, updated_at = CURRENT_TIMESTAMP
             """;
 
     private static final String DELETE_OVERRIDE_SQL = """
@@ -59,16 +52,16 @@ final class JdbcSpaceSettings implements SpaceSettings {
     private final PlanCatalog plans;
 
     @Override
-    public EffectiveSetting effective(UUID spaceId, String planName, String key) {
-        PlanProperties plan = plans.plan(planName);
+    public EffectiveSetting effective(UUID spaceId, @Nullable String planName, String key) {
+        PlanProperties plan = plan(planName);
         SettingDefinition definition = SettingCatalog.require(key);
         String override = findOverride(spaceId, key);
         return resolve(definition, plan, override);
     }
 
     @Override
-    public Map<String, EffectiveSetting> effectiveAll(UUID spaceId, String planName) {
-        PlanProperties plan = plans.plan(planName);
+    public Map<String, EffectiveSetting> effectiveAll(UUID spaceId, @Nullable String planName) {
+        PlanProperties plan = plan(planName);
         Map<String, String> overrides = findOverrides(spaceId);
         Map<String, EffectiveSetting> effective = new LinkedHashMap<>();
         for (SettingDefinition definition : SettingCatalog.all()) {
@@ -80,12 +73,17 @@ final class JdbcSpaceSettings implements SpaceSettings {
     }
 
     @Override
-    public void set(UUID spaceId, String planName, String key, String value) {
-        PlanProperties plan = plans.plan(planName);
+    public void set(UUID spaceId, @Nullable String planName, String key, String value) {
+        String resolvedPlanName = plans.resolvePlanName(planName);
+        PlanProperties plan = plans.plan(resolvedPlanName);
         SettingDefinition definition = SettingCatalog.require(key);
         definition.validate(value);
-        plans.checkWithinBound(plan, planName, definition.key(), value);
-        store(spaceId, key, value);
+        plans.checkWithinBound(plan, resolvedPlanName, definition, value);
+        jdbc.sql(UPSERT_OVERRIDE_SQL)
+                .param("spaceId", spaceId)
+                .param("key", key)
+                .param("value", value)
+                .update();
     }
 
     @Override
@@ -95,6 +93,20 @@ final class JdbcSpaceSettings implements SpaceSettings {
                 .param("spaceId", spaceId)
                 .param("key", key)
                 .update();
+    }
+
+    @Override
+    public String requireExisting(String planName) {
+        return plans.requireExisting(planName);
+    }
+
+    @Override
+    public String resolvePlanName(@Nullable String planName) {
+        return plans.resolvePlanName(planName);
+    }
+
+    private PlanProperties plan(@Nullable String planName) {
+        return plans.plan(plans.resolvePlanName(planName));
     }
 
     private EffectiveSetting resolve(SettingDefinition definition, PlanProperties plan, @Nullable String override) {
@@ -108,9 +120,8 @@ final class JdbcSpaceSettings implements SpaceSettings {
     }
 
     private EffectiveSetting configuredValue(SettingDefinition definition, PlanProperties plan) {
-        SettingKey key = definition.key();
-        String planValue = plans.planValue(plan, key);
-        String instanceValue = plans.instanceValue(key);
+        String planValue = plans.planValue(definition, plan);
+        String instanceValue = plans.instanceValue(definition);
         EffectiveSetting result;
         if (planValue != null) {
             result = new EffectiveSetting(planValue, SettingSource.PLAN);
@@ -142,34 +153,6 @@ final class JdbcSpaceSettings implements SpaceSettings {
             overrides.put(row.key(), row.value());
         }
         return overrides;
-    }
-
-    private void store(UUID spaceId, String key, String value) {
-        int updated = updateOverride(spaceId, key, value);
-        if (updated == 0) {
-            insertOverride(spaceId, key, value);
-        }
-    }
-
-    private int updateOverride(UUID spaceId, String key, String value) {
-        return jdbc.sql(UPDATE_OVERRIDE_SQL)
-                .param("spaceId", spaceId)
-                .param("key", key)
-                .param("value", value)
-                .update();
-    }
-
-    private void insertOverride(UUID spaceId, String key, String value) {
-        try {
-            jdbc.sql(INSERT_OVERRIDE_SQL)
-                    .param("spaceId", spaceId)
-                    .param("key", key)
-                    .param("value", value)
-                    .update();
-        } catch (DuplicateKeyException exception) {
-            log.debug("Setting {} for space {} was inserted concurrently; updating instead", key, spaceId, exception);
-            updateOverride(spaceId, key, value);
-        }
     }
 
     private record StoredSetting(String key, String value) {}

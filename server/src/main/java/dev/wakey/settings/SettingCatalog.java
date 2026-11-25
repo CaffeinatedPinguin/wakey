@@ -6,20 +6,48 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import lombok.extern.slf4j.Slf4j;
+import org.jspecify.annotations.Nullable;
 
 /** The single catalog table; every setting has one definition here instead of its own class. */
 @Slf4j
 public final class SettingCatalog {
 
     private static final List<SettingDefinition> DEFINITIONS = List.of(
-            new SettingDefinition(SettingKey.TIMEZONE, SettingType.STRING, "UTC", SettingCatalog::isTimeZone),
-            new SettingDefinition(SettingKey.LANGUAGE, SettingType.STRING, "pl", SettingCatalog::isLanguage),
             new SettingDefinition(
-                    SettingKey.CHECK_INTERVAL, SettingType.INTEGER, "60", SettingCatalog::isNonNegativeInteger),
+                    SettingKey.TIMEZONE,
+                    SettingType.STRING,
+                    "UTC",
+                    SettingCatalog::isTimeZone,
+                    plan -> null,
+                    InstanceDefaultsProperties::timezone),
             new SettingDefinition(
-                    SettingKey.CHECK_TIMEOUT, SettingType.INTEGER, "10", SettingCatalog::isNonNegativeInteger),
+                    SettingKey.LANGUAGE,
+                    SettingType.STRING,
+                    "pl",
+                    SettingCatalog::isLanguage,
+                    plan -> null,
+                    InstanceDefaultsProperties::language),
             new SettingDefinition(
-                    SettingKey.CHECK_RETRIES, SettingType.INTEGER, "1", SettingCatalog::isNonNegativeInteger));
+                    SettingKey.CHECK_INTERVAL,
+                    SettingType.INTEGER,
+                    "60",
+                    value -> isIntegerAtLeast(value, CheckLimits.MIN_INTERVAL_SECONDS),
+                    PlanProperties::minInterval,
+                    SettingCatalog::intervalDefault),
+            new SettingDefinition(
+                    SettingKey.CHECK_TIMEOUT,
+                    SettingType.INTEGER,
+                    "10",
+                    value -> isIntegerAtLeast(value, CheckLimits.MIN_TIMEOUT_SECONDS),
+                    PlanProperties::maxTimeout,
+                    SettingCatalog::timeoutDefault),
+            new SettingDefinition(
+                    SettingKey.CHECK_RETRIES,
+                    SettingType.INTEGER,
+                    "1",
+                    value -> isIntegerBetween(value, 0, CheckLimits.MAX_RETRIES),
+                    PlanProperties::maxRetries,
+                    SettingCatalog::retriesDefault));
 
     private static final Map<String, SettingDefinition> DEFINITIONS_BY_KEY = indexDefinitions();
 
@@ -61,12 +89,41 @@ public final class SettingCatalog {
         return value.equals("pl") || value.equals("en");
     }
 
-    private static boolean isNonNegativeInteger(String value) {
+    private static boolean isIntegerAtLeast(String value, int minimum) {
         try {
-            return Long.parseLong(value) >= 0;
+            return Long.parseLong(value) >= minimum;
         } catch (NumberFormatException exception) {
-            log.debug("{} is not a non-negative integer", value, exception);
+            log.debug("{} is not an integer of at least {}", value, minimum, exception);
             return false;
         }
+    }
+
+    private static boolean isIntegerBetween(String value, int minimum, int maximum) {
+        try {
+            long parsed = Long.parseLong(value);
+            return parsed >= minimum && parsed <= maximum;
+        } catch (NumberFormatException exception) {
+            log.debug("{} is not an integer between {} and {}", value, minimum, maximum, exception);
+            return false;
+        }
+    }
+
+    private static @Nullable String intervalDefault(InstanceDefaultsProperties defaults) {
+        InstanceDefaultsProperties.CheckDefaults check = defaults.check();
+        return number(check == null ? null : check.interval());
+    }
+
+    private static @Nullable String timeoutDefault(InstanceDefaultsProperties defaults) {
+        InstanceDefaultsProperties.CheckDefaults check = defaults.check();
+        return number(check == null ? null : check.timeout());
+    }
+
+    private static @Nullable String retriesDefault(InstanceDefaultsProperties defaults) {
+        InstanceDefaultsProperties.CheckDefaults check = defaults.check();
+        return number(check == null ? null : check.retries());
+    }
+
+    private static @Nullable String number(@Nullable Integer value) {
+        return value == null ? null : String.valueOf(value);
     }
 }

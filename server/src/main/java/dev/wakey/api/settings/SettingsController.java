@@ -1,7 +1,6 @@
 package dev.wakey.api.settings;
 
 import dev.wakey.api.SpacePrincipals;
-import dev.wakey.settings.PlanCatalog;
 import dev.wakey.settings.SpaceSettings;
 import dev.wakey.spaces.SpaceAccessDeniedException;
 import dev.wakey.spaces.SpaceService;
@@ -49,12 +48,9 @@ final class SettingsController {
 
     private final SpaceSettings settings;
 
-    private final PlanCatalog plans;
-
-    SettingsController(SpaceService spaces, SpaceSettings settings, PlanCatalog plans) {
+    SettingsController(SpaceService spaces, SpaceSettings settings) {
         this.spaces = spaces;
         this.settings = settings;
-        this.plans = plans;
     }
 
     @Operation(operationId = "getSpaceSettings", summary = "Read the effective settings of a space")
@@ -75,7 +71,7 @@ final class SettingsController {
     List<SpaceSettingResponse> getSpaceSettings(@PathVariable String slug, Authentication authentication) {
         var actor = SpacePrincipals.forSpace(authentication, slug);
         var view = spaces.view(actor, slug);
-        String planName = resolvePlan(view);
+        String planName = settings.resolvePlanName(view.planName());
         var effective = settings.effectiveAll(view.id(), planName);
         List<SpaceSettingResponse> response = new ArrayList<>();
         for (var entry : effective.entrySet()) {
@@ -113,8 +109,7 @@ final class SettingsController {
         var actor = SpacePrincipals.forSpace(authentication, slug);
         var view = spaces.view(actor, slug);
         requireWriter(view);
-        String planName = resolvePlan(view);
-        settings.set(view.id(), planName, key, request.value());
+        settings.set(view.id(), view.planName(), key, request.value());
         return ResponseEntity.noContent().build();
     }
 
@@ -170,7 +165,7 @@ final class SettingsController {
         var actor = SpacePrincipals.forSpace(authentication, slug);
         var view = spaces.view(actor, slug);
         requireAdmin(view);
-        String planName = plans.requireExisting(request.plan());
+        String planName = settings.requireExisting(request.plan());
         spaces.assignPlan(actor, slug, planName);
         return ResponseEntity.noContent().build();
     }
@@ -185,9 +180,5 @@ final class SettingsController {
         if (!view.admin()) {
             throw new SpaceAccessDeniedException(ADMIN_DENIED);
         }
-    }
-
-    private String resolvePlan(SpaceView view) {
-        return plans.resolvePlanName(view.planName());
     }
 }

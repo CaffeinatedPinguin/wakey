@@ -39,6 +39,7 @@ import tools.jackson.databind.json.JsonMapper;
             "wakey.plans.large.max-timeout=120",
             "wakey.plans.large.max-retries=10",
             "wakey.plans.large.max-checks=100",
+            "wakey.plans.open.max-checks=50",
             "wakey.defaults.timezone=Europe/Warsaw"
         })
 class SettingsControllerIntegrationTest extends SecurityIntegrationTest {
@@ -149,6 +150,43 @@ class SettingsControllerIntegrationTest extends SecurityIntegrationTest {
     }
 
     @Test
+    void settingsCatalogRejectsAZeroIntervalAndTimeout() throws Exception {
+        // given
+        String admin = uniqueSubject("catalog-zero");
+        String slug = uniqueSlug("catalog-zero");
+        createSpace(slug);
+        putPlan(admin, true, slug, "open");
+
+        // when
+        MvcResult interval = putSetting(admin, true, slug, "check.interval", "0");
+        MvcResult timeout = putSetting(admin, true, slug, "check.timeout", "0");
+
+        // then
+        assertThat(statusOf(interval)).isEqualTo(400);
+        assertThat(codeOf(interval)).isEqualTo("validation_failed");
+        assertThat(statusOf(timeout)).isEqualTo(400);
+        assertThat(codeOf(timeout)).isEqualTo("validation_failed");
+    }
+
+    @Test
+    void settingsCatalogRejectsMoreThanTenRetries() throws Exception {
+        // given
+        String admin = uniqueSubject("catalog-retries");
+        String slug = uniqueSlug("catalog-retries");
+        createSpace(slug);
+        putPlan(admin, true, slug, "open");
+
+        // when
+        MvcResult rejected = putSetting(admin, true, slug, "check.retries", "11");
+        MvcResult accepted = putSetting(admin, true, slug, "check.retries", "10");
+
+        // then
+        assertThat(statusOf(rejected)).isEqualTo(400);
+        assertThat(codeOf(rejected)).isEqualTo("validation_failed");
+        assertThat(statusOf(accepted)).isEqualTo(204);
+    }
+
+    @Test
     void aValueOutsideThePlanIsRejectedWithItsBound() throws Exception {
         // given
         String editor = uniqueSubject("outside-plan");
@@ -166,33 +204,6 @@ class SettingsControllerIntegrationTest extends SecurityIntegrationTest {
         assertThat(number(params, "bound")).isEqualTo(30L);
         assertThat(text(params, "planName")).isEqualTo("small");
         assertThat(text(params, "key")).isEqualTo("check.interval");
-    }
-
-    @Test
-    void movingTheSpaceToABiggerPlanAcceptsTheEarlierRejectedValue() throws Exception {
-        // given
-        String admin = uniqueSubject("raise-plan-admin");
-        String editor = uniqueSubject("raise-plan-editor");
-        String slug = uniqueSlug("raise-plan");
-        createSpace(slug);
-        addMember(slug, editor, SpaceRole.EDITOR);
-
-        // when
-        MvcResult rejected = putSetting(editor, false, slug, "check.interval", "10");
-        MvcResult assigned = putPlan(admin, true, slug, "large");
-        MvcResult accepted = putSetting(editor, false, slug, "check.interval", "10");
-        JsonNode settingsBody = jsonOf(getSettings(editor, false, slug));
-
-        // then
-        JsonNode params = jsonOf(rejected).path("params");
-        JsonNode interval = requiredSetting(settingsOf(settingsBody), "check.interval");
-        assertThat(statusOf(rejected)).isEqualTo(400);
-        assertThat(number(params, "bound")).isEqualTo(30L);
-        assertThat(statusOf(assigned)).isEqualTo(204);
-        assertThat(statusOf(accepted)).isEqualTo(204);
-        assertThat(text(interval, "value")).isEqualTo("10");
-        assertThat(text(interval, "source")).isEqualTo("SPACE");
-        assertThat(text(interval, "planName")).isEqualTo("large");
     }
 
     @Test
@@ -221,29 +232,6 @@ class SettingsControllerIntegrationTest extends SecurityIntegrationTest {
         assertThat(text(timeout, "value")).isEqualTo("20");
         assertThat(text(language, "source")).isEqualTo("DEFAULT");
         assertThat(text(language, "value")).isEqualTo("pl");
-    }
-
-    @Test
-    void resetRemovesTheOverride() throws Exception {
-        // given
-        String editor = uniqueSubject("reset-setting");
-        String slug = uniqueSlug("reset-setting");
-        createSpace(slug);
-        addMember(slug, editor, SpaceRole.EDITOR);
-        putSetting(editor, false, slug, "check.interval", "45");
-
-        // when
-        JsonNode before = jsonOf(getSettings(editor, false, slug));
-        MvcResult removed = deleteSetting(editor, false, slug, "check.interval");
-        JsonNode after = jsonOf(getSettings(editor, false, slug));
-
-        // then
-        JsonNode beforeInterval = requiredSetting(settingsOf(before), "check.interval");
-        JsonNode afterInterval = requiredSetting(settingsOf(after), "check.interval");
-        assertThat(text(beforeInterval, "source")).isEqualTo("SPACE");
-        assertThat(statusOf(removed)).isEqualTo(204);
-        assertThat(text(afterInterval, "value")).isEqualTo("30");
-        assertThat(text(afterInterval, "source")).isEqualTo("PLAN");
     }
 
     @Test

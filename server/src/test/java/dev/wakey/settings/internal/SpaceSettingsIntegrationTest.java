@@ -6,7 +6,6 @@ import static org.assertj.core.api.Assertions.catchThrowable;
 import dev.wakey.settings.EffectiveSetting;
 import dev.wakey.settings.InstanceDefaultsProperties;
 import dev.wakey.settings.InvalidSettingException;
-import dev.wakey.settings.PlanCatalog;
 import dev.wakey.settings.PlanProperties;
 import dev.wakey.settings.SettingOutOfPlanException;
 import dev.wakey.settings.SettingSource;
@@ -140,6 +139,23 @@ class SpaceSettingsIntegrationTest extends PostgresIntegrationTest {
     }
 
     @Test
+    void savingTheSameSettingTwiceKeepsOneRow() {
+        // given
+        SpaceSettings settings = settings(Map.of(), NO_DEFAULTS);
+        UUID spaceId = createSpace();
+
+        // when
+        settings.set(spaceId, "default", "check.interval", "45");
+        settings.set(spaceId, "default", "check.interval", "50");
+        long rows = countSettings(spaceId, "check.interval");
+        String value = storedValue(spaceId, "check.interval");
+
+        // then
+        assertThat(rows).isEqualTo(1L);
+        assertThat(value).isEqualTo("50");
+    }
+
+    @Test
     void onlyOneDefaultPlanIsAllowed() {
         // given
         ApplicationContextRunner runner =
@@ -204,6 +220,22 @@ class SpaceSettingsIntegrationTest extends PostgresIntegrationTest {
         SettingOutOfPlanException exception = (SettingOutOfPlanException) rejected;
         assertThat(exception.bound()).isEqualTo(30L);
         assertThat(accepted).isEqualTo(new EffectiveSetting("10", SettingSource.SPACE));
+    }
+
+    private long countSettings(UUID spaceId, String key) {
+        return jdbc().sql("SELECT COUNT(*) FROM space_setting WHERE space_id = :spaceId AND key = :key")
+                .param("spaceId", spaceId)
+                .param("key", key)
+                .query(Long.class)
+                .single();
+    }
+
+    private String storedValue(UUID spaceId, String key) {
+        return jdbc().sql("SELECT value FROM space_setting WHERE space_id = :spaceId AND key = :key")
+                .param("spaceId", spaceId)
+                .param("key", key)
+                .query(String.class)
+                .single();
     }
 
     private SpaceSettings settings(Map<String, PlanProperties> plans, InstanceDefaultsProperties defaults) {

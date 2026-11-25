@@ -7,6 +7,8 @@ import dev.wakey.spaces.SpacePrincipal;
 import dev.wakey.spaces.SpaceService;
 import dev.wakey.testsupport.PostgresIntegrationTest;
 import java.time.Instant;
+import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -39,7 +41,7 @@ class CheckServiceIntegrationTest extends PostgresIntegrationTest {
     @Test
     void createdCheckIsReadBackInItsSpace() {
         // given
-        NewCheck draft = newCheck("api health", CheckType.HTTP, "https://api.example.test/health");
+        CheckDraft draft = newCheck("api health", CheckType.HTTP, "https://api.example.test/health");
 
         // when
         Check created = checks.create(spaceA, draft);
@@ -59,10 +61,10 @@ class CheckServiceIntegrationTest extends PostgresIntegrationTest {
     @Test
     void aCheckOfAnotherSpaceIsNotFound() {
         // given
-        NewCheck draft = newCheck("foreign", CheckType.TCP, "db.example.test:5432");
+        CheckDraft draft = newCheck("foreign", CheckType.TCP, "db.example.test:5432");
         Check created = checks.create(spaceA, draft);
         UUID id = created.id();
-        CheckChanges updateChanges = changes("foreign renamed", "db.example.test:5432");
+        CheckDraft updateChanges = changes("foreign renamed", "db.example.test:5432");
 
         // when
         Throwable read = catchThrowable(() -> checks.get(spaceB, id));
@@ -82,11 +84,11 @@ class CheckServiceIntegrationTest extends PostgresIntegrationTest {
     @Test
     void updateWithAStaleVersionIsRejected() {
         // given
-        NewCheck draft = newCheck("versioned", CheckType.HTTP, "https://v.example.test");
+        CheckDraft draft = newCheck("versioned", CheckType.HTTP, "https://v.example.test");
         Check created = checks.create(spaceA, draft);
         long version = created.version();
-        CheckChanges firstChanges = changes("versioned renamed", "https://v.example.test");
-        CheckChanges staleChanges = changes("stale", "https://v.example.test");
+        CheckDraft firstChanges = changes("versioned renamed", "https://v.example.test");
+        CheckDraft staleChanges = changes("stale", "https://v.example.test");
         UUID id = created.id();
 
         // when
@@ -102,19 +104,19 @@ class CheckServiceIntegrationTest extends PostgresIntegrationTest {
     @Test
     void validationRejectsBadIntervalsAndTimeouts() {
         // given
-        NewCheck zeroInterval =
-                new NewCheck("zero interval", CheckType.HTTP, "https://x.test", 0, 10, 1, null, null, null, List.of());
-        NewCheck zeroTimeout =
-                new NewCheck("zero timeout", CheckType.HTTP, "https://x.test", 60, 0, 1, null, null, null, List.of());
-        NewCheck overInterval = new NewCheck(
+        CheckDraft zeroInterval = new CheckDraft(
+                "zero interval", CheckType.HTTP, "https://x.test", 0, 10, 1, null, null, null, List.of());
+        CheckDraft zeroTimeout =
+                new CheckDraft("zero timeout", CheckType.HTTP, "https://x.test", 60, 0, 1, null, null, null, List.of());
+        CheckDraft overInterval = new CheckDraft(
                 "timeout over interval", CheckType.HTTP, "https://x.test", 60, 61, 1, null, null, null, List.of());
-        NewCheck tooManyRetries = new NewCheck(
+        CheckDraft tooManyRetries = new CheckDraft(
                 "too many retries", CheckType.HTTP, "https://x.test", 60, 10, 11, null, null, null, List.of());
-        List<NewCheck> invalid = List.of(zeroInterval, zeroTimeout, overInterval, tooManyRetries);
+        List<CheckDraft> invalid = List.of(zeroInterval, zeroTimeout, overInterval, tooManyRetries);
 
         // when
         List<Throwable> rejections = new ArrayList<>();
-        for (NewCheck candidate : invalid) {
+        for (CheckDraft candidate : invalid) {
             rejections.add(catchThrowable(() -> checks.create(spaceA, candidate)));
         }
 
@@ -133,7 +135,7 @@ class CheckServiceIntegrationTest extends PostgresIntegrationTest {
     @Test
     void pausingStoresTheReasonAndResumingClearsIt() {
         // given
-        NewCheck draft = newCheck("paused", CheckType.HTTP, "https://p.test");
+        CheckDraft draft = newCheck("paused", CheckType.HTTP, "https://p.test");
         Check created = checks.create(spaceA, draft);
         UUID id = created.id();
 
@@ -153,10 +155,10 @@ class CheckServiceIntegrationTest extends PostgresIntegrationTest {
     @Test
     void listIsSortedByNameAndResumesAfterACursor() {
         // given
-        NewCheck bravo = newCheck("bravo", CheckType.HTTP, "https://b.test");
-        NewCheck alpha = newCheck("alpha", CheckType.HTTP, "https://a.test");
-        NewCheck delta = newCheck("delta", CheckType.HTTP, "https://d.test");
-        NewCheck charlie = newCheck("charlie", CheckType.HTTP, "https://c.test");
+        CheckDraft bravo = newCheck("bravo", CheckType.HTTP, "https://b.test");
+        CheckDraft alpha = newCheck("alpha", CheckType.HTTP, "https://a.test");
+        CheckDraft delta = newCheck("delta", CheckType.HTTP, "https://d.test");
+        CheckDraft charlie = newCheck("charlie", CheckType.HTTP, "https://c.test");
         checks.create(spaceA, bravo);
         checks.create(spaceA, alpha);
         checks.create(spaceA, delta);
@@ -179,9 +181,9 @@ class CheckServiceIntegrationTest extends PostgresIntegrationTest {
     @Test
     void listFiltersByStateTypeTagGroupAndText() {
         // given
-        NewCheck alpha = newCheck("Alpha service", CheckType.HTTP, "https://alpha.test", "web", "prod");
-        NewCheck bravo = newCheck("Bravo database", CheckType.TCP, "db.example.test:5432", "data", "db");
-        NewCheck charlie = newCheck("Charlie certificate", CheckType.CERTIFICATE, "cert.example.test");
+        CheckDraft alpha = newCheck("Alpha service", CheckType.HTTP, "https://alpha.test", "web", "prod");
+        CheckDraft bravo = newCheck("Bravo database", CheckType.TCP, "db.example.test:5432", "data", "db");
+        CheckDraft charlie = newCheck("Charlie certificate", CheckType.CERTIFICATE, "cert.example.test");
         Check alphaCheck = checks.create(spaceA, alpha);
         Check bravoCheck = checks.create(spaceA, bravo);
         checks.create(spaceA, charlie);
@@ -217,10 +219,10 @@ class CheckServiceIntegrationTest extends PostgresIntegrationTest {
     @Test
     void searchTextTreatsLikeCharactersLiterally() {
         // given
-        NewCheck percentLiteral = newCheck("percent 50%", CheckType.HTTP, "https://p.test");
-        NewCheck percentOther = newCheck("percent 50x", CheckType.HTTP, "https://q.test");
-        NewCheck underscoreLiteral = newCheck("under_score", CheckType.HTTP, "https://r.test");
-        NewCheck underscoreOther = newCheck("underXscore", CheckType.HTTP, "https://s.test");
+        CheckDraft percentLiteral = newCheck("percent 50%", CheckType.HTTP, "https://p.test");
+        CheckDraft percentOther = newCheck("percent 50x", CheckType.HTTP, "https://q.test");
+        CheckDraft underscoreLiteral = newCheck("under_score", CheckType.HTTP, "https://r.test");
+        CheckDraft underscoreOther = newCheck("underXscore", CheckType.HTTP, "https://s.test");
         checks.create(spaceA, percentLiteral);
         checks.create(spaceA, percentOther);
         checks.create(spaceA, underscoreLiteral);
@@ -240,10 +242,10 @@ class CheckServiceIntegrationTest extends PostgresIntegrationTest {
     @Test
     void countsFollowTheSameFiltersAsTheList() {
         // given
-        NewCheck upDraft = newCheck("Alpha web", CheckType.HTTP, "https://a.test", "web", "prod");
-        NewCheck downDraft = newCheck("Bravo web", CheckType.HTTP, "https://b.test", "web", "prod");
-        NewCheck unknownDraft = newCheck("Charlie web", CheckType.HTTP, "https://c.test", "web", "prod");
-        NewCheck otherDraft = newCheck("Delta data", CheckType.TCP, "db.example.test:5432", "data", "db");
+        CheckDraft upDraft = newCheck("Alpha web", CheckType.HTTP, "https://a.test", "web", "prod");
+        CheckDraft downDraft = newCheck("Bravo web", CheckType.HTTP, "https://b.test", "web", "prod");
+        CheckDraft unknownDraft = newCheck("Charlie web", CheckType.HTTP, "https://c.test", "web", "prod");
+        CheckDraft otherDraft = newCheck("Delta data", CheckType.TCP, "db.example.test:5432", "data", "db");
         Check up = checks.create(spaceA, upDraft);
         Check down = checks.create(spaceA, downDraft);
         checks.create(spaceA, unknownDraft);
@@ -268,7 +270,7 @@ class CheckServiceIntegrationTest extends PostgresIntegrationTest {
     @Test
     void latestResultDecidesTheState() {
         // given
-        NewCheck draft = newCheck("latest", CheckType.HTTP, "https://l.test");
+        CheckDraft draft = newCheck("latest", CheckType.HTTP, "https://l.test");
         Check check = checks.create(spaceA, draft);
         UUID id = check.id();
         CheckResult first = result(CheckState.DOWN, ErrorCategory.TARGET_DOWN, instant("2026-01-01T00:00:00Z"));
@@ -291,9 +293,51 @@ class CheckServiceIntegrationTest extends PostgresIntegrationTest {
     }
 
     @Test
+    void listAndDetailsAgreeOnTheLatestResultOnATie() {
+        // given
+        CheckDraft draft = newCheck("tie", CheckType.HTTP, "https://tie.test");
+        Check check = checks.create(spaceA, draft);
+        UUID checkId = check.id();
+        Instant checkedAt = instant("2026-01-01T00:00:00Z");
+        UUID lowerId = UUID.fromString("00000000-0000-0000-0000-000000000001");
+        UUID higherId = UUID.fromString("00000000-0000-0000-0000-000000000002");
+        insertResult(lowerId, checkId, checkedAt, CheckState.DOWN);
+        insertResult(higherId, checkId, checkedAt, CheckState.UP);
+
+        // when
+        Check listed = checks.list(spaceA, CheckFilter.all(), null, 100).items().getFirst();
+        Check details = checks.get(spaceA, checkId);
+        CheckResult latest = results.latest(checkId).orElseThrow();
+
+        // then
+        assertThat(listed.state()).isEqualTo(CheckState.UP);
+        assertThat(details.state()).isEqualTo(CheckState.UP);
+        assertThat(latest.state()).isEqualTo(CheckState.UP);
+    }
+
+    @Test
+    void pausingAPausedCheckKeepsItsVersion() {
+        // given
+        CheckDraft draft = newCheck("paused twice", CheckType.HTTP, "https://pt.test");
+        Check created = checks.create(spaceA, draft);
+        UUID id = created.id();
+        checks.pause(spaceA, id, PausedReason.MANUAL);
+        Check firstPause = checks.get(spaceA, id);
+
+        // when
+        checks.pause(spaceA, id, PausedReason.MANUAL);
+        Check secondPause = checks.get(spaceA, id);
+
+        // then
+        assertThat(secondPause.version()).isEqualTo(firstPause.version());
+        assertThat(secondPause.paused()).isTrue();
+        assertThat(secondPause.pausedReason()).isEqualTo(PausedReason.MANUAL);
+    }
+
+    @Test
     void aCheckWithoutResultsIsUnknown() {
         // given
-        NewCheck draft = newCheck("unknown", CheckType.HTTP, "https://u.test");
+        CheckDraft draft = newCheck("unknown", CheckType.HTTP, "https://u.test");
         Check check = checks.create(spaceA, draft);
 
         // when
@@ -310,7 +354,7 @@ class CheckServiceIntegrationTest extends PostgresIntegrationTest {
     @Test
     void locationNetworkErrorCannotBeDown() {
         // given
-        NewCheck draft = newCheck("network", CheckType.HTTP, "https://n.test");
+        CheckDraft draft = newCheck("network", CheckType.HTTP, "https://n.test");
         Check check = checks.create(spaceA, draft);
         UUID id = check.id();
         CheckResult rejectedResult =
@@ -336,7 +380,7 @@ class CheckServiceIntegrationTest extends PostgresIntegrationTest {
     void deletingACheckRemovesItsResultsAndTags() {
         // given
         List<String> tags = List.of("alpha", "beta");
-        NewCheck draft = newCheckWithTags("deleted", CheckType.HTTP, "https://d.test", tags);
+        CheckDraft draft = newCheckWithTags("deleted", CheckType.HTTP, "https://d.test", tags);
         Check check = checks.create(spaceA, draft);
         UUID id = check.id();
         CheckResult recorded = result(CheckState.UP, null, instant("2026-01-01T00:00:00Z"));
@@ -354,6 +398,18 @@ class CheckServiceIntegrationTest extends PostgresIntegrationTest {
         assertThat(latest).isEmpty();
         assertThat(tagRows).isZero();
         assertThat(resultRows).isZero();
+    }
+
+    private void insertResult(UUID id, UUID checkId, Instant checkedAt, CheckState state) {
+        jdbc().sql("""
+                        INSERT INTO check_result (id, check_id, checked_at, state)
+                        VALUES (:id, :checkId, :checkedAt, :state)
+                        """)
+                .param("id", id)
+                .param("checkId", checkId)
+                .param("checkedAt", OffsetDateTime.ofInstant(checkedAt, ZoneOffset.UTC))
+                .param("state", state.name())
+                .update();
     }
 
     private long countTags(UUID checkId) {
@@ -374,20 +430,20 @@ class CheckServiceIntegrationTest extends PostgresIntegrationTest {
         return checks.stream().map(Check::name).toList();
     }
 
-    private static NewCheck newCheck(String name, CheckType type, String target) {
-        return new NewCheck(name, type, target, 60, 10, 1, null, null, null, List.of());
+    private static CheckDraft newCheck(String name, CheckType type, String target) {
+        return new CheckDraft(name, type, target, 60, 10, 1, null, null, null, List.of());
     }
 
-    private static NewCheck newCheck(String name, CheckType type, String target, String group, String tag) {
-        return new NewCheck(name, type, target, 60, 10, 1, group, null, null, List.of(tag));
+    private static CheckDraft newCheck(String name, CheckType type, String target, String group, String tag) {
+        return new CheckDraft(name, type, target, 60, 10, 1, group, null, null, List.of(tag));
     }
 
-    private static NewCheck newCheckWithTags(String name, CheckType type, String target, List<String> tags) {
-        return new NewCheck(name, type, target, 60, 10, 1, null, null, null, tags);
+    private static CheckDraft newCheckWithTags(String name, CheckType type, String target, List<String> tags) {
+        return new CheckDraft(name, type, target, 60, 10, 1, null, null, null, tags);
     }
 
-    private static CheckChanges changes(String name, String target) {
-        return new CheckChanges(name, CheckType.HTTP, target, 60, 10, 1, null, null, null, List.of());
+    private static CheckDraft changes(String name, String target) {
+        return new CheckDraft(name, CheckType.HTTP, target, 60, 10, 1, null, null, null, List.of());
     }
 
     private static CheckResult result(CheckState state, @Nullable ErrorCategory category, Instant checkedAt) {

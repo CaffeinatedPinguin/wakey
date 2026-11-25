@@ -3,8 +3,11 @@ package dev.wakey.checks;
 import java.util.List;
 import org.jspecify.annotations.Nullable;
 
-/** The editable fields of a new check before validation. */
-public record NewCheck(
+/**
+ * The editable fields of a check, shared by create and update. The validator normalizes it, so the
+ * same record carries the values before and after validation.
+ */
+public record CheckDraft(
         String name,
         CheckType type,
         String target,

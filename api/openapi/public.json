@@ -130,14 +130,10 @@
         "properties" : {
           "description" : {
             "description" : "The optional description",
-            "maxLength" : 1000,
-            "minLength" : 0,
             "type" : "string"
           },
           "groupName" : {
             "description" : "The optional group name",
-            "maxLength" : 100,
-            "minLength" : 0,
             "type" : "string"
           },
           "intervalSeconds" : {
@@ -149,8 +145,6 @@
           "name" : {
             "description" : "The name, 1-100 characters after trimming",
             "example" : "API health",
-            "maxLength" : 100,
-            "minLength" : 0,
             "type" : "string"
           },
           "retries" : {
@@ -161,8 +155,6 @@
           },
           "runbookUrl" : {
             "description" : "The optional runbook address",
-            "maxLength" : 2048,
-            "minLength" : 0,
             "type" : "string"
           },
           "tags" : {
@@ -175,8 +167,6 @@
           "target" : {
             "description" : "The target address",
             "example" : "https://example.test/health",
-            "maxLength" : 2048,
-            "minLength" : 0,
             "type" : "string"
           },
           "timeoutSeconds" : {
@@ -206,8 +196,6 @@
           "name" : {
             "description" : "The token name",
             "example" : "ci-deploy",
-            "maxLength" : 100,
-            "minLength" : 0,
             "type" : "string"
           },
           "scope" : {
@@ -516,14 +504,10 @@
         "properties" : {
           "description" : {
             "description" : "The optional description",
-            "maxLength" : 1000,
-            "minLength" : 0,
             "type" : "string"
           },
           "groupName" : {
             "description" : "The optional group name",
-            "maxLength" : 100,
-            "minLength" : 0,
             "type" : "string"
           },
           "intervalSeconds" : {
@@ -535,8 +519,6 @@
           "name" : {
             "description" : "The name, 1-100 characters after trimming",
             "example" : "API health",
-            "maxLength" : 100,
-            "minLength" : 0,
             "type" : "string"
           },
           "retries" : {
@@ -547,8 +529,6 @@
           },
           "runbookUrl" : {
             "description" : "The optional runbook address",
-            "maxLength" : 2048,
-            "minLength" : 0,
             "type" : "string"
           },
           "tags" : {
@@ -561,8 +541,6 @@
           "target" : {
             "description" : "The target address",
             "example" : "https://example.test/health",
-            "maxLength" : 2048,
-            "minLength" : 0,
             "type" : "string"
           },
           "timeoutSeconds" : {
@@ -579,7 +557,6 @@
           },
           "version" : {
             "description" : "The version the caller last read",
-            "exclusiveMinimum" : 0,
             "format" : "int64",
             "type" : "integer"
           }

@@ -1,11 +1,10 @@
 package dev.wakey.api.checks;
 
 import dev.wakey.checks.Check;
-import dev.wakey.checks.CheckChanges;
+import dev.wakey.checks.CheckDraft;
 import dev.wakey.checks.CheckResult;
 import dev.wakey.checks.CheckResults;
 import dev.wakey.checks.CheckService;
-import dev.wakey.checks.NewCheck;
 import dev.wakey.spaces.SpaceView;
 import java.util.Optional;
 import java.util.UUID;
@@ -35,14 +34,14 @@ final class ChecksCommands {
 
     CheckResponse create(Authentication authentication, String slug, CreateCheckRequest request) {
         SpaceView space = access.write(authentication, slug);
-        NewCheck draft = request.toNewCheck();
+        CheckDraft draft = request.toDraft();
         Check created = checks.create(space.id(), draft);
         return CheckResponse.from(created);
     }
 
     CheckResponse update(Authentication authentication, String slug, UUID id, UpdateCheckRequest request) {
         SpaceView space = access.write(authentication, slug);
-        CheckChanges changes = request.toChanges();
+        CheckDraft changes = request.toDraft();
         Check updated = checks.update(space.id(), id, changes, request.version());
         return CheckResponse.from(updated);
     }
