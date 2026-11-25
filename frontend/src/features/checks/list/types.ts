@@ -10,6 +10,11 @@ export type BulkAction = 'pause' | 'resume' | 'delete'
 
 export type RowAction = 'pause' | 'resume'
 
+export interface BulkProgress {
+  done: number
+  total: number
+}
+
 export interface CheckRowData {
   id: string
   name: string

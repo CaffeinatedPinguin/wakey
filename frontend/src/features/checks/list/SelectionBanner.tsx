@@ -19,7 +19,7 @@ export function SelectionBanner(props: SelectionBannerProps): ReactElement | nul
   if (selection.mode === 'all') {
     return (
       <Text size="sm" fw={600}>
-        {t('checks.list.selection.all', { total: totalCount })}
+        {t('checks.list.selection.all', { count: totalCount, total: totalCount })}
       </Text>
     )
   }
@@ -34,7 +34,7 @@ export function SelectionBanner(props: SelectionBannerProps): ReactElement | nul
           onSelectionChange({ mode: 'all', ids: [] })
         }}
       >
-        {t('checks.list.selection.selectAll', { total: totalCount })}
+        {t('checks.list.selection.selectAll', { count: totalCount, total: totalCount })}
       </Button>
     </Group>
   )

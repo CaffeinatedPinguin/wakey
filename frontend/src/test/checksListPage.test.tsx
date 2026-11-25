@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, screen, waitFor } from '@testing-library/react'
+import { cleanup, fireEvent, screen, waitFor, within } from '@testing-library/react'
 import { afterEach, beforeEach, expect, it } from 'vitest'
 import i18n from '../app/i18n'
 import type { ChecksApiMock } from './checksApiMock'
@@ -8,6 +8,21 @@ import { renderApp } from './renderApp'
 import { installViewport } from './viewport'
 
 const DESKTOP_WIDTH = 1024
+
+interface Deferred {
+  promise: Promise<void>
+  resolve: () => void
+}
+
+function deferred(): Deferred {
+  let resolve: () => void = () => undefined
+  const promise = new Promise<void>((done) => {
+    resolve = () => {
+      done()
+    }
+  })
+  return { promise, resolve }
+}
 
 let api: ChecksApiMock
 
@@ -191,7 +206,7 @@ it('selecting all results acts on every page of the result', async () => {
   await screen.findByText('API płatności')
 
   fireEvent.click(screen.getByRole('checkbox', { name: 'Zaznacz stronę' }))
-  fireEvent.click(await screen.findByRole('button', { name: 'Zaznacz wszystkie 3 wyników' }))
+  fireEvent.click(await screen.findByRole('button', { name: 'Zaznacz wszystkie 3 wyniki' }))
   fireEvent.click(screen.getByRole('button', { name: 'Pauza' }))
 
   await waitFor(() => {
@@ -211,6 +226,57 @@ it('removing a filter clears it from the URL and the API query', async () => {
   })
   await waitFor(() => {
     expect(api.state.listCalls.some((url) => !url.includes('state='))).toBe(true)
+  })
+})
+
+it('bulk actions clear the selection when they finish', async () => {
+  installChecks([makeCheck({ id: 'c1' }), makeCheck({ id: 'c2', name: 'Panel klienta' })])
+  renderApp('/checks?space=alpha')
+  await screen.findByText('API płatności')
+  fireEvent.click(screen.getByRole('checkbox', { name: 'Zaznacz stronę' }))
+  expect(await screen.findByText('Zaznaczono 2 na stronie')).toBeDefined()
+  fireEvent.click(screen.getByRole('button', { name: 'Pauza' }))
+  await waitFor(() => {
+    expect(screen.queryByText('Zaznaczono 2 na stronie')).toBeNull()
+  })
+  expect([...api.state.pauseCalls].sort()).toEqual(['c1', 'c2'])
+})
+
+it('a bulk action cannot be started twice', async () => {
+  installChecks([makeCheck({ id: 'c1' }), makeCheck({ id: 'c2', name: 'Panel klienta' })])
+  const gate = deferred()
+  installMockApi((request) => {
+    const reply = api.handler(request)
+    const pause = request.method.toUpperCase() === 'POST' && request.url.includes('/pause')
+    return pause ? { ...reply, waitFor: gate.promise } : reply
+  })
+  renderApp('/checks?space=alpha')
+  await screen.findByText('API płatności')
+  fireEvent.click(screen.getByRole('checkbox', { name: 'Zaznacz stronę' }))
+  fireEvent.click(screen.getByRole('button', { name: 'Pauza' }))
+  fireEvent.click(screen.getByRole('button', { name: 'Pauza' }))
+  await waitFor(() => {
+    expect(api.state.pauseCalls).toHaveLength(1)
+  })
+  gate.resolve()
+  await waitFor(() => {
+    expect([...api.state.pauseCalls].sort()).toEqual(['c1', 'c2'])
+  })
+})
+
+it('select all confirms the exact number of checks it will change', async () => {
+  installChecks(threeChecks())
+  api.state.counts = { up: 0, degraded: 0, down: 7, unknown: 0 }
+  renderApp('/checks?space=alpha')
+  await screen.findByText('API płatności')
+  fireEvent.click(screen.getByRole('checkbox', { name: 'Zaznacz stronę' }))
+  fireEvent.click(await screen.findByRole('button', { name: 'Zaznacz wszystkie 7 wyników' }))
+  fireEvent.click(screen.getByRole('button', { name: 'Usuń' }))
+  const dialog = await screen.findByRole('dialog')
+  expect(within(dialog).getByText('Usunąć 3 checki? Tej operacji nie można cofnąć.')).toBeDefined()
+  fireEvent.click(within(dialog).getByRole('button', { name: 'Usuń' }))
+  await waitFor(() => {
+    expect([...api.state.deleteCalls].sort()).toEqual(['c1', 'c2', 'c3'])
   })
 })
 

@@ -42,6 +42,9 @@ export function useChangeSetting(
 ): UseMutationResult<void, Error, SettingChange> {
   const queryClient = useQueryClient()
   return useMutation({
+    // A save of one setting waits for the previous save, so a late response
+    // cannot overwrite a newer value.
+    scope: { id: 'settings-change' },
     mutationFn: (change: SettingChange) => updateSpaceSetting(requireSlug(slug), change),
     onSuccess: () => {
       invalidateSettings(queryClient, slug)

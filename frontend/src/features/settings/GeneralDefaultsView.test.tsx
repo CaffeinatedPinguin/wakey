@@ -185,10 +185,9 @@ describe('settings editing', () => {
   it('editing a field calls onChange with the key and the new value', () => {
     const onChange = vi.fn()
     renderView({ onChange })
-
-    fireEvent.change(screen.getByLabelText('Nazwa przestrzeni'), {
-      target: { value: 'Staging' },
-    })
+    const input = screen.getByLabelText('Nazwa przestrzeni')
+    fireEvent.change(input, { target: { value: 'Staging' } })
+    fireEvent.blur(input)
 
     expect(onChange).toHaveBeenCalledWith('name', 'Staging')
   })
@@ -204,10 +203,12 @@ describe('settings editing', () => {
     const input = screen.getByLabelText('Interwał')
 
     fireEvent.change(input, { target: { value: '400' } })
+    fireEvent.blur(input)
     expect(onChange).toHaveBeenLastCalledWith('interval', '400')
 
     onChange.mockClear()
     fireEvent.change(input, { target: { value: '300' } })
+    fireEvent.blur(input)
     expect(onChange).not.toHaveBeenCalled()
   })
 

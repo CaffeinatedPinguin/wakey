@@ -10,6 +10,7 @@ import type { ChecksTableProps } from './ChecksTable'
 import { EmptyState, ErrorState, LoadingState, NoResultsState, ResultsFooter } from './ListStates'
 import type {
   BulkAction,
+  BulkProgress,
   CheckRowData,
   FilterFacet,
   ListFilters,
@@ -26,10 +27,13 @@ export interface ChecksListViewProps {
   totalCount: number
   status: ListStatus
   hasNextPage: boolean
+  bulkRunning: boolean
+  bulkProgress: BulkProgress | null
   onFiltersChange: (filters: ListFilters) => void
   onSelectionChange: (selection: SelectionState) => void
   onBulkAction: (action: BulkAction) => void
   onRowAction: (id: string, action: RowAction) => void
+  onCancelBulk: () => void
   onLoadMore: () => void
   onRetry: () => void
   onClearFilters: () => void
@@ -85,6 +89,20 @@ function ListBody(props: ChecksListViewProps & { isMobile: boolean }): ReactElem
   )
 }
 
+function SelectionActions({ view }: { view: ChecksListViewProps }): ReactElement {
+  return (
+    <BulkActionBar
+      selection={view.selection}
+      totalCount={view.totalCount}
+      running={view.bulkRunning}
+      progress={view.bulkProgress}
+      onBulkAction={view.onBulkAction}
+      onSelectionChange={view.onSelectionChange}
+      onCancel={view.onCancelBulk}
+    />
+  )
+}
+
 export function ChecksListView(props: ChecksListViewProps): ReactElement {
   const { t } = useTranslation()
   const isMobile = useIsMobile()
@@ -93,14 +111,7 @@ export function ChecksListView(props: ChecksListViewProps): ReactElement {
   return (
     <PageFrame title={t('checks.list.title')}>
       <Stack gap="md">
-        {hasSelection && !isMobile ? (
-          <BulkActionBar
-            selection={props.selection}
-            totalCount={props.totalCount}
-            onBulkAction={props.onBulkAction}
-            onSelectionChange={props.onSelectionChange}
-          />
-        ) : null}
+        {hasSelection && !isMobile ? <SelectionActions view={props} /> : null}
         {hasSelection ? null : (
           <ChecksFilterBar
             filters={props.filters}
@@ -110,14 +121,7 @@ export function ChecksListView(props: ChecksListViewProps): ReactElement {
           />
         )}
         <ListBody {...props} isMobile={isMobile} />
-        {hasSelection && isMobile ? (
-          <BulkActionBar
-            selection={props.selection}
-            totalCount={props.totalCount}
-            onBulkAction={props.onBulkAction}
-            onSelectionChange={props.onSelectionChange}
-          />
-        ) : null}
+        {hasSelection && isMobile ? <SelectionActions view={props} /> : null}
       </Stack>
     </PageFrame>
   )

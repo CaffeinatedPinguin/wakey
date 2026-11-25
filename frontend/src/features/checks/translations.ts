@@ -12,7 +12,10 @@ const pageResources = {
       actionNetwork: 'Brak połączenia z serwerem. Spróbuj ponownie.',
       delete: {
         title: 'Usunąć checki?',
-        body: 'Usunąć {{count}} checków? Tej operacji nie można cofnąć.',
+        body_one: 'Usunąć 1 check? Tej operacji nie można cofnąć.',
+        body_few: 'Usunąć {{count}} checki? Tej operacji nie można cofnąć.',
+        body_many: 'Usunąć {{count}} checków? Tej operacji nie można cofnąć.',
+        body_other: 'Usunąć {{count}} checka? Tej operacji nie można cofnąć.',
         confirm: 'Usuń',
         cancel: 'Anuluj',
       },
@@ -28,7 +31,8 @@ const pageResources = {
       actionNetwork: 'No connection to the server. Please try again.',
       delete: {
         title: 'Delete the checks?',
-        body: 'Delete {{count}} checks? This action cannot be undone.',
+        body_one: 'Delete 1 check? This action cannot be undone.',
+        body_other: 'Delete {{count}} checks? This action cannot be undone.',
         confirm: 'Delete',
         cancel: 'Cancel',
       },

@@ -1,25 +1,30 @@
-import { Button, Group, Paper, Stack } from '@mantine/core'
+import { Button, Group, Paper, Stack, Text } from '@mantine/core'
 import type { ReactElement } from 'react'
 import { useTranslation } from 'react-i18next'
 import { selectionBarStyle, touchStyle } from './listStyles'
 import { SelectionBanner } from './SelectionBanner'
-import type { BulkAction, SelectionState } from './types'
+import type { BulkAction, BulkProgress, SelectionState } from './types'
 
 const bulkActions: BulkAction[] = ['pause', 'resume']
 
 export interface BulkActionBarProps {
   selection: SelectionState
   totalCount: number
+  running: boolean
+  progress: BulkProgress | null
   onBulkAction: (action: BulkAction) => void
   onSelectionChange: (selection: SelectionState) => void
+  onCancel: () => void
 }
 
 interface BulkActionButtonsProps {
+  running: boolean
   onBulkAction: (action: BulkAction) => void
   onSelectionChange: (selection: SelectionState) => void
+  onCancel: () => void
 }
 
-function PrimaryBulkActions({ onBulkAction }: BulkActionButtonsProps): ReactElement {
+function PrimaryBulkActions({ running, onBulkAction }: BulkActionButtonsProps): ReactElement {
   const { t } = useTranslation()
 
   return (
@@ -29,6 +34,7 @@ function PrimaryBulkActions({ onBulkAction }: BulkActionButtonsProps): ReactElem
           key={action}
           variant="default"
           style={touchStyle}
+          disabled={running}
           onClick={() => {
             onBulkAction(action)
           }}
@@ -41,6 +47,7 @@ function PrimaryBulkActions({ onBulkAction }: BulkActionButtonsProps): ReactElem
 }
 
 function DestructiveBulkActions({
+  running,
   onBulkAction,
   onSelectionChange,
 }: BulkActionButtonsProps): ReactElement {
@@ -52,6 +59,7 @@ function DestructiveBulkActions({
         variant="light"
         color="danger"
         style={touchStyle}
+        disabled={running}
         onClick={() => {
           onBulkAction('delete')
         }}
@@ -61,6 +69,7 @@ function DestructiveBulkActions({
       <Button
         variant="subtle"
         style={touchStyle}
+        disabled={running}
         onClick={() => {
           onSelectionChange({ mode: 'none', ids: [] })
         }}
@@ -71,23 +80,44 @@ function DestructiveBulkActions({
   )
 }
 
+function BulkProgressLine({
+  running,
+  progress,
+  onCancel,
+}: {
+  running: boolean
+  progress: BulkProgress | null
+  onCancel: () => void
+}): ReactElement | null {
+  const { t } = useTranslation()
+
+  if (progress === null) {
+    return null
+  }
+  return (
+    <Group gap="xs" wrap="wrap">
+      <Text size="sm" role="status">
+        {t('checks.list.bulk.progress', { done: progress.done, total: progress.total })}
+      </Text>
+      <Button variant="subtle" style={touchStyle} disabled={!running} onClick={onCancel}>
+        {t('checks.list.bulk.cancel')}
+      </Button>
+    </Group>
+  )
+}
+
 function BulkActionButtons(props: BulkActionButtonsProps): ReactElement {
   return (
     <Group gap="xs" wrap="wrap">
-      <PrimaryBulkActions
-        onBulkAction={props.onBulkAction}
-        onSelectionChange={props.onSelectionChange}
-      />
-      <DestructiveBulkActions
-        onBulkAction={props.onBulkAction}
-        onSelectionChange={props.onSelectionChange}
-      />
+      <PrimaryBulkActions {...props} />
+      <DestructiveBulkActions {...props} />
     </Group>
   )
 }
 
 export function BulkActionBar(props: BulkActionBarProps): ReactElement {
-  const { selection, totalCount, onBulkAction, onSelectionChange } = props
+  const { selection, totalCount, running, progress, onBulkAction, onSelectionChange, onCancel } =
+    props
 
   return (
     <Paper withBorder p="sm" style={selectionBarStyle}>
@@ -97,7 +127,13 @@ export function BulkActionBar(props: BulkActionBarProps): ReactElement {
           totalCount={totalCount}
           onSelectionChange={onSelectionChange}
         />
-        <BulkActionButtons onBulkAction={onBulkAction} onSelectionChange={onSelectionChange} />
+        <BulkProgressLine running={running} progress={progress} onCancel={onCancel} />
+        <BulkActionButtons
+          running={running}
+          onBulkAction={onBulkAction}
+          onSelectionChange={onSelectionChange}
+          onCancel={onCancel}
+        />
       </Stack>
     </Paper>
   )

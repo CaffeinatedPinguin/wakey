@@ -59,6 +59,8 @@ function buildViewProps(args: ViewPropsArgs): ChecksListViewProps {
     totalCount: data.totalCount,
     status: data.status,
     hasNextPage: data.hasNextPage,
+    bulkRunning: bulk.running,
+    bulkProgress: bulk.progress,
     onFiltersChange: (filters) => {
       setSelection(NO_SELECTION)
       navigation.onFiltersChange(filters)
@@ -68,6 +70,7 @@ function buildViewProps(args: ViewPropsArgs): ChecksListViewProps {
       bulk.onBulkAction(action, selection)
     },
     onRowAction: bulk.onRowAction,
+    onCancelBulk: bulk.onCancel,
     onLoadMore: data.loadMore,
     onRetry: data.retry,
     onClearFilters: () => {
@@ -79,11 +82,12 @@ function buildViewProps(args: ViewPropsArgs): ChecksListViewProps {
 
 function ChecksPageContent({ space, search }: ChecksPageContentProps): ReactElement {
   const data = useChecksData(space, search)
-  const bulk = useChecksBulkActions(space, data.apiFilters)
   const navigation = useChecksNavigation(space, search)
   const [selection, setSelection] = useState<SelectionState>(NO_SELECTION)
+  const bulk = useChecksBulkActions(space, data.apiFilters, () => {
+    setSelection(NO_SELECTION)
+  })
   const viewProps = buildViewProps({ data, bulk, navigation, selection, setSelection })
-  const deleteCount = selection.mode === 'all' ? data.totalCount : selection.ids.length
 
   return (
     <>
@@ -95,11 +99,9 @@ function ChecksPageContent({ space, search }: ChecksPageContentProps): ReactElem
       <ChecksListView {...viewProps} />
       <BulkDeleteDialog
         opened={bulk.deleteOpen}
-        count={deleteCount}
+        count={bulk.deleteCount}
         onCancel={bulk.cancelDelete}
-        onConfirm={() => {
-          bulk.confirmDelete(selection)
-        }}
+        onConfirm={bulk.confirmDelete}
       />
     </>
   )

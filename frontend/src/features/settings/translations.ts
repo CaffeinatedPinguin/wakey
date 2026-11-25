@@ -43,6 +43,7 @@ export const settingsResources = {
       fieldError: {
         outOfPlan: 'Poza planem: maksymalnie {{bound}}.',
         generic: 'Nieprawidłowa wartość.',
+        required: 'Wartość nie może być pusta.',
       },
       mobileEditTitle: 'Edytuj: {{label}}',
       done: 'Gotowe',
@@ -91,6 +92,7 @@ export const settingsResources = {
       fieldError: {
         outOfPlan: 'Outside the plan: at most {{bound}}.',
         generic: 'Invalid value.',
+        required: 'The value cannot be empty.',
       },
       mobileEditTitle: 'Edit: {{label}}',
       done: 'Done',

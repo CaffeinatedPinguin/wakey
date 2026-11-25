@@ -1,44 +1,42 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { collectCheckIds } from './api/checks.api'
 import type { CheckApiFilters, CollectedCheckIds } from './api/checks.api'
-import type { BulkAction, RowAction, SelectionState } from './list/types'
+import type { BulkAction, BulkProgress, RowAction, SelectionState } from './list/types'
 import { showActionError, useCheckActions } from './useCheckActions'
 import type { CheckActions } from './useCheckActions'
 
-const MAX_BULK_PAGES = 100
-
-interface BulkRequest {
-  action: BulkAction
-  selection: SelectionState
-  space: string
-  filters: CheckApiFilters
-  actions: CheckActions
-}
+const MAX_BULK_CHECKS = 500
 
 export interface ChecksBulkActions {
   onBulkAction: (action: BulkAction, selection: SelectionState) => void
   onRowAction: (id: string, action: RowAction) => void
   message: string | null
+  running: boolean
+  progress: BulkProgress | null
+  onCancel: () => void
   deleteOpen: boolean
+  deleteCount: number
   cancelDelete: () => void
-  confirmDelete: (selection: SelectionState) => void
+  confirmDelete: () => void
 }
 
-interface Execution {
-  run: (action: BulkAction, selection: SelectionState) => Promise<void>
-  runOne: (id: string, action: RowAction) => Promise<void>
-  message: string | null
-}
+type CollectSelection = (selection: SelectionState) => Promise<string[] | null>
 
-async function collectIds(request: BulkRequest): Promise<CollectedCheckIds> {
-  if (request.selection.mode === 'page') {
-    return { ids: request.selection.ids, complete: true }
+type RunIds = (action: BulkAction, ids: string[]) => Promise<void>
+
+async function resolveIds(
+  space: string,
+  filters: CheckApiFilters,
+  selection: SelectionState,
+): Promise<CollectedCheckIds> {
+  if (selection.mode === 'all') {
+    return collectCheckIds(space, filters, MAX_BULK_CHECKS)
   }
-  if (request.selection.mode === 'none') {
-    return { ids: [], complete: true }
+  if (selection.mode === 'page') {
+    return { ids: selection.ids, complete: true }
   }
-  return collectCheckIds(request.space, request.filters, MAX_BULK_PAGES)
+  return { ids: [], complete: true }
 }
 
 async function applyOne(action: BulkAction, id: string, api: CheckActions): Promise<void> {
@@ -55,41 +53,145 @@ async function applyOne(action: BulkAction, id: string, api: CheckActions): Prom
   }
 }
 
-async function applyBulk(action: BulkAction, ids: string[], api: CheckActions): Promise<void> {
+interface RunContext {
+  actions: CheckActions
+  report: (done: number, total: number) => void
+  isCancelled: () => boolean
+}
+
+async function applyIds(
+  action: BulkAction,
+  ids: readonly string[],
+  context: RunContext,
+): Promise<void> {
+  context.report(0, ids.length)
+  let done = 0
   for (const id of ids) {
-    await applyOne(action, id, api)
+    if (context.isCancelled()) {
+      return
+    }
+    await applyOne(action, id, context.actions)
+    done += 1
+    context.report(done, ids.length)
   }
 }
 
-async function executeBulk(request: BulkRequest): Promise<boolean> {
-  const target = await collectIds(request)
-  if (!target.complete) {
-    return false
-  }
-  await applyBulk(request.action, target.ids, request.actions)
-  return true
-}
-
-function useBulkExecution(space: string, filters: CheckApiFilters): Execution {
-  const { t } = useTranslation()
-  const actions = useCheckActions(space)
+function useBulkStatus() {
   const [message, setMessage] = useState<string | null>(null)
+  const [running, setRunning] = useState(false)
+  const [progress, setProgress] = useState<BulkProgress | null>(null)
+  const busy = useRef(false)
 
-  async function run(action: BulkAction, selection: SelectionState): Promise<void> {
-    setMessage(null)
-    try {
-      const complete = await executeBulk({ action, selection, space, filters, actions })
-      if (!complete) {
-        setMessage(t('checks.page.bulkLimit'))
+  return {
+    message,
+    running,
+    progress,
+    acquire: (): boolean => {
+      if (busy.current) {
+        return false
       }
+      busy.current = true
+      return true
+    },
+    release: (): void => {
+      busy.current = false
+    },
+    begin: () => {
+      setMessage(null)
+      setRunning(true)
+      setProgress(null)
+    },
+    finish: () => {
+      setRunning(false)
+      setProgress(null)
+    },
+    fail: setMessage,
+    report: setProgress,
+  }
+}
+
+function useBulkCollector(
+  space: string,
+  filters: CheckApiFilters,
+  status: ReturnType<typeof useBulkStatus>,
+): CollectSelection {
+  const { t } = useTranslation()
+
+  return async (selection) => {
+    if (!status.acquire()) {
+      return null
+    }
+    status.begin()
+    try {
+      const target = await resolveIds(space, filters, selection)
+      if (!target.complete) {
+        status.fail(t('checks.page.bulkLimit'))
+        return null
+      }
+      return target.ids
+    } catch (error) {
+      showActionError(t, error)
+      return null
+    } finally {
+      status.release()
+      status.finish()
+    }
+  }
+}
+
+function useRunIds(
+  actions: CheckActions,
+  status: ReturnType<typeof useBulkStatus>,
+  onFinished: () => void,
+) {
+  const { t } = useTranslation()
+  const cancelled = useRef(false)
+
+  async function runIds(action: BulkAction, ids: string[]): Promise<void> {
+    if (!status.acquire()) {
+      return
+    }
+    cancelled.current = false
+    status.begin()
+    try {
+      await applyIds(action, ids, {
+        actions,
+        report: (done, total) => {
+          status.report({ done, total })
+        },
+        isCancelled: () => cancelled.current,
+      })
     } catch (error) {
       showActionError(t, error)
     } finally {
+      status.release()
+      status.finish()
       actions.refresh()
+      onFinished()
     }
   }
 
-  async function runOne(id: string, action: RowAction): Promise<void> {
+  return {
+    runIds,
+    cancel: () => {
+      cancelled.current = true
+    },
+  }
+}
+
+function useRunSelection(collect: CollectSelection, runIds: RunIds) {
+  return async (action: BulkAction, selection: SelectionState): Promise<void> => {
+    const ids = await collect(selection)
+    if (ids !== null) {
+      await runIds(action, ids)
+    }
+  }
+}
+
+function useRowRunner(actions: CheckActions) {
+  const { t } = useTranslation()
+
+  return async (id: string, action: RowAction) => {
     try {
       await applyOne(action, id, actions)
     } catch (error) {
@@ -98,33 +200,64 @@ function useBulkExecution(space: string, filters: CheckApiFilters): Execution {
       actions.refresh()
     }
   }
-
-  return { run, runOne, message }
 }
 
-export function useChecksBulkActions(space: string, filters: CheckApiFilters): ChecksBulkActions {
-  const execution = useBulkExecution(space, filters)
-  const [deleteOpen, setDeleteOpen] = useState(false)
+function useDeleteFlow(collect: CollectSelection, runIds: RunIds) {
+  const [ids, setIds] = useState<string[] | null>(null)
+
+  return {
+    ids,
+    prepare: async (selection: SelectionState) => {
+      const collected = await collect(selection)
+      if (collected !== null) {
+        setIds(collected)
+      }
+    },
+    cancel: () => {
+      setIds(null)
+    },
+    confirm: () => {
+      const current = ids
+      if (current === null) {
+        return
+      }
+      setIds(null)
+      void runIds('delete', current)
+    },
+  }
+}
+
+export function useChecksBulkActions(
+  space: string,
+  filters: CheckApiFilters,
+  onFinished: () => void,
+): ChecksBulkActions {
+  const actions = useCheckActions(space)
+  const status = useBulkStatus()
+  const collect = useBulkCollector(space, filters, status)
+  const ids = useRunIds(actions, status, onFinished)
+  const run = useRunSelection(collect, ids.runIds)
+  const deletion = useDeleteFlow(collect, ids.runIds)
+  const runRow = useRowRunner(actions)
 
   return {
     onBulkAction: (action, selection) => {
       if (action === 'delete') {
-        setDeleteOpen(true)
+        void deletion.prepare(selection)
         return
       }
-      void execution.run(action, selection)
+      void run(action, selection)
     },
     onRowAction: (id, action) => {
-      void execution.runOne(id, action)
+      void runRow(id, action)
     },
-    message: execution.message,
-    deleteOpen,
-    cancelDelete: () => {
-      setDeleteOpen(false)
-    },
-    confirmDelete: (selection) => {
-      setDeleteOpen(false)
-      void execution.run('delete', selection)
-    },
+    message: status.message,
+    running: status.running,
+    progress: status.progress,
+    onCancel: ids.cancel,
+    deleteOpen: deletion.ids !== null,
+    deleteCount: deletion.ids?.length ?? 0,
+    cancelDelete: deletion.cancel,
+    confirmDelete: deletion.confirm,
   }
 }

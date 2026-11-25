@@ -1,7 +1,7 @@
 import { NumberInput, Select, Text, TextInput } from '@mantine/core'
 import type { TFunction } from 'i18next'
-import type { ReactElement } from 'react'
-import { useState } from 'react'
+import type { KeyboardEvent, ReactElement } from 'react'
+import { useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { SettingFieldError, SettingRowData } from './types'
 
@@ -13,9 +13,10 @@ interface SettingFieldProps {
   onChange: Commit
 }
 
-interface DraftConflict {
+interface DraftControl {
   value: string
   error: string | undefined
+  change: (next: string) => void
   commit: (next: string) => void
 }
 
@@ -38,22 +39,41 @@ function useDraft(
   row: SettingRowData,
   error: SettingFieldError | undefined,
   onChange: Commit,
-): DraftConflict {
+): DraftControl {
   const { t } = useTranslation()
   const [draft, setDraft] = useState<DraftState | null>(null)
-  // A failed save keeps the old server value in the input and shows the message.
-  const value =
-    draft !== null && draft.base === row.value && error === undefined ? draft.value : row.value
+  const [missing, setMissing] = useState(false)
+  const lastSent = useRef<string | null>(null)
+  const message = missing ? t('settings.fieldError.required') : errorText(error, t)
+  const value = draft !== null && draft.base === row.value ? draft.value : row.value
+
+  function change(next: string): void {
+    setDraft({ base: row.value, value: next })
+    setMissing(false)
+    lastSent.current = null
+  }
 
   function commit(next: string): void {
-    setDraft({ base: row.value, value: next })
-    if (error !== undefined && next === row.value) {
+    setMissing(false)
+    if (next.trim() === '') {
+      setDraft(null)
+      setMissing(true)
       return
     }
+    if (error !== undefined && lastSent.current === next) {
+      setDraft(null)
+      return
+    }
+    if (next === row.value || next === lastSent.current) {
+      setDraft({ base: row.value, value: next })
+      return
+    }
+    lastSent.current = next
+    setDraft({ base: row.value, value: next })
     onChange(row.key, next)
   }
 
-  return { value, error: errorText(error, t), commit }
+  return { value, error: message, change, commit }
 }
 
 function unitSection(row: SettingRowData): ReactElement | undefined {
@@ -67,6 +87,15 @@ function unitSection(row: SettingRowData): ReactElement | undefined {
   )
 }
 
+function enterCommits(
+  event: KeyboardEvent<HTMLInputElement>,
+  commit: (next: string) => void,
+): void {
+  if (event.key === 'Enter') {
+    commit(event.currentTarget.value)
+  }
+}
+
 function TextSetting({ row, error, onChange }: SettingFieldProps): ReactElement {
   const draft = useDraft(row, error, onChange)
   return (
@@ -76,7 +105,13 @@ function TextSetting({ row, error, onChange }: SettingFieldProps): ReactElement 
       rightSection={unitSection(row)}
       error={draft.error}
       onChange={(event) => {
+        draft.change(event.currentTarget.value)
+      }}
+      onBlur={(event) => {
         draft.commit(event.currentTarget.value)
+      }}
+      onKeyDown={(event) => {
+        enterCommits(event, draft.commit)
       }}
     />
   )
@@ -91,7 +126,13 @@ function NumberSetting({ row, error, onChange }: SettingFieldProps): ReactElemen
       rightSection={unitSection(row)}
       error={draft.error}
       onChange={(value) => {
-        draft.commit(String(value))
+        draft.change(String(value))
+      }}
+      onBlur={(event) => {
+        draft.commit(event.currentTarget.value)
+      }}
+      onKeyDown={(event) => {
+        enterCommits(event, draft.commit)
       }}
     />
   )

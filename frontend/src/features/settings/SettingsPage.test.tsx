@@ -8,23 +8,19 @@ import { renderApp } from '../../test/renderApp'
 import { installViewport } from '../../test/viewport'
 import i18n from '../../app/i18n'
 import type { Me } from '../auth'
-
 const ME_URL = `${appConfig.apiBaseUrl}/me`
 const SPACES_URL = `${appConfig.apiBaseUrl}/spaces`
 const SETTINGS_URL = `${SPACES_URL}/alpha/settings`
 const DESKTOP_WIDTH = 1024
 const OUT_OF_PLAN_BOUND = 300
-
 type Source = 'SPACE' | 'PLAN' | 'INSTANCE' | 'DEFAULT'
 type Role = 'EDITOR' | 'VIEWER' | null
-
 interface SettingFixture {
   key: string
   planName: string
   source: Source
   value: string
 }
-
 interface SpaceFixture {
   slug: string
   name: string
@@ -167,6 +163,12 @@ function rowFor(label: string): HTMLElement {
   return row
 }
 
+function changeAndBlur(label: string, value: string): void {
+  const input = screen.getByLabelText(label)
+  fireEvent.change(input, { target: { value } })
+  fireEvent.blur(input)
+}
+
 beforeEach(() => {
   api = createApiState()
   installMockApi(handleRequest)
@@ -195,7 +197,7 @@ describe('settings page data', () => {
     const { router } = renderApp('/settings?space=alpha')
     await screen.findByDisplayValue('Europe/Warsaw')
 
-    fireEvent.change(screen.getByLabelText('Interwał'), { target: { value: '45' } })
+    changeAndBlur('Interwał', '45')
 
     await waitFor(() => {
       expect(api.writes).toEqual([{ key: 'check.interval', value: '45' }])
@@ -207,9 +209,9 @@ describe('settings page data', () => {
 describe('settings changes', () => {
   it('changing a value sends it for the current space and refreshes the list', async () => {
     renderApp('/settings?space=alpha')
-    const interval = await screen.findByLabelText('Interwał')
+    await screen.findByLabelText('Interwał')
 
-    fireEvent.change(interval, { target: { value: '45' } })
+    changeAndBlur('Interwał', '45')
 
     await waitFor(() => {
       expect(api.writes).toEqual([{ key: 'check.interval', value: '45' }])
@@ -223,9 +225,9 @@ describe('settings changes', () => {
 
   it('a value outside the plan shows the bound next to the field', async () => {
     renderApp('/settings?space=alpha')
-    const interval = await screen.findByLabelText('Interwał')
+    await screen.findByLabelText('Interwał')
 
-    fireEvent.change(interval, { target: { value: '400' } })
+    changeAndBlur('Interwał', '400')
 
     expect(await screen.findByText('Poza planem: maksymalnie 300 s.')).toBeDefined()
     expect(api.writes).toEqual([{ key: 'check.interval', value: '400' }])
@@ -233,9 +235,9 @@ describe('settings changes', () => {
 
   it('the settings page reads the bound from the error params', async () => {
     renderApp('/settings?space=alpha')
-    const interval = await screen.findByLabelText('Interwał')
+    await screen.findByLabelText('Interwał')
 
-    fireEvent.change(interval, { target: { value: '400' } })
+    changeAndBlur('Interwał', '400')
 
     expect(await screen.findByText('Poza planem: maksymalnie 300 s.')).toBeDefined()
   })
@@ -244,11 +246,15 @@ describe('settings changes', () => {
 describe('settings validation', () => {
   it('the settings page shows a message for a validation error', async () => {
     renderApp('/settings?space=alpha')
-    const timezone = await screen.findByLabelText('Strefa czasowa')
+    await screen.findByLabelText('Strefa czasowa')
 
-    fireEvent.change(timezone, { target: { value: 'Not/AZone' } })
+    changeAndBlur('Strefa czasowa', 'Not/AZone')
 
     expect(await screen.findByText('Nieprawidłowa wartość.')).toBeDefined()
+    expect(screen.getByDisplayValue('Not/AZone')).toBeDefined()
+
+    fireEvent.blur(screen.getByLabelText('Strefa czasowa'))
+
     expect(screen.getByDisplayValue('Europe/Warsaw')).toBeDefined()
   })
 })

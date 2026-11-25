@@ -14,6 +14,7 @@ import type {
 const SLUG_PLACEHOLDER = '{slug}'
 const ID_PLACEHOLDER = '{id}'
 const CHECK_PAGE_LIMIT = 50
+const MAX_BULK_PAGES = 100
 const MANUAL_PAUSE = 'MANUAL'
 
 export interface CheckApiFilters {
@@ -116,15 +117,18 @@ export async function deleteCheck(slug: string, id: string): Promise<void> {
 export async function collectCheckIds(
   slug: string,
   filters: CheckApiFilters,
-  maxPages: number,
+  maxIds: number,
 ): Promise<CollectedCheckIds> {
   const ids: string[] = []
   let cursor: string | undefined
-  for (let page = 0; page < maxPages; page += 1) {
+  for (let page = 0; page < MAX_BULK_PAGES; page += 1) {
     const result = await fetchChecks(slug, filters, cursor)
     ids.push(...result.items.map((item) => item.id))
     if (result.nextCursor === null) {
-      return { ids, complete: true }
+      return { ids, complete: ids.length <= maxIds }
+    }
+    if (ids.length >= maxIds) {
+      return { ids, complete: false }
     }
     cursor = result.nextCursor
   }

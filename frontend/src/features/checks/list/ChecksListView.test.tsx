@@ -63,7 +63,7 @@ it('selecting the page shows a banner to select all results', () => {
   renderChecksList({ selection: { mode: 'page', ids: ['c1', 'c2'] } })
 
   expect(screen.getByText('Zaznaczono 2 na stronie')).toBeDefined()
-  expect(screen.getByRole('button', { name: 'Zaznacz wszystkie 3 wyników' })).toBeDefined()
+  expect(screen.getByRole('button', { name: 'Zaznacz wszystkie 3 wyniki' })).toBeDefined()
 })
 
 it('bulk actions replace the filter bar while rows are selected', () => {
@@ -83,7 +83,7 @@ it('bulk actions replace the filter bar while rows are selected', () => {
 it('selecting all results is reported through onSelectionChange', () => {
   const result = renderChecksList({ selection: { mode: 'page', ids: ['c1', 'c2'] } })
 
-  fireEvent.click(screen.getByRole('button', { name: 'Zaznacz wszystkie 3 wyników' }))
+  fireEvent.click(screen.getByRole('button', { name: 'Zaznacz wszystkie 3 wyniki' }))
 
   expect(result.viewProps.onSelectionChange).toHaveBeenCalledWith({ mode: 'all', ids: [] })
 })
