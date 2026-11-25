@@ -5,6 +5,10 @@
 
 export type Rgb = readonly [number, number, number]
 
+/** The extremes a colour is mixed toward to raise its contrast. */
+export const ContrastTarget = { BLACK: '#000000', WHITE: '#FFFFFF' } as const
+export type ContrastTarget = (typeof ContrastTarget)[keyof typeof ContrastTarget]
+
 const clamp = (value: number): number => Math.round(Math.min(255, Math.max(0, value)))
 
 const toHexByte = (value: number): string => clamp(value).toString(16).padStart(2, '0')
@@ -54,7 +58,7 @@ export function contrastRatio(a: string, b: string): number {
 }
 
 /**
- * Darkens (toward = '#000000') or lightens (toward = '#FFFFFF') the colour by
+ * Darkens (toward black) or lightens (toward white) the colour by
  * the smallest step that reaches the required contrast against every
  * background. Returns null when it cannot be reached.
  */
@@ -62,7 +66,7 @@ export function adjustForContrast(
   color: string,
   backgrounds: readonly string[],
   minRatio: number,
-  toward: '#000000' | '#FFFFFF',
+  toward: ContrastTarget,
 ): string | null {
   for (let step = 0; step <= 100; step += 2) {
     const candidate = step === 0 ? color.toUpperCase() : mix(toward, color, step)

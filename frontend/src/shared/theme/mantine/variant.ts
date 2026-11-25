@@ -1,13 +1,14 @@
 import { defaultVariantColorsResolver, type VariantColorsResolver } from '@mantine/core'
 import { relativeLuminance } from '../color'
 import type { ComposedTokens } from '../tokens/compose'
-import type { TokenMap } from '../tokens/types'
+import { ColorScheme, type TokenMap } from '../tokens/types'
 import { controlBorder, transparentBorder } from './styles'
 import type { SemanticMap } from './types'
 
 type ResolverInput = Parameters<VariantColorsResolver>[0]
 type Resolved = ReturnType<VariantColorsResolver>
-type Scheme = 'light' | 'dark'
+const MixKeyword = { BLACK: 'black', WHITE: 'white' } as const
+type MixKeyword = (typeof MixKeyword)[keyof typeof MixKeyword]
 export type ControlVars = (
   variant: string | undefined,
   color: string | undefined,
@@ -21,7 +22,7 @@ const isDanger = (color: string | undefined): boolean => color === 'danger' || c
 const isAccent = (color: string | undefined): boolean =>
   color === undefined || color === 'brand' || color === 'primary'
 
-function schemeVars(tokens: ComposedTokens, scheme: Scheme): TokenMap {
+function schemeVars(tokens: ComposedTokens, scheme: ColorScheme): TokenMap {
   return { ...tokens.shared, ...tokens[scheme] }
 }
 
@@ -41,17 +42,17 @@ function resolveAlias(vars: TokenMap, name: `--${string}`, depth = 0): string {
 }
 
 /** The text on a solid state: dark text needs a lighter fill, light text a darker one. */
-function mixKeyword(vars: TokenMap, prefix: `--${string}`): 'black' | 'white' {
+function mixKeyword(vars: TokenMap, prefix: `--${string}`): MixKeyword {
   const text = resolveAlias(vars, `${prefix}-on-solid` as `--${string}`)
-  return relativeLuminance(text) < 0.18 ? 'white' : 'black'
+  return relativeLuminance(text) < 0.18 ? MixKeyword.WHITE : MixKeyword.BLACK
 }
 
-function filledMix(tokens: ComposedTokens, scheme: Scheme, prefix: `--${string}`): string {
+function filledMix(tokens: ComposedTokens, scheme: ColorScheme, prefix: `--${string}`): string {
   const target = mixKeyword(schemeVars(tokens, scheme), prefix)
   return `color-mix(in srgb, var(${prefix}-solid) 88%, ${target})`
 }
 
-function pressedMix(tokens: ComposedTokens, scheme: Scheme, prefix: `--${string}`): string {
+function pressedMix(tokens: ComposedTokens, scheme: ColorScheme, prefix: `--${string}`): string {
   const target = mixKeyword(schemeVars(tokens, scheme), prefix)
   return `color-mix(in srgb, var(${prefix}-solid) 76%, ${target})`
 }
@@ -63,11 +64,17 @@ function perScheme(light: string, dark: string): string {
 }
 
 export function filledHover(tokens: ComposedTokens, prefix: `--${string}`): string {
-  return perScheme(filledMix(tokens, 'light', prefix), filledMix(tokens, 'dark', prefix))
+  return perScheme(
+    filledMix(tokens, ColorScheme.LIGHT, prefix),
+    filledMix(tokens, ColorScheme.DARK, prefix),
+  )
 }
 
 export function statePressed(tokens: ComposedTokens, prefix: `--${string}`): string {
-  return perScheme(pressedMix(tokens, 'light', prefix), pressedMix(tokens, 'dark', prefix))
+  return perScheme(
+    pressedMix(tokens, ColorScheme.LIGHT, prefix),
+    pressedMix(tokens, ColorScheme.DARK, prefix),
+  )
 }
 
 function semanticVariant(prefix: `--${string}`, variant: string, tokens: ComposedTokens): Resolved {

@@ -10,9 +10,9 @@
  * The report lists every change so the UI can show a warning instead of
  * guessing. The brand never changes status or state colours.
  */
-import { adjustForContrast, contrastRatio, hexToRgb, mix } from '../color'
+import { adjustForContrast, ContrastTarget, contrastRatio, hexToRgb, mix } from '../color'
 import { brandBackgrounds } from './core'
-import type { TokenMap } from './types'
+import { ColorScheme, type TokenMap } from './types'
 
 export interface BrandInput {
   /** Brand colour in hex, e.g. '#7367F0'. */
@@ -21,7 +21,7 @@ export interface BrandInput {
 
 export interface BrandAdjustment {
   readonly token: string
-  readonly scheme: 'light' | 'dark'
+  readonly scheme: ColorScheme
   readonly from: string
   readonly to: string
   readonly reason: string
@@ -128,7 +128,7 @@ function statusConflicts(accent: string): string[] {
 }
 
 interface SchemeContext {
-  readonly scheme: 'light' | 'dark'
+  readonly scheme: ColorScheme
   readonly accent: string
   readonly adjustments: BrandAdjustment[]
 }
@@ -140,19 +140,24 @@ function pickToken(
   got: string | null,
 ): string {
   const { scheme, adjustments } = context
-  const value = got ?? (scheme === 'light' ? '#000000' : '#FFFFFF')
+  const value = got ?? towardFor(scheme)
   if (value !== wanted.toUpperCase()) {
     adjustments.push({ token, scheme, from: wanted, to: value, reason: 'contrast below target' })
   }
   return value
 }
 
+function towardFor(scheme: ColorScheme): ContrastTarget {
+  return scheme === ColorScheme.LIGHT ? ContrastTarget.BLACK : ContrastTarget.WHITE
+}
+
 function primaryTokens(accent: string, adjustments: BrandAdjustment[]): TokenMap {
-  const primaryBg = adjustForContrast(accent, ['#FFFFFF'], 4.5, '#000000') ?? '#000000'
+  const primaryBg =
+    adjustForContrast(accent, ['#FFFFFF'], 4.5, ContrastTarget.BLACK) ?? ContrastTarget.BLACK
   if (primaryBg !== accent) {
     adjustments.push({
       token: '--app-color-primary-bg',
-      scheme: 'light',
+      scheme: ColorScheme.LIGHT,
       from: accent,
       to: primaryBg,
       reason: 'white text on the primary button < 4.5:1',
@@ -221,7 +226,7 @@ function darkPrimaryTokens(
     if (value !== accent) {
       adjustments.push({
         token,
-        scheme: 'dark',
+        scheme: ColorScheme.DARK,
         from: accent,
         to: value,
         reason: 'dark scheme: text contrast and a visible button against page/surface',
@@ -241,13 +246,13 @@ function darkPrimaryTokens(
 }
 
 function schemeTokens(
-  scheme: 'light' | 'dark',
+  scheme: ColorScheme,
   accent: string,
   primary: TokenMap,
   adjustments: BrandAdjustment[],
 ): TokenMap {
   const backgrounds = brandBackgrounds[scheme]
-  const toward = scheme === 'light' ? '#000000' : '#FFFFFF'
+  const toward = towardFor(scheme)
   const context: SchemeContext = { scheme, accent, adjustments }
   const ring = pickToken(
     context,
@@ -277,8 +282,8 @@ export function createBrandTokens(input: BrandInput = DEFAULT_BRAND): BrandResul
   const warnings: string[] = []
   const lightPrimary = primaryTokens(accent, adjustments)
   const darkPrimary = darkPrimaryTokens(accent, adjustments, warnings)
-  const light = schemeTokens('light', accent, lightPrimary, adjustments)
-  const dark = schemeTokens('dark', accent, darkPrimary, adjustments)
+  const light = schemeTokens(ColorScheme.LIGHT, accent, lightPrimary, adjustments)
+  const dark = schemeTokens(ColorScheme.DARK, accent, darkPrimary, adjustments)
   return { light, dark, adjustments, warnings: [...statusConflicts(accent), ...warnings] }
 }
 
