@@ -37,7 +37,6 @@ class ErrorCodeWireFormatTest {
         assertCode(SpaceError.INVALID_NAME, "invalid_name", HttpStatus.BAD_REQUEST);
         assertCode(SpaceError.INVALID_SLUG, "invalid_slug", HttpStatus.BAD_REQUEST);
         assertCode(SpaceError.INVALID_SUBJECT, "invalid_subject", HttpStatus.BAD_REQUEST);
-        assertCode(SpaceError.INVALID_PRECONDITION, "invalid_precondition", HttpStatus.BAD_REQUEST);
     }
 
     @Test

@@ -22,8 +22,7 @@ export interface SpacesPage {
   nextCursor: string | null
 }
 
-// The server answers 409 with `code: slug_taken` when If-None-Match: * names a
-// slug that already exists.
+// The server answers 409 with `code: slug_taken` when the new slug already exists.
 export function isSlugTakenError(error: unknown): boolean {
   return error instanceof ApiError && error.code === 'slug_taken'
 }
@@ -82,11 +81,9 @@ export async function fetchSpace(slug: string, signal: AbortSignal): Promise<Spa
 }
 
 export async function createSpace(values: CreateSpaceInput): Promise<SpaceSummary> {
-  const url = spaceUrl(contract.putSpace.path, values.slug)
-  const response = await serverClient.put<unknown>(
-    url,
-    { name: values.name },
-    { headers: { 'If-None-Match': '*' } },
-  )
+  const response = await serverClient.post<unknown>(contract.createSpace.path, {
+    slug: values.slug,
+    name: values.name,
+  })
   return toSummary(spaceSchema.parse(response.data))
 }

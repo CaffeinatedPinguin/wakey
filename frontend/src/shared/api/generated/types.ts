@@ -4,10 +4,12 @@
 import type { components, operations } from './schema'
 
 export type ProblemDetail = components['schemas']['ProblemDetail']
+export type CreateSpaceResponse = operations['createSpace']['responses'][201]['content']['application/json']
+export type CreateSpaceRequest = operations['createSpace']['requestBody']['content']['application/json']
 export type GetMeResponse = operations['getMe']['responses'][200]['content']['application/json']
 export type GetSpaceResponse = operations['getSpace']['responses'][200]['content']['application/json']
 export type GetSpacePath = NonNullable<operations['getSpace']['parameters']['path']>
-export type ListSpacesResponse = operations['listSpaces']['responses'][200]['content']['application/json']
+export type ListSpacesResponse = operations['listSpaces']['responses'][200]['content']['*/*']
 export type ListSpacesQuery = NonNullable<operations['listSpaces']['parameters']['query']>
 export type PutSpaceResponse = operations['putSpace']['responses'][200]['content']['application/json']
 export type PutSpaceRequest = operations['putSpace']['requestBody']['content']['application/json']

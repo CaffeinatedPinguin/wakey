@@ -3,6 +3,7 @@ package dev.wakey.api.spaces;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.oidcLogin;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
@@ -309,7 +310,7 @@ class SpacesControllerIntegrationTest extends SecurityIntegrationTest {
         MockHttpServletRequestBuilder badLimitRequest =
                 get(SPACES_PATH).param("limit", "abc").with(login(admin, true));
         MockHttpServletRequestBuilder wrongMethodRequest =
-                post(SPACES_PATH).with(login(admin, true)).with(csrf());
+                delete(SPACES_PATH).with(login(admin, true)).with(csrf());
 
         // when
         MvcResult badLimit = mockMvc().perform(badLimitRequest).andReturn();
@@ -333,7 +334,7 @@ class SpacesControllerIntegrationTest extends SecurityIntegrationTest {
         // given
         String admin = uniqueSubject("allow-header");
         MockHttpServletRequestBuilder request =
-                post(SPACES_PATH).with(login(admin, true)).with(csrf());
+                delete(SPACES_PATH).with(login(admin, true)).with(csrf());
 
         // when
         MvcResult result = mockMvc().perform(request).andReturn();
@@ -348,40 +349,53 @@ class SpacesControllerIntegrationTest extends SecurityIntegrationTest {
     }
 
     @Test
-    void putWithIfNoneMatchStarRefusesAnExistingSlug() throws Exception {
+    void postCreatesASpaceAndAnswersWithALocationHeader() throws Exception {
         // given
-        String admin = uniqueSubject("if-none-match");
-        String slug = uniqueSlug("existing");
-        putSpace(admin, true, slug, nameBody("Original name"), true);
+        String admin = uniqueSubject("post-create");
+        String slug = uniqueSlug("post-create");
 
         // when
-        MockHttpServletRequestBuilder request = put(SPACES_PATH + "/" + slug)
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(nameBody("Renamed"))
-                .header("If-None-Match", "*")
-                .with(login(admin, true))
-                .with(csrf());
-        MvcResult refused = mockMvc().perform(request).andReturn();
-        MockHttpServletRequestBuilder readRequest =
-                get(SPACES_PATH + "/" + slug).with(login(admin, true));
-        MvcResult read = mockMvc().perform(readRequest).andReturn();
+        MvcResult created = postSpace(admin, slug, "Created space");
 
         // then
-        JsonNode refusedBody = jsonOf(refused);
-        JsonNode readBody = jsonOf(read);
-        String refusedCode = refusedBody.path("code").asString();
-        String readName = readBody.path("name").asString();
-        assertThat(statusOf(refused)).isEqualTo(409);
-        assertThat(contentTypeOf(refused)).isEqualTo(PROBLEM_JSON);
-        assertThat(refusedCode).isEqualTo(SpaceError.SLUG_TAKEN.getCode());
-        assertThat(readName).isEqualTo("Original name");
+        String location = created.getResponse().getHeader(HttpHeaders.LOCATION);
+        JsonNode body = jsonOf(created);
+        String responseSlug = body.path("slug").asString();
+        String responseName = body.path("name").asString();
+        assertThat(statusOf(created)).isEqualTo(201);
+        assertThat(location).isEqualTo(SPACES_PATH + "/" + slug);
+        assertThat(responseSlug).isEqualTo(slug);
+        assertThat(responseName).isEqualTo("Created space");
     }
 
     @Test
-    void putWithoutTheHeaderStillRenames() throws Exception {
+    void postWithATakenSlugIsAConflictOnTheSlugField() throws Exception {
         // given
-        String admin = uniqueSubject("no-if-none-match");
-        String slug = uniqueSlug("rename-without-header");
+        String admin = uniqueSubject("post-taken");
+        String slug = uniqueSlug("post-taken");
+        putSpace(admin, true, slug, nameBody("Original name"), true);
+
+        // when
+        MvcResult refused = postSpace(admin, slug, "Renamed");
+
+        // then
+        JsonNode body = jsonOf(refused);
+        JsonNode firstError = body.path("errors").path(0);
+        String code = body.path("code").asString();
+        String pointer = firstError.path("pointer").asString();
+        String fieldCode = firstError.path("code").asString();
+        assertThat(statusOf(refused)).isEqualTo(409);
+        assertThat(contentTypeOf(refused)).isEqualTo(PROBLEM_JSON);
+        assertThat(code).isEqualTo(SpaceError.SLUG_TAKEN.getCode());
+        assertThat(pointer).isEqualTo("/slug");
+        assertThat(fieldCode).isEqualTo(SpaceError.SLUG_TAKEN.getCode());
+    }
+
+    @Test
+    void putWithoutAVersionStillRenames() throws Exception {
+        // given
+        String admin = uniqueSubject("no-version");
+        String slug = uniqueSlug("rename-without-version");
         putSpace(admin, true, slug, nameBody("Old name"), true);
 
         // when
@@ -395,15 +409,15 @@ class SpacesControllerIntegrationTest extends SecurityIntegrationTest {
     }
 
     @Test
-    void renamingWithAStaleIfMatchIsAConflict() throws Exception {
+    void renamingWithAStaleVersionIsAConflict() throws Exception {
         // given
-        String admin = uniqueSubject("stale-if-match");
-        String slug = uniqueSlug("stale-if-match");
+        String admin = uniqueSubject("stale-version");
+        String slug = uniqueSlug("stale-version");
         MvcResult created = putSpace(admin, true, slug, nameBody("Original name"), true);
         long createdVersion = jsonOf(created).path("version").asLong();
 
         // when
-        MvcResult stale = putWithHeader(admin, slug, nameBody("Stale name"), "If-Match", quoted(createdVersion - 1));
+        MvcResult stale = putSpace(admin, true, slug, nameAndVersionBody("Stale name", createdVersion - 1), true);
         MockHttpServletRequestBuilder readRequest =
                 get(SPACES_PATH + "/" + slug).with(login(admin, true));
         MvcResult read = mockMvc().perform(readRequest).andReturn();
@@ -420,13 +434,13 @@ class SpacesControllerIntegrationTest extends SecurityIntegrationTest {
     @Test
     void renamingWithTheCurrentVersionSucceeds() throws Exception {
         // given
-        String admin = uniqueSubject("current-if-match");
-        String slug = uniqueSlug("current-if-match");
+        String admin = uniqueSubject("current-version");
+        String slug = uniqueSlug("current-version");
         MvcResult created = putSpace(admin, true, slug, nameBody("Original name"), true);
         long createdVersion = jsonOf(created).path("version").asLong();
 
         // when
-        MvcResult renamed = putWithHeader(admin, slug, nameBody("Renamed name"), "If-Match", quoted(createdVersion));
+        MvcResult renamed = putSpace(admin, true, slug, nameAndVersionBody("Renamed name", createdVersion), true);
 
         // then
         JsonNode body = jsonOf(renamed);
@@ -438,19 +452,38 @@ class SpacesControllerIntegrationTest extends SecurityIntegrationTest {
     }
 
     @Test
-    void anIfNoneMatchOtherThanStarIsRejected() throws Exception {
+    void putOfANewSlugAnswersCreatedWithALocationHeader() throws Exception {
         // given
-        String admin = uniqueSubject("bad-if-none-match");
-        String slug = uniqueSlug("bad-if-none-match");
+        String admin = uniqueSubject("put-create");
+        String slug = uniqueSlug("put-create");
 
         // when
-        MvcResult rejected = putWithHeader(admin, slug, nameBody("Rejected"), "If-None-Match", "\"1\"");
+        MvcResult created = putSpace(admin, true, slug, nameBody("Put space"), true);
+
+        // then
+        String location = created.getResponse().getHeader(HttpHeaders.LOCATION);
+        assertThat(statusOf(created)).isEqualTo(201);
+        assertThat(location).isEqualTo(SPACES_PATH + "/" + slug);
+    }
+
+    @Test
+    void aNegativeVersionIsAValidationProblemWithPointer() throws Exception {
+        // given
+        String admin = uniqueSubject("negative-version");
+        String slug = uniqueSlug("negative-version");
+        putSpace(admin, true, slug, nameBody("Original name"), true);
+
+        // when
+        MvcResult rejected = putSpace(admin, true, slug, nameAndVersionBody("Renamed", -1), true);
 
         // then
         JsonNode body = jsonOf(rejected);
+        JsonNode firstError = body.path("errors").path(0);
         String code = body.path("code").asString();
+        String pointer = firstError.path("pointer").asString();
         assertThat(statusOf(rejected)).isEqualTo(400);
-        assertThat(code).isEqualTo(SpaceError.INVALID_PRECONDITION.getCode());
+        assertThat(code).isEqualTo(CommonError.VALIDATION_FAILED.getCode());
+        assertThat(pointer).isEqualTo("/version");
     }
 
     @Test
@@ -494,21 +527,6 @@ class SpacesControllerIntegrationTest extends SecurityIntegrationTest {
     }
 
     @Test
-    void aCreatedSpaceHasALocationHeader() throws Exception {
-        // given
-        String admin = uniqueSubject("location-admin");
-        String slug = uniqueSlug("location");
-
-        // when
-        MvcResult created = putSpace(admin, true, slug, nameBody("Located space"), true);
-
-        // then
-        String location = created.getResponse().getHeader("Location");
-        assertThat(statusOf(created)).isEqualTo(201);
-        assertThat(location).isEqualTo(SPACES_PATH + "/" + slug);
-    }
-
-    @Test
     void spaceResponseHasNoAdminField() throws Exception {
         // given
         String admin = uniqueSubject("no-admin-field");
@@ -528,12 +546,10 @@ class SpacesControllerIntegrationTest extends SecurityIntegrationTest {
         assertThat(responseSlug).isEqualTo(slug);
     }
 
-    private MvcResult putWithHeader(String subject, String slug, String body, String header, String value)
-            throws Exception {
-        var request = put(SPACES_PATH + "/" + slug)
+    private MvcResult postSpace(String subject, String slug, String name) throws Exception {
+        var request = post(SPACES_PATH)
                 .contentType(MediaType.APPLICATION_JSON)
-                .content(body)
-                .header(header, value)
+                .content(createBody(slug, name))
                 .with(login(subject, true))
                 .with(csrf());
         return mockMvc().perform(request).andReturn();
@@ -584,8 +600,12 @@ class SpacesControllerIntegrationTest extends SecurityIntegrationTest {
         return "{\"name\":\"" + name + "\"}";
     }
 
-    private static String quoted(long version) {
-        return "\"" + version + "\"";
+    private static String nameAndVersionBody(String name, long version) {
+        return "{\"name\":\"" + name + "\",\"version\":" + version + "}";
+    }
+
+    private static String createBody(String slug, String name) {
+        return "{\"slug\":\"" + slug + "\",\"name\":\"" + name + "\"}";
     }
 
     private static int statusOf(MvcResult result) {

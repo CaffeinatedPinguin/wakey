@@ -5,7 +5,7 @@ import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 
-/** The error codes of the spaces module: slugs, versions, member fields and preconditions. */
+/** The error codes of the spaces module: slugs, versions and member fields. */
 @Getter
 @RequiredArgsConstructor
 public enum SpaceError implements ErrorCode {
@@ -25,8 +25,7 @@ public enum SpaceError implements ErrorCode {
                     + " lowercase letters, digits or hyphens, start with a letter and end with a letter or digit."),
     INVALID_SUBJECT(
             HttpStatus.BAD_REQUEST,
-            "A member subject must have 1-" + SpacePrincipal.MAX_SUBJECT_LENGTH + " characters."),
-    INVALID_PRECONDITION(HttpStatus.BAD_REQUEST, "The precondition header is invalid.");
+            "A member subject must have 1-" + SpacePrincipal.MAX_SUBJECT_LENGTH + " characters.");
 
     private final HttpStatus status;
 

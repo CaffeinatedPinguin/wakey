@@ -126,7 +126,8 @@ class JdbcSpaceService implements SpaceService {
         String checkedName = SpaceName.requireValid(name);
         int inserted = insertSpaceIfAbsent(checkedSlug, checkedName);
         if (inserted == 0) {
-            throw new ApiException(SpaceError.SLUG_TAKEN);
+            FieldProblem problem = new FieldProblem("/slug", SpaceError.SLUG_TAKEN.getCode(), Map.of());
+            throw new ApiException(SpaceError.SLUG_TAKEN, List.of(problem));
         }
         return new PutResult(findRequired(checkedSlug), true);
     }

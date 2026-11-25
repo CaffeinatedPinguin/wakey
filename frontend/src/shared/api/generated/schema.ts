@@ -26,10 +26,9 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** List the spaces visible to the caller */
         get: operations["listSpaces"];
         put?: never;
-        post?: never;
+        post: operations["createSpace"];
         delete?: never;
         options?: never;
         head?: never;
@@ -43,12 +42,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Read one space visible to the caller */
         get: operations["getSpace"];
-        /**
-         * Create or rename a space idempotently
-         * @description A rename is last-write-wins unless an If-Match precondition is sent. Send If-None-Match: * to create the space only when the slug is free, and If-Match: "<version>" to rename only the version the caller read.
-         */
         put: operations["putSpace"];
         post?: never;
         delete?: never;
@@ -61,6 +55,19 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /** @description The desired state of a new space */
+        CreateSpaceRequest: {
+            /**
+             * @description The display name, 1-100 characters after trimming
+             * @example Acme
+             */
+            name: string;
+            /**
+             * @description The stable space slug
+             * @example acme
+             */
+            slug: string;
+        };
         CurrentUser: {
             /** @description Whether the user is an instance administrator */
             admin: boolean;
@@ -75,7 +82,7 @@ export interface components {
         };
         ProblemDetail: {
             /** @enum {string} */
-            code?: "bad_request" | "validation_failed" | "invalid_body" | "invalid_cursor" | "unauthenticated" | "forbidden" | "not_found" | "method_not_allowed" | "not_acceptable" | "unsupported_media_type" | "internal_error" | "slug_taken" | "version_conflict" | "invalid_name" | "invalid_slug" | "invalid_subject" | "invalid_precondition";
+            code?: "bad_request" | "validation_failed" | "invalid_body" | "invalid_cursor" | "unauthenticated" | "forbidden" | "not_found" | "method_not_allowed" | "not_acceptable" | "unsupported_media_type" | "internal_error" | "slug_taken" | "version_conflict" | "invalid_name" | "invalid_slug" | "invalid_subject";
             detail?: string;
             errors?: {
                 code?: string;
@@ -99,6 +106,12 @@ export interface components {
              * @example Acme
              */
             name: string;
+            /**
+             * Format: int64
+             * @description The version the caller read; omit to rename without a condition
+             * @example 1
+             */
+            version?: number;
         };
         /** @description A space as seen by the caller */
         SpaceResponse: {
@@ -181,16 +194,42 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["CursorPageSpaceResponse"];
+                    "*/*": components["schemas"]["CursorPageSpaceResponse"];
                 };
             };
-            /** @description The cursor or the limit is invalid. */
-            400: {
+            /** @description Authentication is required. */
+            401: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
                     "application/problem+json": components["schemas"]["ProblemDetail"];
+                };
+            };
+        };
+    };
+    createSpace: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateSpaceRequest"];
+            };
+        };
+        responses: {
+            /** @description The space was created. */
+            201: {
+                headers: {
+                    /** @description The URL of the created space. */
+                    Location?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SpaceResponse"];
                 };
             };
             /** @description Authentication is required. */
@@ -224,26 +263,8 @@ export interface operations {
                     "application/json": components["schemas"]["SpaceResponse"];
                 };
             };
-            /** @description The slug is invalid. */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/problem+json": components["schemas"]["ProblemDetail"];
-                };
-            };
             /** @description Authentication is required. */
             401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/problem+json": components["schemas"]["ProblemDetail"];
-                };
-            };
-            /** @description The space was not found. */
-            404: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -256,12 +277,7 @@ export interface operations {
     putSpace: {
         parameters: {
             query?: never;
-            header?: {
-                /** @description Send * to create the space only when the slug is free. */
-                "If-None-Match"?: string;
-                /** @description The quoted space version to rename, for example "1". */
-                "If-Match"?: string;
-            };
+            header?: never;
             path: {
                 slug: string;
             };
@@ -285,41 +301,16 @@ export interface operations {
             /** @description The space was created. */
             201: {
                 headers: {
+                    /** @description The URL of the created space. */
+                    Location?: string;
                     [name: string]: unknown;
                 };
                 content: {
                     "application/json": components["schemas"]["SpaceResponse"];
                 };
             };
-            /** @description The request is invalid or a precondition header is malformed. */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/problem+json": components["schemas"]["ProblemDetail"];
-                };
-            };
             /** @description Authentication is required. */
             401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/problem+json": components["schemas"]["ProblemDetail"];
-                };
-            };
-            /** @description The caller is not allowed to create or rename spaces. */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/problem+json": components["schemas"]["ProblemDetail"];
-                };
-            };
-            /** @description The slug is taken or the If-Match version is stale. */
-            409: {
                 headers: {
                     [name: string]: unknown;
                 };

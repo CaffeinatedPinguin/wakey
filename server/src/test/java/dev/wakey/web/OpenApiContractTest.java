@@ -136,6 +136,66 @@ class OpenApiContractTest extends SecurityIntegrationTest {
         assertThat(maximum).isEqualTo(maxPageSize);
     }
 
+    @Test
+    void theContractHasOneSpacesTagAndNoPreconditionHeaders() throws Exception {
+        // given
+        JsonNode document = MAPPER.readTree(generatedContract());
+        JsonNode paths = document.path("paths");
+        Set<String> spacesTags = new LinkedHashSet<>();
+        int spacesOperations = 0;
+
+        // when
+        for (String path : paths.propertyNames()) {
+            if (!path.startsWith("/api/v1/spaces")) {
+                continue;
+            }
+            for (String method : HTTP_METHODS) {
+                JsonNode operation = paths.path(path).path(method);
+                if (!operation.isMissingNode()) {
+                    spacesOperations++;
+                    JsonNode tags = operation.path("tags");
+                    spacesTags.addAll(valuesOf(tags));
+                    assertNoPreconditionHeader(operation);
+                }
+            }
+        }
+
+        // then
+        assertThat(spacesOperations).isEqualTo(4);
+        assertThat(spacesTags).containsExactly("spaces");
+    }
+
+    @Test
+    void everyApiOperationAnswers401InTheContract() throws Exception {
+        // given
+        JsonNode document = MAPPER.readTree(generatedContract());
+        JsonNode paths = document.path("paths");
+        int checked = 0;
+
+        // when
+        for (String path : paths.propertyNames()) {
+            for (String method : HTTP_METHODS) {
+                JsonNode operation = paths.path(path).path(method);
+                if (!operation.isMissingNode()) {
+                    checked++;
+                    boolean answersUnauthorized = operation.path("responses").has("401");
+                    assertThat(answersUnauthorized).as(path + " " + method).isTrue();
+                }
+            }
+        }
+
+        // then
+        assertThat(checked).isPositive();
+    }
+
+    private static void assertNoPreconditionHeader(JsonNode operation) {
+        for (JsonNode parameter : operation.path("parameters")) {
+            String name = parameter.path("name").asString();
+            assertThat(name).isNotEqualTo("If-None-Match");
+            assertThat(name).isNotEqualTo("If-Match");
+        }
+    }
+
     private static JsonNode parameterNamed(JsonNode parameters, String name) {
         for (JsonNode parameter : parameters) {
             String parameterName = parameter.path("name").asString();

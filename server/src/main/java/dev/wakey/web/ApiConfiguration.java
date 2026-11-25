@@ -6,13 +6,18 @@ import io.swagger.v3.oas.models.Operation;
 import io.swagger.v3.oas.models.PathItem;
 import io.swagger.v3.oas.models.Paths;
 import io.swagger.v3.oas.models.info.Info;
+import io.swagger.v3.oas.models.media.Content;
+import io.swagger.v3.oas.models.media.MediaType;
 import io.swagger.v3.oas.models.media.Schema;
-import io.swagger.v3.oas.models.media.StringSchema;
 import io.swagger.v3.oas.models.parameters.Parameter;
+import io.swagger.v3.oas.models.responses.ApiResponse;
+import io.swagger.v3.oas.models.responses.ApiResponses;
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import org.jspecify.annotations.Nullable;
+import org.springdoc.core.customizers.OperationCustomizer;
 import org.springdoc.core.models.GroupedOpenApi;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
@@ -31,17 +36,7 @@ public class ApiConfiguration {
 
     private static final String PROBLEM_DETAIL_SCHEMA = "ProblemDetail";
 
-    private static final String SPACES_PATH = ApiPaths.API_V1 + "/spaces";
-
-    private static final String SPACES_ITEM_PATH = SPACES_PATH + "/{slug}";
-
-    private static final String LIMIT_PARAMETER = "limit";
-
-    private static final String IF_NONE_MATCH = "If-None-Match";
-
-    private static final String IF_MATCH = "If-Match";
-
-    private static final String SPACES_TAG = "spaces-controller";
+    private static final String PROBLEM_DETAIL_REF = "#/components/schemas/" + PROBLEM_DETAIL_SCHEMA;
 
     @Bean
     GroupedOpenApi publicApi(ApiProperties apiProperties, List<ErrorCodes> errorCodeGroups) {
@@ -50,6 +45,7 @@ public class ApiConfiguration {
                 .group(GROUP)
                 .pathsToMatch(ApiPaths.API_V1_ALL)
                 .addOpenApiCustomizer(openApi -> documentPublicApi(openApi, apiProperties, codes))
+                .addOperationCustomizer(OpenApiUnauthenticatedResponse.customizer(PROBLEM_DETAIL_REF))
                 .build();
     }
 
@@ -62,9 +58,7 @@ public class ApiConfiguration {
         }
         components.addSchemas(PROBLEM_DETAIL_SCHEMA, ProblemDetailSchema.schema(codes));
         openApi.setComponents(components);
-        Paths paths = openApi.getPaths();
-        documentPageLimit(paths, apiProperties.maxPageSize());
-        documentPreconditionHeaders(paths);
+        OpenApiPageLimit.document(openApi.getPaths(), apiProperties.maxPageSize());
     }
 
     private static List<String> errorCodeValues(List<ErrorCodes> errorCodeGroups) {
@@ -80,69 +74,71 @@ public class ApiConfiguration {
         return List.copyOf(codes);
     }
 
-    private static void documentPageLimit(@Nullable Paths paths, int maxPageSize) {
-        if (paths != null) {
-            PathItem spaces = paths.get(SPACES_PATH);
-            if (spaces != null) {
-                documentPageBounds(spaces.getGet(), maxPageSize);
-            }
+    /** Documents the single {@code 401} answer that every public API operation shares. */
+    private static final class OpenApiUnauthenticatedResponse {
+
+        private static final String UNAUTHORIZED = "401";
+
+        private OpenApiUnauthenticatedResponse() {}
+
+        static OperationCustomizer customizer(String problemDetailRef) {
+            return (operation, handlerMethod) -> {
+                ApiResponses responses = operation.getResponses();
+                if (responses == null) {
+                    responses = new ApiResponses();
+                    operation.setResponses(responses);
+                }
+                responses.addApiResponse(UNAUTHORIZED, problemResponse(problemDetailRef));
+                return operation;
+            };
+        }
+
+        private static ApiResponse problemResponse(String problemDetailRef) {
+            Schema<?> schema = new Schema<>().$ref(problemDetailRef);
+            MediaType mediaType = new MediaType().schema(schema);
+            Content content = new Content();
+            content.addMediaType(org.springframework.http.MediaType.APPLICATION_PROBLEM_JSON_VALUE, mediaType);
+            return new ApiResponse()
+                    .description(CommonError.UNAUTHENTICATED.getDetail())
+                    .content(content);
         }
     }
 
-    private static void documentPageBounds(@Nullable Operation operation, int maxPageSize) {
-        if (operation != null) {
-            List<Parameter> parameters = operation.getParameters();
-            if (parameters != null) {
-                parameters.stream()
-                        .filter(ApiConfiguration::isLimit)
-                        .findFirst()
-                        .ifPresent(parameter -> setPageBounds(parameter, maxPageSize));
+    /** Documents the instance page-size bounds on the {@code limit} parameter of every operation. */
+    private static final class OpenApiPageLimit {
+
+        private static final String LIMIT_PARAMETER = "limit";
+
+        private OpenApiPageLimit() {}
+
+        static void document(@Nullable Paths paths, int maxPageSize) {
+            if (paths != null) {
+                for (PathItem pathItem : paths.values()) {
+                    documentBounds(pathItem.readOperations(), maxPageSize);
+                }
             }
         }
-    }
 
-    private static void setPageBounds(Parameter parameter, int maxPageSize) {
-        Schema<?> schema = parameter.getSchema();
-        if (schema != null) {
+        private static void documentBounds(List<Operation> operations, int maxPageSize) {
+            for (Operation operation : operations) {
+                List<Parameter> parameters = operation.getParameters();
+                if (parameters != null) {
+                    parameters.stream()
+                            .filter(OpenApiPageLimit::isLimit)
+                            .findFirst()
+                            .ifPresent(parameter -> setBounds(parameter, maxPageSize));
+                }
+            }
+        }
+
+        private static void setBounds(Parameter parameter, int maxPageSize) {
+            Schema<?> schema = Objects.requireNonNull(parameter.getSchema());
             schema.setMinimum(BigDecimal.ONE);
             schema.setMaximum(BigDecimal.valueOf(maxPageSize));
         }
-    }
 
-    private static boolean isLimit(Parameter parameter) {
-        return LIMIT_PARAMETER.equals(parameter.getName());
-    }
-
-    private static void documentPreconditionHeaders(@Nullable Paths paths) {
-        if (paths != null) {
-            PathItem item = paths.get(SPACES_ITEM_PATH);
-            if (item != null) {
-                addPreconditionHeaders(item.getPut());
-            }
+        private static boolean isLimit(Parameter parameter) {
+            return LIMIT_PARAMETER.equals(parameter.getName());
         }
-    }
-
-    private static void addPreconditionHeaders(@Nullable Operation operation) {
-        if (operation != null) {
-            operation.setTags(List.of(SPACES_TAG));
-            List<Parameter> parameters = operation.getParameters();
-            if (parameters != null) {
-                Parameter ifNoneMatch =
-                        headerParameter(IF_NONE_MATCH, "Send * to create the space only when the slug is free.");
-                Parameter ifMatch = headerParameter(IF_MATCH, "The quoted space version to rename, for example \"1\".");
-                parameters.add(ifNoneMatch);
-                parameters.add(ifMatch);
-            }
-        }
-    }
-
-    private static Parameter headerParameter(String name, String description) {
-        Parameter parameter = new Parameter();
-        parameter.setIn("header");
-        parameter.setName(name);
-        parameter.setRequired(false);
-        parameter.setDescription(description);
-        parameter.setSchema(new StringSchema());
-        return parameter;
     }
 }

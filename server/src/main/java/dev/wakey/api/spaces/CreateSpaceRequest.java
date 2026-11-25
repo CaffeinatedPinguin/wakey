@@ -1,0 +1,25 @@
+package dev.wakey.api.spaces;
+
+import dev.wakey.spaces.SpaceName;
+import dev.wakey.spaces.SpaceSlug;
+import io.swagger.v3.oas.annotations.media.Schema;
+import jakarta.validation.constraints.NotNull;
+
+/** The desired state of a new space. */
+@Schema(description = "The desired state of a new space")
+public record CreateSpaceRequest(
+        @Schema(
+                description = "The stable space slug",
+                example = "acme",
+                pattern = SpaceSlug.PATTERN,
+                requiredMode = Schema.RequiredMode.REQUIRED)
+        @NotNull
+        String slug,
+
+        @Schema(
+                description = "The display name, 1-100 characters after trimming",
+                example = "Acme",
+                minLength = 1,
+                maxLength = SpaceName.MAX_LENGTH)
+        @NotNull
+        String name) {}
