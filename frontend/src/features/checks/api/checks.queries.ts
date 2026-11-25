@@ -1,36 +1,14 @@
-import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import type {
-  InfiniteData,
-  UseInfiniteQueryResult,
-  UseMutationResult,
-  UseQueryResult,
-} from '@tanstack/react-query'
-import type { QueryClient } from '@tanstack/react-query'
-import {
-  deleteCheck,
-  fetchCheck,
-  fetchCheckCounts,
-  fetchChecks,
-  pauseCheck,
-  resumeCheck,
-} from './checks.api'
+import { useInfiniteQuery, useQuery } from '@tanstack/react-query'
+import type { InfiniteData, UseInfiniteQueryResult, UseQueryResult } from '@tanstack/react-query'
+import { fetchCheck, fetchCheckCounts, fetchChecks } from './checks.api'
 import type { CheckApiFilters } from './checks.api'
 import type { CheckPage, CheckRecord, StateCounts } from './checks.schemas'
-
-export interface CheckMutationVariables {
-  slug: string
-  id: string
-}
 
 export const checksQueryKeys = {
   all: ['checks'] as const,
   list: (slug: string, filters: CheckApiFilters) => ['checks', 'list', slug, filters] as const,
   counts: (slug: string, filters: CheckApiFilters) => ['checks', 'counts', slug, filters] as const,
   detail: (slug: string, id: string) => ['checks', 'detail', slug, id] as const,
-}
-
-function invalidateChecks(queryClient: QueryClient): void {
-  void queryClient.invalidateQueries({ queryKey: checksQueryKeys.all })
 }
 
 export function useChecksList(
@@ -59,35 +37,5 @@ export function useCheck(slug: string, id: string): UseQueryResult<CheckRecord> 
   return useQuery({
     queryKey: checksQueryKeys.detail(slug, id),
     queryFn: ({ signal }) => fetchCheck(slug, id, signal),
-  })
-}
-
-export function usePauseCheck(): UseMutationResult<CheckRecord, Error, CheckMutationVariables> {
-  const queryClient = useQueryClient()
-  return useMutation({
-    mutationFn: (variables: CheckMutationVariables) => pauseCheck(variables.slug, variables.id),
-    onSuccess: () => {
-      invalidateChecks(queryClient)
-    },
-  })
-}
-
-export function useResumeCheck(): UseMutationResult<CheckRecord, Error, CheckMutationVariables> {
-  const queryClient = useQueryClient()
-  return useMutation({
-    mutationFn: (variables: CheckMutationVariables) => resumeCheck(variables.slug, variables.id),
-    onSuccess: () => {
-      invalidateChecks(queryClient)
-    },
-  })
-}
-
-export function useDeleteCheck(): UseMutationResult<void, Error, CheckMutationVariables> {
-  const queryClient = useQueryClient()
-  return useMutation({
-    mutationFn: (variables: CheckMutationVariables) => deleteCheck(variables.slug, variables.id),
-    onSuccess: () => {
-      invalidateChecks(queryClient)
-    },
   })
 }

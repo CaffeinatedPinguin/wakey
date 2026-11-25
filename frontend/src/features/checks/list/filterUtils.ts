@@ -1,18 +1,20 @@
 import type { FacetKey, ListFilters } from './types'
 
-function toggle(values: string[], value: string): string[] {
-  return values.includes(value) ? values.filter((item) => item !== value) : [...values, value]
+// The server accepts one value per filter, so a second choice replaces the
+// first and choosing the selected value again clears the filter.
+function choose(values: string[], value: string): string[] {
+  return values.includes(value) ? [] : [value]
 }
 
-export function withFacetToggle(filters: ListFilters, key: FacetKey, value: string): ListFilters {
+export function withFacetChoice(filters: ListFilters, key: FacetKey, value: string): ListFilters {
   switch (key) {
     case 'state':
-      return { ...filters, state: toggle(filters.state, value) }
+      return { ...filters, state: choose(filters.state, value) }
     case 'type':
-      return { ...filters, type: toggle(filters.type, value) }
+      return { ...filters, type: choose(filters.type, value) }
     case 'tag':
-      return { ...filters, tag: toggle(filters.tag, value) }
+      return { ...filters, tag: choose(filters.tag, value) }
     case 'group':
-      return { ...filters, group: toggle(filters.group, value) }
+      return { ...filters, group: choose(filters.group, value) }
   }
 }

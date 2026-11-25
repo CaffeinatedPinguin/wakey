@@ -4,7 +4,7 @@ import type { ReactElement } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { CheckRowData, RowAction } from './types'
 
-const rowActions: RowAction[] = ['pause', 'resume', 'mute']
+const rowActions: RowAction[] = ['pause', 'resume']
 
 interface RowMenuProps {
   row: CheckRowData

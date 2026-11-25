@@ -1,11 +1,32 @@
 import type { ListFilters } from '../list/types'
 import type { CheckApiFilters } from './checks.api'
+import type { CheckState, CheckType, PausedReason } from './checks.schemas'
 
-const CHECK_STATES = ['down', 'degraded', 'up', 'unknown'] as const
-const CHECK_TYPES = ['http', 'tcp', 'certificate'] as const
-const CHECK_PAUSED_REASONS = ['manual', 'plan_limit', 'abandoned', 'unverified'] as const
-const CHECK_SORTS = ['name', 'state', 'lastResult'] as const
-const DEFAULT_SORT = 'name'
+// The server compares tags and groups exactly, so only the enumerated filters
+// are normalised to lower case. One table maps each URL value to the API value.
+const STATE_API: Readonly<Record<string, CheckState>> = {
+  up: 'UP',
+  degraded: 'DEGRADED',
+  down: 'DOWN',
+  unknown: 'UNKNOWN',
+}
+
+const TYPE_API: Readonly<Record<string, CheckType>> = {
+  http: 'HTTP',
+  tcp: 'TCP',
+  certificate: 'CERTIFICATE',
+}
+
+const PAUSED_REASON_API: Readonly<Record<string, PausedReason>> = {
+  manual: 'MANUAL',
+  plan_limit: 'PLAN_LIMIT',
+  abandoned: 'ABANDONED',
+  unverified: 'UNVERIFIED',
+}
+
+const STATE_KEYS = Object.keys(STATE_API)
+const TYPE_KEYS = Object.keys(TYPE_API)
+const PAUSED_REASON_KEYS = Object.keys(PAUSED_REASON_API)
 
 export interface ChecksSearch {
   q?: string
@@ -14,40 +35,35 @@ export interface ChecksSearch {
   tag?: string[]
   group?: string[]
   pausedReason?: string[]
-  sort?: string
 }
 
 function isObject(search: unknown): search is Record<string, unknown> {
   return typeof search === 'object' && search !== null
 }
 
-function isAllowed<T extends string>(value: string, allowed: readonly T[]): value is T {
-  return allowed.some((item) => item === value)
-}
-
-function stringsOf(value: unknown): string[] {
+function firstText(value: unknown): string | undefined {
   if (Array.isArray(value)) {
-    return value.flatMap((item) => stringsOf(item))
+    return firstText(value[0])
   }
-  if (typeof value !== 'string') {
-    return []
-  }
-  return value
-    .split(',')
-    .map((item) => item.trim().toLowerCase())
-    .filter((item) => item.length > 0)
-}
-
-function picked<T extends string>(value: unknown, allowed: readonly T[]): T[] {
-  return stringsOf(value).filter((item): item is T => isAllowed(item, allowed))
-}
-
-function oneOf<T extends string>(value: unknown, allowed: readonly T[]): T | undefined {
   if (typeof value !== 'string') {
     return undefined
   }
-  const normalized = value.toLowerCase()
-  return isAllowed(normalized, allowed) ? normalized : undefined
+  const trimmed = value.trim()
+  return trimmed.length === 0 ? undefined : trimmed
+}
+
+function enumChoice(value: unknown, allowed: readonly string[]): string[] {
+  const normalized = firstText(value)?.toLowerCase()
+  if (normalized === undefined) {
+    return []
+  }
+  return allowed.includes(normalized) ? [normalized] : []
+}
+
+// Tags and groups keep their case and are never split on a comma.
+function textChoice(value: unknown): string[] {
+  const text = firstText(value)
+  return text === undefined ? [] : [text]
 }
 
 function textSearch(q: string | undefined, tag: string[], group: string[]): ChecksSearch {
@@ -58,17 +74,11 @@ function textSearch(q: string | undefined, tag: string[], group: string[]): Chec
   }
 }
 
-function enumSearch(
-  state: string[],
-  type: string[],
-  pausedReason: string[],
-  sort: string | undefined,
-): ChecksSearch {
+function enumSearch(state: string[], type: string[], pausedReason: string[]): ChecksSearch {
   return {
     ...(state.length === 0 ? {} : { state }),
     ...(type.length === 0 ? {} : { type }),
     ...(pausedReason.length === 0 ? {} : { pausedReason }),
-    ...(sort === undefined ? {} : { sort }),
   }
 }
 
@@ -77,13 +87,12 @@ export function validateChecksSearch(search: unknown): ChecksSearch {
     return {}
   }
   const q = typeof search.q === 'string' && search.q.trim().length > 0 ? search.q : undefined
-  const state = picked(search.state, CHECK_STATES)
-  const type = picked(search.type, CHECK_TYPES)
-  const tag = stringsOf(search.tag)
-  const group = stringsOf(search.group)
-  const pausedReason = picked(search.pausedReason, CHECK_PAUSED_REASONS)
-  const sort = oneOf(search.sort, CHECK_SORTS)
-  return { ...textSearch(q, tag, group), ...enumSearch(state, type, pausedReason, sort) }
+  const state = enumChoice(search.state, STATE_KEYS)
+  const type = enumChoice(search.type, TYPE_KEYS)
+  const tag = textChoice(search.tag)
+  const group = textChoice(search.group)
+  const pausedReason = enumChoice(search.pausedReason, PAUSED_REASON_KEYS)
+  return { ...textSearch(q, tag, group), ...enumSearch(state, type, pausedReason) }
 }
 
 export function spaceOf(search: unknown): string | undefined {
@@ -117,57 +126,19 @@ export function toListFilters(search: ChecksSearch): ListFilters {
     type: search.type ?? [],
     tag: search.tag ?? [],
     group: search.group ?? [],
-    sort: search.sort ?? DEFAULT_SORT,
   }
 }
 
-function apiState(value: string | undefined): CheckApiFilters['state'] {
-  switch (value) {
-    case 'up':
-      return 'UP'
-    case 'degraded':
-      return 'DEGRADED'
-    case 'down':
-      return 'DOWN'
-    case 'unknown':
-      return 'UNKNOWN'
-    case undefined:
-      return undefined
-    default:
-      return undefined
-  }
+function stateFilter(value: string | undefined): CheckState | undefined {
+  return value === undefined ? undefined : STATE_API[value]
 }
 
-function apiType(value: string | undefined): CheckApiFilters['type'] {
-  switch (value) {
-    case 'http':
-      return 'HTTP'
-    case 'tcp':
-      return 'TCP'
-    case 'certificate':
-      return 'CERTIFICATE'
-    case undefined:
-      return undefined
-    default:
-      return undefined
-  }
+function typeFilter(value: string | undefined): CheckType | undefined {
+  return value === undefined ? undefined : TYPE_API[value]
 }
 
-function apiPausedReason(value: string | undefined): CheckApiFilters['pausedReason'] {
-  switch (value) {
-    case 'manual':
-      return 'MANUAL'
-    case 'plan_limit':
-      return 'PLAN_LIMIT'
-    case 'abandoned':
-      return 'ABANDONED'
-    case 'unverified':
-      return 'UNVERIFIED'
-    case undefined:
-      return undefined
-    default:
-      return undefined
-  }
+function pausedReasonFilter(value: string | undefined): PausedReason | undefined {
+  return value === undefined ? undefined : PAUSED_REASON_API[value]
 }
 
 function textFilters(search: ChecksSearch): CheckApiFilters {
@@ -175,14 +146,13 @@ function textFilters(search: ChecksSearch): CheckApiFilters {
     ...(search.q === undefined ? {} : { q: search.q }),
     ...(search.tag?.[0] === undefined ? {} : { tag: search.tag[0] }),
     ...(search.group?.[0] === undefined ? {} : { group: search.group[0] }),
-    sort: search.sort ?? DEFAULT_SORT,
   }
 }
 
 function enumFilters(search: ChecksSearch): CheckApiFilters {
-  const state = apiState(search.state?.[0])
-  const type = apiType(search.type?.[0])
-  const pausedReason = apiPausedReason(search.pausedReason?.[0])
+  const state = stateFilter(search.state?.[0])
+  const type = typeFilter(search.type?.[0])
+  const pausedReason = pausedReasonFilter(search.pausedReason?.[0])
   return {
     ...(state === undefined ? {} : { state }),
     ...(type === undefined ? {} : { type }),
@@ -202,7 +172,6 @@ export function withListFilters(search: ChecksSearch, filters: ListFilters): Che
     ...(filters.tag.length === 0 ? {} : { tag: filters.tag }),
     ...(filters.group.length === 0 ? {} : { group: filters.group }),
     ...(search.pausedReason === undefined ? {} : { pausedReason: search.pausedReason }),
-    ...(filters.sort === DEFAULT_SORT ? {} : { sort: filters.sort }),
   }
 }
 

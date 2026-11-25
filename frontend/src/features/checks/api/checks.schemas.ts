@@ -76,3 +76,6 @@ export const stateCountsSchema = z.object({
 export type CheckRecord = z.infer<typeof checkSchema>
 export type CheckPage = z.infer<typeof checksPageSchema>
 export type StateCounts = z.infer<typeof stateCountsSchema>
+export type CheckState = z.infer<typeof checkStateSchema>
+export type CheckType = z.infer<typeof checkTypeSchema>
+export type PausedReason = z.infer<typeof pausedReasonSchema>

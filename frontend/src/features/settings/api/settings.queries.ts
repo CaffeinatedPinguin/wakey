@@ -1,19 +1,13 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import type { QueryClient, UseMutationResult, UseQueryResult } from '@tanstack/react-query'
-import {
-  fetchSpaceAccess,
-  fetchSpaceSettings,
-  resetSpaceSettings,
-  updateSpaceSetting,
-} from './settings.api'
+import { fetchSpaceSettings, resetSpaceSettings, updateSpaceSetting } from './settings.api'
 import type { SettingChange } from './settings.api'
-import type { SpaceAccess, SpaceSetting } from './settings.schemas'
+import type { SpaceSetting } from './settings.schemas'
 
 const SETTINGS_KEY = 'settings'
 
 export const settingsQueryKeys = {
   space: (slug: string) => [SETTINGS_KEY, 'space', slug] as const,
-  access: (slug: string) => [SETTINGS_KEY, 'access', slug] as const,
 }
 
 function invalidateSettings(queryClient: QueryClient, slug: string | undefined): void {
@@ -31,19 +25,6 @@ export function useSpaceSettings(slug: string | undefined): UseQueryResult<Space
         throw new Error('A slug is required to read the settings')
       }
       return fetchSpaceSettings(slug, signal)
-    },
-    enabled: slug !== undefined,
-  })
-}
-
-export function useSpaceAccess(slug: string | undefined): UseQueryResult<SpaceAccess> {
-  return useQuery({
-    queryKey: settingsQueryKeys.access(slug ?? ''),
-    queryFn: ({ signal }) => {
-      if (slug === undefined) {
-        throw new Error('A slug is required to read the space access')
-      }
-      return fetchSpaceAccess(slug, signal)
     },
     enabled: slug !== undefined,
   })

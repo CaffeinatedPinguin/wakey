@@ -139,9 +139,15 @@ function boundText(key: string, bound: unknown): string | undefined {
 }
 
 export function settingFieldError(key: string, error: unknown): SettingFieldError | undefined {
-  if (!(error instanceof ApiError) || error.code !== 'out_of_plan') {
+  if (!(error instanceof ApiError)) {
     return undefined
   }
-  const bound = boundText(key, error.params.bound)
-  return { code: 'out_of_plan', ...(bound === undefined ? {} : { bound }) }
+  if (error.code === 'out_of_plan') {
+    const bound = boundText(key, error.params.bound)
+    return { code: 'out_of_plan', ...(bound === undefined ? {} : { bound }) }
+  }
+  if (error.code === 'validation_failed' || error.status === 403) {
+    return { code: 'invalid' }
+  }
+  return undefined
 }

@@ -47,7 +47,6 @@ it('the filter bar shows facet counts and reports changes', () => {
     type: [],
     tag: [],
     group: [],
-    sort: 'name',
   })
 })
 

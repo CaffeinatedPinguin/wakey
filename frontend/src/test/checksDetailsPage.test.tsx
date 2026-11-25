@@ -48,6 +48,16 @@ describe('the check details page', () => {
     expect(await screen.findByRole('heading', { name: 'Nie znaleziono checka' })).toBeDefined()
   })
 
+  it('the check details page without a space shows the missing space state', async () => {
+    api.state.spaces = []
+    renderApp('/checks/c1')
+
+    expect(await screen.findByRole('heading', { name: 'Brak przestrzeni' })).toBeDefined()
+    expect(screen.queryByRole('status', { name: 'Ładowanie checka…' })).toBeNull()
+  })
+})
+
+describe('the check details page actions', () => {
   it('deleting a check from the details page returns to the list', async () => {
     api.state.checks = [detailCheck()]
     api.state.counts = countsFor(api.state.checks)

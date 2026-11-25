@@ -1,14 +1,12 @@
-import { Button, Checkbox, Drawer, Group, Select, Stack, Text, TextInput } from '@mantine/core'
+import { Button, Checkbox, Drawer, Group, Stack, Text, TextInput } from '@mantine/core'
 import { useDisclosure } from '@mantine/hooks'
 import { IconFilter } from '@tabler/icons-react'
 import type { ReactElement } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useIsMobile } from '../../../shared/ui'
-import { withFacetToggle } from './filterUtils'
+import { withFacetChoice } from './filterUtils'
 import { sheetStyles, touchStyle } from './listStyles'
 import type { FacetKey, FacetOption, FilterFacet, ListFilters } from './types'
-
-const sortValues = ['name', 'state', 'lastResult']
 
 interface FilterControlsProps {
   filters: ListFilters
@@ -42,7 +40,7 @@ function FacetOptionRow(props: FacetOptionRowProps): ReactElement {
         label={option.label}
         checked={filters[facetKey].includes(option.value)}
         onChange={() => {
-          onFiltersChange(withFacetToggle(filters, facetKey, option.value))
+          onFiltersChange(withFacetChoice(filters, facetKey, option.value))
         }}
       />
       <Text size="xs" c="dimmed">
@@ -75,10 +73,6 @@ function FacetGroup({ facet, filters, onFiltersChange }: FacetGroupProps): React
 
 function FilterControls({ filters, facets, onFiltersChange }: FilterControlsProps): ReactElement {
   const { t } = useTranslation()
-  const sortOptions = sortValues.map((value) => ({
-    value,
-    label: t(`checks.list.sort.${value}`),
-  }))
 
   return (
     <Stack gap="md">
@@ -98,15 +92,6 @@ function FilterControls({ filters, facets, onFiltersChange }: FilterControlsProp
           onFiltersChange={onFiltersChange}
         />
       ))}
-      <Select
-        label={t('checks.list.filters.sort')}
-        data={sortOptions}
-        value={filters.sort}
-        allowDeselect={false}
-        onChange={(value) => {
-          onFiltersChange({ ...filters, sort: value ?? '' })
-        }}
-      />
     </Stack>
   )
 }

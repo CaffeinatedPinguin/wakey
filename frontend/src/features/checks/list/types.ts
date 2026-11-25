@@ -6,9 +6,9 @@ export type SelectionMode = 'none' | 'page' | 'all'
 
 export type FacetKey = 'state' | 'type' | 'tag' | 'group'
 
-export type BulkAction = 'pause' | 'resume' | 'mute' | 'tags' | 'policy' | 'delete'
+export type BulkAction = 'pause' | 'resume' | 'delete'
 
-export type RowAction = 'pause' | 'resume' | 'mute'
+export type RowAction = 'pause' | 'resume'
 
 export interface CheckRowData {
   id: string
@@ -39,7 +39,6 @@ export interface ListFilters {
   type: string[]
   tag: string[]
   group: string[]
-  sort: string
 }
 
 export interface SelectionState {

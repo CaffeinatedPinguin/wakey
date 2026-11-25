@@ -62,9 +62,11 @@ export interface ChecksApiState {
   counts: StateCountsResponse
   pageSize: number
   listCalls: string[]
+  countsCalls: string[]
   pauseCalls: string[]
   resumeCalls: string[]
   deleteCalls: string[]
+  failPause: MockReply | null
 }
 
 export interface ChecksApiMock {
@@ -79,9 +81,11 @@ function createState(): ChecksApiState {
     counts: { up: 0, degraded: 0, down: 0, unknown: 0 },
     pageSize: DEFAULT_PAGE_SIZE,
     listCalls: [],
+    countsCalls: [],
     pauseCalls: [],
     resumeCalls: [],
     deleteCalls: [],
+    failPause: null,
   }
 }
 
@@ -121,7 +125,7 @@ function handleCheckItem(
 ): MockReply {
   if (action === 'pause') {
     state.pauseCalls.push(id)
-    return mutateCheck(state, id, true)
+    return state.failPause ?? mutateCheck(state, id, true)
   }
   if (action === 'resume') {
     state.resumeCalls.push(id)
@@ -151,6 +155,7 @@ function handleChecks(state: ChecksApiState, request: CheckRequest): MockReply {
     return listReply(state, request.url)
   }
   if (request.url.pathname === `${checksPath}/counts`) {
+    state.countsCalls.push(request.url.pathname + request.url.search)
     return { status: 200, data: state.counts }
   }
   const id = request.tail[1]

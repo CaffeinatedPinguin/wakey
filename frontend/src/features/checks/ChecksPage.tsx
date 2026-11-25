@@ -1,13 +1,13 @@
-import { Alert, Button, Stack, Text } from '@mantine/core'
-import { Link, useSearch } from '@tanstack/react-router'
+import { Alert } from '@mantine/core'
+import { useNavigate, useRouterState, useSearch } from '@tanstack/react-router'
 import type { Dispatch, ReactElement, SetStateAction } from 'react'
-import { useState } from 'react'
-import { useTranslation } from 'react-i18next'
-import { PageFrame } from '../../shared/ui'
-import { validateChecksSearch } from './api/checks.search'
-import { spaceOf } from './api/checks.search'
+import { useEffect, useState } from 'react'
+import { spaceOf, validateChecksSearch } from './api/checks.search'
+import type { ChecksSearch } from './api/checks.search'
+
 import { BulkDeleteDialog } from './BulkDeleteDialog'
 import { ChecksListView } from './list/ChecksListView'
+import { MissingSpaceState } from './list/ListStates'
 import type { ChecksListViewProps } from './list/ChecksListView'
 import type { SelectionState } from './list/types'
 import { useChecksBulkActions } from './useChecksBulkActions'
@@ -19,25 +19,26 @@ import type { ChecksNavigation } from './useChecksNavigation'
 
 const NO_SELECTION: SelectionState = { mode: 'none', ids: [] }
 
-function ChecksEmptySection(): ReactElement {
-  const { t } = useTranslation()
-  return (
-    <PageFrame title={t('checks.list.title')}>
-      <Stack align="center" gap="md" py="xl">
-        <Text c="dimmed" ta="center">
-          {t('common.section.comingSoon')}
-        </Text>
-        <Button component={Link} to="/" variant="light">
-          {t('common.section.backToOverview')}
-        </Button>
-      </Stack>
-    </PageFrame>
-  )
+// The list knows no sort, so an old or hand-edited URL is rewritten to the
+// search the route validates. The address and the API query then say the same.
+function useCanonicalSearch(space: string | undefined): void {
+  const navigate = useNavigate()
+  const raw = useRouterState({ select: (state) => state.location.search })
+  const clean = validateChecksSearch(raw)
+  const unknownKey = Object.keys(raw).some((key) => key !== 'space' && !(key in clean))
+
+  useEffect(() => {
+    if (!unknownKey) {
+      return
+    }
+    const target = space === undefined ? clean : { ...clean, space }
+    void navigate({ to: '/checks', search: target, replace: true })
+  }, [navigate, clean, space, unknownKey])
 }
 
 interface ChecksPageContentProps {
   space: string
-  search: ReturnType<typeof validateChecksSearch>
+  search: ChecksSearch
 }
 
 interface ViewPropsArgs {
@@ -105,10 +106,13 @@ function ChecksPageContent({ space, search }: ChecksPageContentProps): ReactElem
 }
 
 export function ChecksPage(): ReactElement {
-  const search = useSearch({ strict: false })
-  const space = spaceOf(search)
+  // The /checks route validates the search with validateChecksSearch.
+  const rawSearch = useSearch({ strict: false })
+  const search = validateChecksSearch(rawSearch)
+  const space = spaceOf(rawSearch)
+  useCanonicalSearch(space)
   if (space === undefined) {
-    return <ChecksEmptySection />
+    return <MissingSpaceState />
   }
-  return <ChecksPageContent space={space} search={validateChecksSearch(search)} />
+  return <ChecksPageContent space={space} search={search} />
 }

@@ -5,7 +5,7 @@ import { selectionBarStyle, touchStyle } from './listStyles'
 import { SelectionBanner } from './SelectionBanner'
 import type { BulkAction, SelectionState } from './types'
 
-const bulkActions: BulkAction[] = ['pause', 'resume', 'mute', 'tags', 'policy']
+const bulkActions: BulkAction[] = ['pause', 'resume']
 
 export interface BulkActionBarProps {
   selection: SelectionState

@@ -1,7 +1,9 @@
 import { Button, Group, Skeleton, Stack, Text } from '@mantine/core'
 import { IconAlertTriangle, IconPlus, IconSearch } from '@tabler/icons-react'
+import { Link } from '@tanstack/react-router'
 import type { ReactElement, ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
+import { PageFrame } from '../../../shared/ui'
 import { touchStyle } from './listStyles'
 
 const loadingRows = Array.from({ length: 10 }, (_, index) => index)
@@ -72,6 +74,23 @@ export function ErrorState({ onRetry }: { onRetry: () => void }): ReactElement {
       action={t('checks.list.error.action')}
       onAction={onRetry}
     />
+  )
+}
+
+export function MissingSpaceState(): ReactElement {
+  const { t } = useTranslation()
+
+  return (
+    <PageFrame title={t('checks.list.title')}>
+      <Stack align="center" gap="md" py="xl">
+        <Text c="dimmed" ta="center">
+          {t('checks.list.missingSpace.body')}
+        </Text>
+        <Button component={Link} to="/" variant="light" style={touchStyle}>
+          {t('common.section.backToOverview')}
+        </Button>
+      </Stack>
+    </PageFrame>
   )
 }
 

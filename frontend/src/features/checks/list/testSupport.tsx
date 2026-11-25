@@ -49,7 +49,6 @@ export const testFilters: ListFilters = {
   type: [],
   tag: [],
   group: [],
-  sort: 'name',
 }
 
 export interface RenderedChecksList extends RenderResult {

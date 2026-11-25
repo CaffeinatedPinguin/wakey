@@ -48,14 +48,14 @@ it('the checks page lists the checks of the current space from the API', async (
   )
 })
 
-it('filters search and sorting live in the URL and reach the API', async () => {
+it('filters search live in the URL and reach the API', async () => {
   installChecks([makeCheck({ id: 'c1' })])
-  const view = renderApp('/checks?space=alpha&q=pay&state=down&sort=name')
+  const view = renderApp('/checks?space=alpha&q=pay&state=down')
   await screen.findByText('API płatności')
 
   await waitFor(() => {
     const reached = api.state.listCalls.some(
-      (url) => url.includes('q=pay') && url.includes('state=DOWN') && url.includes('sort=name'),
+      (url) => url.includes('q=pay') && url.includes('state=DOWN'),
     )
     expect(reached).toBe(true)
   })
@@ -71,6 +71,76 @@ it('filters search and sorting live in the URL and reach the API', async () => {
   })
   await waitFor(() => {
     expect(api.state.listCalls.some((url) => url.includes('q=panel'))).toBe(true)
+  })
+})
+
+it('tags and groups keep their case in the URL and the API call', async () => {
+  installChecks([makeCheck({ id: 'c1' })])
+  const view = renderApp('/checks?space=alpha&tag=Prod&group=Payments')
+  await screen.findByText('API płatności')
+
+  expect(view.router.state.location.search).toMatchObject({
+    space: 'alpha',
+    tag: ['Prod'],
+    group: ['Payments'],
+  })
+  await waitFor(() => {
+    const reached = api.state.listCalls.some(
+      (url) => url.includes('tag=Prod') && url.includes('group=Payments'),
+    )
+    expect(reached).toBe(true)
+  })
+})
+
+it('selecting a second state replaces the first one', async () => {
+  installChecks([makeCheck({ id: 'c1' })])
+  const view = renderApp('/checks?space=alpha')
+  await screen.findByText('API płatności')
+
+  fireEvent.click(screen.getByRole('checkbox', { name: 'Nie działa' }))
+  fireEvent.click(screen.getByRole('checkbox', { name: 'Działa' }))
+
+  await waitFor(() => {
+    expect(view.router.state.location.search).toMatchObject({ space: 'alpha', state: ['up'] })
+  })
+  await waitFor(() => {
+    expect(
+      api.state.listCalls.some((url) => url.includes('state=UP') && !url.includes('state=DOWN')),
+    ).toBe(true)
+  })
+})
+
+it('the list has no sort control until the server supports sorting', async () => {
+  installChecks([makeCheck({ id: 'c1' })])
+  const view = renderApp('/checks?space=alpha&sort=name')
+  await screen.findByText('API płatności')
+
+  expect(screen.queryByLabelText('Sortuj')).toBeNull()
+  await waitFor(() => {
+    expect(view.router.state.location.search).not.toHaveProperty('sort')
+  })
+  await waitFor(() => {
+    expect(api.state.listCalls.some((url) => url.includes('sort='))).toBe(false)
+  })
+  await waitFor(() => {
+    expect(api.state.countsCalls.length).toBeGreaterThan(0)
+  })
+  expect(api.state.countsCalls.every((url) => !url.includes('limit='))).toBe(true)
+})
+
+it('a failed bulk action shows an error and the list is refreshed once', async () => {
+  installChecks([makeCheck({ id: 'c1' }), makeCheck({ id: 'c2', name: 'Panel klienta' })])
+  api.state.failPause = { status: 403, data: { code: 'forbidden' } }
+  renderApp('/checks?space=alpha')
+  await screen.findByText('API płatności')
+  const initialCalls = api.state.listCalls.length
+
+  fireEvent.click(screen.getByRole('checkbox', { name: 'Zaznacz stronę' }))
+  fireEvent.click(screen.getByRole('button', { name: 'Pauza' }))
+
+  expect(await screen.findByText('Nie masz uprawnień do wykonania tej akcji.')).toBeDefined()
+  await waitFor(() => {
+    expect(api.state.listCalls.length).toBe(initialCalls + 1)
   })
 })
 

@@ -1,18 +1,14 @@
 import type { ReactElement } from 'react'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { useQueryClient } from '@tanstack/react-query'
-import type { QueryClient, UseQueryResult } from '@tanstack/react-query'
-import { GeneralDefaultsView } from './GeneralDefaultsView'
-import type { SpaceAccess, SpaceSetting } from './api/settings.schemas'
 import {
-  settingsQueryKeys,
   useChangeSetting,
   useRestoreAllSettings,
   useRestoreSetting,
-  useSpaceAccess,
   useSpaceSettings,
 } from './api/settings.queries'
+import type { SpaceAccess } from './api/settings.schemas'
+import { GeneralDefaultsView } from './GeneralDefaultsView'
 import {
   buildSettingsGroups,
   canEditSpace,
@@ -23,6 +19,8 @@ import type { SettingFieldError, SettingFieldErrors, SettingsStatus } from './ty
 
 export interface SettingsPageProps {
   spaceSlug: string | undefined
+  access: SpaceAccess | undefined
+  accessLoading: boolean
 }
 
 const NO_FIELD_ERRORS: SettingFieldErrors = {}
@@ -79,31 +77,25 @@ function useSettingsActions(spaceSlug: string | undefined): SettingsActions {
 }
 
 function settingsStatus(
-  settings: UseQueryResult<SpaceSetting[]>,
-  access: UseQueryResult<SpaceAccess>,
+  settings: ReturnType<typeof useSpaceSettings>,
+  accessLoading: boolean,
 ): SettingsStatus {
   if (settings.isError) {
     return 'error'
   }
-  if (settings.isPending || access.isPending) {
+  if (settings.isPending || accessLoading) {
     return 'loading'
   }
   return 'ready'
 }
 
-function reloadSettings(queryClient: QueryClient, slug: string | undefined): void {
-  if (slug === undefined) {
-    return
-  }
-  void queryClient.invalidateQueries({ queryKey: settingsQueryKeys.space(slug) })
-  void queryClient.invalidateQueries({ queryKey: settingsQueryKeys.access(slug) })
-}
-
-export function SettingsPage({ spaceSlug }: SettingsPageProps): ReactElement {
+export function SettingsPage({
+  spaceSlug,
+  access,
+  accessLoading,
+}: SettingsPageProps): ReactElement {
   const { t } = useTranslation()
-  const queryClient = useQueryClient()
   const settings = useSpaceSettings(spaceSlug)
-  const access = useSpaceAccess(spaceSlug)
   const actions = useSettingsActions(spaceSlug)
   const groups = buildSettingsGroups(settings.data ?? [], t)
   const keys = overriddenSettingKeys(settings.data ?? [])
@@ -112,8 +104,8 @@ export function SettingsPage({ spaceSlug }: SettingsPageProps): ReactElement {
     <GeneralDefaultsView
       embedded
       groups={groups}
-      status={settingsStatus(settings, access)}
-      canEdit={canEditSpace(access.data)}
+      status={settingsStatus(settings, accessLoading)}
+      canEdit={canEditSpace(access)}
       fieldErrors={actions.fieldErrors}
       onChange={actions.onChange}
       onRestore={actions.onRestore}
@@ -121,7 +113,7 @@ export function SettingsPage({ spaceSlug }: SettingsPageProps): ReactElement {
         actions.onRestoreAll(keys)
       }}
       onRetry={() => {
-        reloadSettings(queryClient, spaceSlug)
+        void settings.refetch()
       }}
     />
   )

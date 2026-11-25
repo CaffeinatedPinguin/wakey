@@ -17,6 +17,18 @@ export function CheckDetailsLoading(): ReactElement {
   )
 }
 
+export function CheckDetailsMissingSpace(): ReactElement {
+  const { t } = useTranslation()
+  return (
+    <PageFrame title={t('checks.details.missingSpace.title')}>
+      <Stack gap="md">
+        <Text>{t('checks.details.missingSpace.body')}</Text>
+        <Anchor href="/checks">{t('checks.details.missingSpace.back')}</Anchor>
+      </Stack>
+    </PageFrame>
+  )
+}
+
 export function CheckDetailsNotFound(): ReactElement {
   const { t } = useTranslation()
   return (

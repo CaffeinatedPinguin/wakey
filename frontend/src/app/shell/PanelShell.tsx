@@ -1,4 +1,5 @@
 import { AppShell } from '@mantine/core'
+import { Notifications } from '@mantine/notifications'
 import { Outlet } from '@tanstack/react-router'
 import type { ReactElement } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -32,23 +33,26 @@ export function PanelShell(): ReactElement {
   const space = useSpaceController(me.admin)
 
   return (
-    <AppShell {...shellLayout}>
-      <AppShell.Header>
-        <PanelHeader me={me} isMobile={isMobile} switcher={space.switcher} />
-      </AppShell.Header>
-      {isMobile ? (
-        <AppShell.Footer>
-          <MobilePanelNav switcher={space.switcher} />
-        </AppShell.Footer>
-      ) : (
-        <AppShell.Navbar aria-label={t('common.nav.label')}>
-          <PanelNavbar />
-        </AppShell.Navbar>
-      )}
-      <AppShell.Main>
-        {space.isUnknown ? <SpaceNotFoundView spaces={space.spaces} /> : <Outlet />}
-      </AppShell.Main>
-      <CreateSpaceDialog {...space.dialog} />
-    </AppShell>
+    <>
+      <AppShell {...shellLayout}>
+        <AppShell.Header>
+          <PanelHeader me={me} isMobile={isMobile} switcher={space.switcher} />
+        </AppShell.Header>
+        {isMobile ? (
+          <AppShell.Footer>
+            <MobilePanelNav switcher={space.switcher} />
+          </AppShell.Footer>
+        ) : (
+          <AppShell.Navbar aria-label={t('common.nav.label')}>
+            <PanelNavbar />
+          </AppShell.Navbar>
+        )}
+        <AppShell.Main>
+          {space.isUnknown ? <SpaceNotFoundView spaces={space.spaces} /> : <Outlet />}
+        </AppShell.Main>
+        <CreateSpaceDialog {...space.dialog} />
+      </AppShell>
+      <Notifications />
+    </>
   )
 }

@@ -25,13 +25,7 @@ export const checksListResources = {
           title: 'Filtry',
           search: 'Szukaj',
           searchPlaceholder: 'Nazwa lub cel',
-          sort: 'Sortuj',
           apply: 'Pokaż {{count}} wyników',
-        },
-        sort: {
-          name: 'Nazwa',
-          state: 'Stan',
-          lastResult: 'Ostatni wynik',
         },
         selection: {
           page: 'Zaznaczono {{count}} na stronie',
@@ -42,16 +36,12 @@ export const checksListResources = {
         bulk: {
           pause: 'Pauza',
           resume: 'Wznów',
-          mute: 'Wycisz',
-          tags: 'Tagi',
-          policy: 'Polityka',
           delete: 'Usuń',
         },
         rowMenu: {
           label: 'Akcje checka',
           pause: 'Pauza',
           resume: 'Wznów',
-          mute: 'Wycisz',
         },
         intervalSeconds: '{{count}} s',
         never: 'Brak wyniku',
@@ -72,6 +62,9 @@ export const checksListResources = {
           title: 'Nie udało się wczytać checków',
           body: 'Spróbuj ponownie.',
           action: 'Ponów',
+        },
+        missingSpace: {
+          body: 'Wybierz przestrzeń, żeby zobaczyć jej checki.',
         },
       },
     },
@@ -102,13 +95,7 @@ export const checksListResources = {
           title: 'Filters',
           search: 'Search',
           searchPlaceholder: 'Name or target',
-          sort: 'Sort',
           apply: 'Show {{count}} results',
-        },
-        sort: {
-          name: 'Name',
-          state: 'State',
-          lastResult: 'Last result',
         },
         selection: {
           page: '{{count}} selected on this page',
@@ -119,16 +106,12 @@ export const checksListResources = {
         bulk: {
           pause: 'Pause',
           resume: 'Resume',
-          mute: 'Mute',
-          tags: 'Tags',
-          policy: 'Policy',
           delete: 'Delete',
         },
         rowMenu: {
           label: 'Check actions',
           pause: 'Pause',
           resume: 'Resume',
-          mute: 'Mute',
         },
         intervalSeconds: '{{count}} s',
         never: 'No result',
@@ -149,6 +132,9 @@ export const checksListResources = {
           title: 'Could not load the checks',
           body: 'Please try again.',
           action: 'Try again',
+        },
+        missingSpace: {
+          body: 'Select a space to see its checks.',
         },
       },
     },

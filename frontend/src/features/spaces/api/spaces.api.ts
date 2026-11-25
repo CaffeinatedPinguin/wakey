@@ -1,7 +1,7 @@
 import { ApiError } from '../../../shared/api/problem'
 import { contract } from '../../../shared/api/generated/contract'
 import { serverClient } from '../../../shared/api/instances'
-import type { SpaceSummary } from '../spaceTypes'
+import type { SpaceDetail, SpaceSummary } from '../spaceTypes'
 import { spaceSchema, spacesPageSchema } from './spaces.schemas'
 
 const SPACE_PAGE_LIMIT = 100
@@ -31,6 +31,10 @@ function toSummary(space: { slug: string; name: string }): SpaceSummary {
   return { slug: space.slug, name: space.name }
 }
 
+function toDetail(space: SpaceDetail): SpaceDetail {
+  return { slug: space.slug, name: space.name, admin: space.admin, role: space.role }
+}
+
 export async function fetchSpaces(
   cursor: string | undefined,
   signal: AbortSignal,
@@ -43,11 +47,11 @@ export async function fetchSpaces(
   return { items: page.items.map(toSummary), nextCursor: page.nextCursor }
 }
 
-export async function fetchSpace(slug: string, signal: AbortSignal): Promise<SpaceSummary> {
+export async function fetchSpace(slug: string, signal: AbortSignal): Promise<SpaceDetail> {
   const response = await serverClient.get<unknown>(spaceUrl(contract.getSpace.path, slug), {
     signal,
   })
-  return toSummary(spaceSchema.parse(response.data))
+  return toDetail(spaceSchema.parse(response.data))
 }
 
 export async function createSpace(values: CreateSpaceInput): Promise<SpaceSummary> {

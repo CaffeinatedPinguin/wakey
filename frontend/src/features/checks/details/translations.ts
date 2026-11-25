@@ -14,6 +14,11 @@ export const checkDetailsResources = {
           body: 'Check nie istnieje albo został usunięty.',
           back: 'Wróć do listy checków',
         },
+        missingSpace: {
+          title: 'Brak przestrzeni',
+          body: 'Wybierz przestrzeń, żeby zobaczyć szczegóły checka.',
+          back: 'Wróć do listy checków',
+        },
         actions: {
           menu: 'Akcje',
           unavailable: 'Ta akcja pojawi się w kolejnym etapie.',
@@ -86,6 +91,11 @@ export const checkDetailsResources = {
         notFound: {
           title: 'Check not found',
           body: 'The check does not exist or has been deleted.',
+          back: 'Back to the checks list',
+        },
+        missingSpace: {
+          title: 'Missing space',
+          body: 'Choose a space to see the check details.',
           back: 'Back to the checks list',
         },
         actions: {

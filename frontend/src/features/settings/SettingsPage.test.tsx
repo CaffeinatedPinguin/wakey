@@ -86,6 +86,12 @@ function valueFrom(body: string | undefined): string {
 function handlePut(key: string, body: string | undefined): MockReply {
   const value = valueFrom(body)
   api.writes.push({ key, value })
+  if (key === 'timezone' && value === 'Not/AZone') {
+    return {
+      status: 400,
+      data: { code: 'validation_failed', params: {}, errors: [] },
+    }
+  }
   if (key === 'check.interval' && Number(value) > OUT_OF_PLAN_BOUND) {
     return {
       status: 400,
@@ -232,6 +238,18 @@ describe('settings changes', () => {
     fireEvent.change(interval, { target: { value: '400' } })
 
     expect(await screen.findByText('Poza planem: maksymalnie 300 s.')).toBeDefined()
+  })
+})
+
+describe('settings validation', () => {
+  it('the settings page shows a message for a validation error', async () => {
+    renderApp('/settings?space=alpha')
+    const timezone = await screen.findByLabelText('Strefa czasowa')
+
+    fireEvent.change(timezone, { target: { value: 'Not/AZone' } })
+
+    expect(await screen.findByText('Nieprawidłowa wartość.')).toBeDefined()
+    expect(screen.getByDisplayValue('Europe/Warsaw')).toBeDefined()
   })
 })
 

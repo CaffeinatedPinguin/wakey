@@ -1,13 +1,17 @@
 import { useNavigate, useParams, useSearch } from '@tanstack/react-router'
+import type { TFunction } from 'i18next'
 import type { ReactElement } from 'react'
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { isNotFoundError } from '../../shared/api/client'
 import { toCheckDetails } from './api/checks.adapters'
-import { useCheck, useDeleteCheck, usePauseCheck, useResumeCheck } from './api/checks.queries'
+import { useCheck } from './api/checks.queries'
 import { spaceOf } from './api/checks.search'
 import { CheckDetailsView } from './details/CheckDetailsView'
 import type { CheckAction, CheckDetailsStatus, CheckDetailsTab } from './details/checkDetailsTypes'
-import { CheckDetailsLoading } from './details/CheckDetailsStates'
+import { CheckDetailsMissingSpace, CheckDetailsNotFound } from './details/CheckDetailsStates'
+import { showActionError, useCheckActions } from './useCheckActions'
+import type { CheckActions } from './useCheckActions'
 
 const UNAVAILABLE_ACTIONS: readonly CheckAction[] = ['check-now', 'edit', 'duplicate']
 
@@ -26,47 +30,51 @@ interface CheckDetailsContentProps {
   checkId: string
 }
 
-interface MutationLike {
-  mutateAsync: (variables: { slug: string; id: string }) => Promise<unknown>
-}
-
-interface DeleteMutationLike {
-  mutateAsync: (variables: { slug: string; id: string }) => Promise<void>
-}
-
 interface DetailActionContext {
-  space: string
   checkId: string
-  pause: MutationLike
-  resume: MutationLike
-  remove: DeleteMutationLike
+  actions: CheckActions
   goToList: () => void
+  t: TFunction
 }
 
-async function runDetailAction(action: CheckAction, context: DetailActionContext): Promise<void> {
+async function performAction(action: CheckAction, context: DetailActionContext): Promise<boolean> {
   switch (action) {
     case 'pause':
-      await context.pause.mutateAsync({ slug: context.space, id: context.checkId })
-      return
+      await context.actions.pause(context.checkId)
+      return true
     case 'resume':
-      await context.resume.mutateAsync({ slug: context.space, id: context.checkId })
-      return
+      await context.actions.resume(context.checkId)
+      return true
     case 'delete':
-      await context.remove.mutateAsync({ slug: context.space, id: context.checkId })
-      context.goToList()
-      return
+      await context.actions.remove(context.checkId)
+      return true
     case 'check-now':
     case 'edit':
     case 'duplicate':
+      return false
+  }
+}
+
+async function runDetailAction(action: CheckAction, context: DetailActionContext): Promise<void> {
+  try {
+    const changed = await performAction(action, context)
+    if (!changed) {
       return
+    }
+    context.actions.refresh()
+    if (action === 'delete') {
+      context.goToList()
+    }
+  } catch (error) {
+    showActionError(context.t, error)
+    context.actions.refresh()
   }
 }
 
 function CheckDetailsContent({ space, checkId }: CheckDetailsContentProps): ReactElement {
+  const { t } = useTranslation()
   const query = useCheck(space, checkId)
-  const pause = usePauseCheck()
-  const resume = useResumeCheck()
-  const remove = useDeleteCheck()
+  const actions = useCheckActions(space)
   const navigate = useNavigate()
   const [activeTab, setActiveTab] = useState<CheckDetailsTab>('events')
   const status = detailStatus(query)
@@ -75,7 +83,7 @@ function CheckDetailsContent({ space, checkId }: CheckDetailsContentProps): Reac
   const goToList = (): void => {
     void navigate({ to: '/checks', search: (previous) => ({ ...previous, space }) })
   }
-  const context = { space, checkId, pause, resume, remove, goToList }
+  const context = { checkId, actions, goToList, t }
 
   return (
     <CheckDetailsView
@@ -100,8 +108,11 @@ export function CheckDetailsPage(): ReactElement {
   const search = useSearch({ strict: false })
   const checkId = typeof params.checkId === 'string' ? params.checkId : undefined
   const space = spaceOf(search)
-  if (space === undefined || checkId === undefined) {
-    return <CheckDetailsLoading />
+  if (space === undefined) {
+    return <CheckDetailsMissingSpace />
+  }
+  if (checkId === undefined) {
+    return <CheckDetailsNotFound />
   }
   return <CheckDetailsContent space={space} checkId={checkId} />
 }

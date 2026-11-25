@@ -17,13 +17,7 @@ export const spaceSettingsSchema = z.array(
   spaceSettingSchema,
 ) satisfies z.ZodType<GetSpaceSettingsResponse>
 
-// The caller's access level for one space, taken from the same response the
-// shell uses to resolve the space in the URL.
+// The caller's access level for one space, taken from the shared space detail.
 export type SpaceAccess = Pick<GetSpaceResponse, 'admin' | 'role'>
-
-export const spaceAccessSchema = z.object({
-  admin: z.boolean(),
-  role: z.enum(['EDITOR', 'VIEWER']).nullable(),
-}) satisfies z.ZodType<SpaceAccess>
 
 export type SpaceSetting = z.infer<typeof spaceSettingSchema>

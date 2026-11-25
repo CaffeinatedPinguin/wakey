@@ -41,7 +41,9 @@ function useDraft(
 ): DraftConflict {
   const { t } = useTranslation()
   const [draft, setDraft] = useState<DraftState | null>(null)
-  const value = draft !== null && draft.base === row.value ? draft.value : row.value
+  // A failed save keeps the old server value in the input and shows the message.
+  const value =
+    draft !== null && draft.base === row.value && error === undefined ? draft.value : row.value
 
   function commit(next: string): void {
     setDraft({ base: row.value, value: next })
