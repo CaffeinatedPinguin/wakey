@@ -3,7 +3,7 @@ import type { UseFormReturnType } from '@mantine/form'
 import type { ChangeEvent } from 'react'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { applyApiError } from '../../../shared/api/formErrors'
+import { applyApiException } from '../../../shared/api/formErrors'
 import { CREATE_SPACE_REQUEST_NAME_MAX_LENGTH } from '../../../shared/api/generated/limits'
 import { useCreateSpace } from '../api/spaces.queries'
 import { isValidSlug } from '../slug'
@@ -66,7 +66,7 @@ export function useCreateSpaceForm({
   const handlers = createHandlers(form, slugEdited, setSlugEdited)
   const close = createClose(resetForm, onClose)
   const onError = (error: unknown): void => {
-    setFormError(applyApiError(form, error, t))
+    setFormError(applyApiException(form, error, t))
   }
   const submitValues = createSubmit(create, close, onCreated, onError)
   const submit = (values: SpaceFormValues): void => {

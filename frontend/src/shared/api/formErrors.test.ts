@@ -3,8 +3,8 @@ import { act, cleanup, renderHook } from '@testing-library/react'
 import { afterEach, describe, expect, it } from 'vitest'
 import i18n from '../../app/i18n'
 import { commonResources } from '../i18n/resources'
-import { ApiError, ClientErrorCode } from './apiError'
-import { applyApiError } from './formErrors'
+import { ApiException, ClientErrorCode } from './apiException'
+import { applyApiException } from './formErrors'
 import { ErrorCode } from './generated/enums'
 
 interface TestFormValues {
@@ -38,10 +38,10 @@ describe('server error translations', () => {
   })
 })
 
-describe('applyApiError field errors', () => {
+describe('applyApiException field errors', () => {
   it('a server error with a field pointer is shown on that field', () => {
     const { result } = renderForm()
-    const error = new ApiError({
+    const error = new ApiException({
       status: 409,
       code: ErrorCode.SLUG_TAKEN,
       errors: [{ pointer: '/slug', code: ErrorCode.SLUG_TAKEN, params: {} }],
@@ -49,7 +49,7 @@ describe('applyApiError field errors', () => {
     let message: string | null | undefined
 
     act(() => {
-      message = applyApiError(result.current, error, pl)
+      message = applyApiException(result.current, error, pl)
     })
 
     expect(message).toBeNull()
@@ -58,7 +58,7 @@ describe('applyApiError field errors', () => {
 
   it('only pointers that match a form field reach the fields', () => {
     const { result } = renderForm()
-    const error = new ApiError({
+    const error = new ApiException({
       status: 400,
       code: ErrorCode.VALIDATION_FAILED,
       errors: [
@@ -69,7 +69,7 @@ describe('applyApiError field errors', () => {
     let message: string | null | undefined
 
     act(() => {
-      message = applyApiError(result.current, error, pl)
+      message = applyApiException(result.current, error, pl)
     })
 
     expect(message).toBeNull()
@@ -77,10 +77,10 @@ describe('applyApiError field errors', () => {
   })
 })
 
-describe('applyApiError unmatched pointers', () => {
+describe('applyApiException unmatched pointers', () => {
   it('a server error whose pointer matches no field shows the form message', () => {
     const { result } = renderForm()
-    const error = new ApiError({
+    const error = new ApiException({
       status: 400,
       code: ErrorCode.VALIDATION_FAILED,
       errors: [{ pointer: '/missing', code: ErrorCode.INVALID_NAME, params: { max: 100 } }],
@@ -88,7 +88,7 @@ describe('applyApiError unmatched pointers', () => {
     let message: string | null | undefined
 
     act(() => {
-      message = applyApiError(result.current, error, pl)
+      message = applyApiException(result.current, error, pl)
     })
 
     expect(message).toBe(pl('errors.validation_failed'))
@@ -96,14 +96,14 @@ describe('applyApiError unmatched pointers', () => {
   })
 })
 
-describe('applyApiError form messages', () => {
+describe('applyApiException form messages', () => {
   it('a server error without a field returns the form message', () => {
     const { result } = renderForm()
-    const error = new ApiError({ status: 500, code: ErrorCode.INTERNAL_ERROR })
+    const error = new ApiException({ status: 500, code: ErrorCode.INTERNAL_ERROR })
     let message: string | null | undefined
 
     act(() => {
-      message = applyApiError(result.current, error, pl)
+      message = applyApiException(result.current, error, pl)
     })
 
     expect(message).toBe(pl('errors.internal_error'))
@@ -112,11 +112,11 @@ describe('applyApiError form messages', () => {
 
   it('an unknown server code falls back to the generic message', () => {
     const { result } = renderForm()
-    const error = new ApiError({ code: ClientErrorCode.UNKNOWN })
+    const error = new ApiException({ code: ClientErrorCode.UNKNOWN })
     let message: string | null | undefined
 
     act(() => {
-      message = applyApiError(result.current, error, pl)
+      message = applyApiException(result.current, error, pl)
     })
 
     expect(message).toBe(pl('errors.generic'))

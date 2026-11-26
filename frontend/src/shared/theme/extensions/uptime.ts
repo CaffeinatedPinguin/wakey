@@ -25,7 +25,7 @@ const states = {
   // No data on the history bar: an empty segment with an outline ≥ 3:1.
   '--app-state-nodata-fill': 'transparent',
   '--app-state-nodata-border': 'var(--app-color-border-control)',
-  // A day marker with a problem: a non-colour carrier of information.
+  // A day marker with an incident: a non-colour carrier of information.
   '--app-state-marker': 'var(--app-color-text-heading)',
 } as const
 

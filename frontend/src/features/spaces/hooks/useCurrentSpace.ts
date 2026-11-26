@@ -1,5 +1,5 @@
 import { getRouteApi, useNavigate, useRouterState } from '@tanstack/react-router'
-import { isNotFoundError } from '../../../shared/api/client'
+import { isNotFoundException } from '../../../shared/api/client'
 import { useSpace, useSpaces } from '../api/spaces.queries'
 import type { SpaceSummary } from '../spaceTypes'
 
@@ -37,7 +37,7 @@ export function useCurrentSpace(): CurrentSpace {
   return {
     slug: requestedSlug ?? firstSlug ?? '',
     space: detail.data,
-    isUnknown: detail.isError && isNotFoundError(detail.error),
+    isUnknown: detail.isError && isNotFoundException(detail.error),
     select: selectSpace(navigate, pathname),
   }
 }

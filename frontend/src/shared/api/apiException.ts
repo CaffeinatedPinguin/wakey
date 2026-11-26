@@ -10,7 +10,7 @@ export const ClientErrorCode = {
 } as const
 export type ClientErrorCode = (typeof ClientErrorCode)[keyof typeof ClientErrorCode]
 
-export type ApiErrorCode = ErrorCode | ClientErrorCode
+export type ApiExceptionCode = ErrorCode | ClientErrorCode
 
 const KNOWN_ERROR_CODES: readonly string[] = Object.values(ErrorCode)
 
@@ -18,13 +18,13 @@ function isErrorCode(value: string): value is ErrorCode {
   return KNOWN_ERROR_CODES.includes(value)
 }
 
-function errorCodeOf(value: string): ApiErrorCode {
+function errorCodeOf(value: string): ApiExceptionCode {
   return isErrorCode(value) ? value : ClientErrorCode.UNKNOWN
 }
 
-// RFC 9457 Problem Details as the server sends them (ADR 0006): the standard
-// fields plus the `code` and `errors[]` extensions. The schema is checked
-// against the generated contract type, so a field drift breaks compilation.
+// RFC 9457 error body as the server sends it (ADR 0006): the standard fields
+// plus the `code` and `errors[]` extensions. The schema is checked against the
+// generated contract type, so a field drift breaks compilation.
 export const apiFieldErrorSchema = z.object({
   pointer: z.string(),
   code: z.string(),
@@ -35,7 +35,7 @@ export const apiFieldErrorSchema = z.object({
 // without `| undefined`, which `satisfies` needs under exactOptionalPropertyTypes.
 // `code` stays a plain string here: the generated type lists the codes this
 // client knows, but a newer server may send one it does not.
-export const problemDetailSchema = z.object({
+export const apiExceptionSchema = z.object({
   title: z.string().default(''),
   status: z.number().int().default(0),
   detail: z.string().default(''),
@@ -45,24 +45,24 @@ export const problemDetailSchema = z.object({
 
 export type ApiFieldError = z.infer<typeof apiFieldErrorSchema>
 
-export interface ApiErrorInit {
+export interface ApiExceptionInit {
   status?: number | undefined
-  code: ApiErrorCode
+  code: ApiExceptionCode
   errors?: ApiFieldError[] | undefined
   detail?: string | undefined
 }
 
-// The one error type application code sees for a failed API call. `code` is the
+// The one exception application code sees for a failed API call. `code` is the
 // stable machine code the screens translate; `errors` describes invalid fields.
-export class ApiError extends Error {
+export class ApiException extends Error {
   readonly status: number | undefined
-  readonly code: ApiErrorCode
+  readonly code: ApiExceptionCode
   readonly errors: ApiFieldError[]
   readonly detail: string | undefined
 
-  constructor({ status, code, errors = [], detail }: ApiErrorInit) {
+  constructor({ status, code, errors = [], detail }: ApiExceptionInit) {
     super(`API request failed with code ${code}`)
-    this.name = 'ApiError'
+    this.name = 'ApiException'
     this.status = status
     this.code = code
     this.errors = errors
@@ -71,7 +71,7 @@ export class ApiError extends Error {
 }
 
 function statusOf(error: unknown): number | undefined {
-  if (error instanceof ApiError) {
+  if (error instanceof ApiException) {
     return error.status
   }
   if (axios.isAxiosError<unknown>(error)) {
@@ -80,37 +80,37 @@ function statusOf(error: unknown): number | undefined {
   return undefined
 }
 
-export function isUnauthorizedError(error: unknown): boolean {
+export function isUnauthorizedException(error: unknown): boolean {
   return statusOf(error) === 401
 }
 
-export function isNotFoundError(error: unknown): boolean {
+export function isNotFoundException(error: unknown): boolean {
   return statusOf(error) === 404
 }
 
-function parseErrorBody(body: unknown): z.infer<typeof problemDetailSchema> | undefined {
-  const result = problemDetailSchema.safeParse(body)
+function parseApiException(body: unknown): z.infer<typeof apiExceptionSchema> | undefined {
+  const result = apiExceptionSchema.safeParse(body)
   return result.success ? result.data : undefined
 }
 
-// Normalises any failure into one ApiError. A response without a valid Problem
-// Details body keeps the HTTP status but reports the `unknown` code; transport
-// failures report `network`.
-export function toApiError(error: unknown): ApiError {
-  if (error instanceof ApiError) {
+// Normalises any failure into one ApiException. A response without a valid RFC
+// 9457 error body keeps the HTTP status but reports the `unknown` code;
+// transport failures report `network`.
+export function toApiException(error: unknown): ApiException {
+  if (error instanceof ApiException) {
     return error
   }
   if (!axios.isAxiosError<unknown>(error)) {
-    return new ApiError({ code: ClientErrorCode.UNKNOWN })
+    return new ApiException({ code: ClientErrorCode.UNKNOWN })
   }
   if (error.response === undefined) {
-    return new ApiError({ code: ClientErrorCode.NETWORK })
+    return new ApiException({ code: ClientErrorCode.NETWORK })
   }
-  const problem = parseErrorBody(error.response.data)
-  return new ApiError({
+  const errorBody = parseApiException(error.response.data)
+  return new ApiException({
     status: error.response.status,
-    code: errorCodeOf(problem?.code ?? ClientErrorCode.UNKNOWN),
-    errors: problem?.errors ?? [],
-    detail: problem?.detail,
+    code: errorCodeOf(errorBody?.code ?? ClientErrorCode.UNKNOWN),
+    errors: errorBody?.errors ?? [],
+    detail: errorBody?.detail,
   })
 }

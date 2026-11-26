@@ -1,6 +1,6 @@
 import { MutationCache, QueryCache, QueryClient } from '@tanstack/react-query'
 import { meQueryKey } from '../features/auth'
-import { isUnauthorizedError, shouldRetryRequest } from '../shared/api/client'
+import { isUnauthorizedException, shouldRetryRequest } from '../shared/api/client'
 
 export type ExpiredSessionHandler = () => void
 
@@ -12,7 +12,7 @@ export function createQueryClient(onExpired: ExpiredSessionHandler = () => undef
   // so an unguarded handler would keep removing and refetching a 401 response.
   let sessionExpired = false
   const handleError = (error: unknown): void => {
-    if (!isUnauthorizedError(error) || sessionExpired) {
+    if (!isUnauthorizedException(error) || sessionExpired) {
       return
     }
     sessionExpired = true

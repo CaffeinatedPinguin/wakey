@@ -216,7 +216,7 @@ describe('status badge', () => {
     const states = Object.values(StatusState)
     const labels: Record<StatusState, string> = {
       [StatusState.UP]: 'Działa',
-      [StatusState.DEGRADED]: 'Działa z problemami',
+      [StatusState.DEGRADED]: 'Częściowo działa',
       [StatusState.DOWN]: 'Nie działa',
       [StatusState.UNKNOWN]: 'Stan nieznany',
       [StatusState.MAINTENANCE]: 'Prace planowe',
