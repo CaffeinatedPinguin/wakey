@@ -39,6 +39,10 @@ final class SpacesProblemResponses implements GlobalOperationCustomizer {
             case "getSpace" -> documentGet(operation);
             case "createSpace" -> documentCreate(operation);
             case "putSpace" -> documentPut(operation);
+            case "listSpaceMembers" -> documentMemberList(operation);
+            case "addSpaceMember" -> documentMemberAdd(operation);
+            case "changeSpaceMemberRole" -> documentMemberChange(operation);
+            case "removeSpaceMember" -> documentMemberRemove(operation);
             default -> {
                 // Every other operation documents its errors elsewhere.
             }
@@ -67,6 +71,29 @@ final class SpacesProblemResponses implements GlobalOperationCustomizer {
         add(operation, BAD_REQUEST, CommonError.BAD_REQUEST.getDetail());
         add(operation, FORBIDDEN, CommonError.FORBIDDEN.getDetail());
         add(operation, CONFLICT, SpaceError.VERSION_CONFLICT.getDetail());
+    }
+
+    private static void documentMemberList(Operation operation) {
+        add(operation, BAD_REQUEST, "The limit or the cursor is invalid.");
+        add(operation, NOT_FOUND, CommonError.NOT_FOUND.getDetail());
+    }
+
+    private static void documentMemberAdd(Operation operation) {
+        add(operation, BAD_REQUEST, CommonError.VALIDATION_FAILED.getDetail());
+        add(operation, FORBIDDEN, CommonError.FORBIDDEN.getDetail());
+        add(operation, NOT_FOUND, CommonError.NOT_FOUND.getDetail());
+    }
+
+    private static void documentMemberChange(Operation operation) {
+        add(operation, BAD_REQUEST, CommonError.VALIDATION_FAILED.getDetail());
+        add(operation, FORBIDDEN, CommonError.FORBIDDEN.getDetail());
+        add(operation, NOT_FOUND, CommonError.NOT_FOUND.getDetail());
+    }
+
+    private static void documentMemberRemove(Operation operation) {
+        add(operation, BAD_REQUEST, CommonError.VALIDATION_FAILED.getDetail());
+        add(operation, FORBIDDEN, CommonError.FORBIDDEN.getDetail());
+        add(operation, NOT_FOUND, CommonError.NOT_FOUND.getDetail());
     }
 
     private static void add(Operation operation, String status, String description) {

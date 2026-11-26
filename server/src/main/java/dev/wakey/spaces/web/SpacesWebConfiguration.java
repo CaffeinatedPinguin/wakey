@@ -14,6 +14,7 @@ import org.springdoc.core.customizers.GlobalOpenApiCustomizer;
 import org.springdoc.core.customizers.GlobalOperationCustomizer;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.web.method.HandlerMethod;
 
 /** Registers the spaces error codes, parameter docs and the domain schema tweaks of the contract. */
 @Configuration(proxyBeanMethods = false)
@@ -44,11 +45,18 @@ class SpacesWebConfiguration {
     @Bean
     GlobalOperationCustomizer spacesParameterDocumentation() {
         return (operation, handlerMethod) -> {
-            if (handlerMethod.getBeanType() == SpacesController.class) {
+            if (isSpacesController(handlerMethod)) {
                 documentParameters(operation);
             }
             return operation;
         };
+    }
+
+    private static boolean isSpacesController(HandlerMethod handlerMethod) {
+        Class<?> beanType = handlerMethod.getBeanType();
+        return beanType == SpacesController.class
+                || beanType == SpaceMembersController.class
+                || beanType == SpaceMemberRolesController.class;
     }
 
     @Bean

@@ -204,7 +204,7 @@ class OpenApiContractTest extends SecurityIntegrationTest {
         }
 
         // then
-        assertThat(spacesOperations).isEqualTo(4);
+        assertThat(spacesOperations).isEqualTo(8);
         assertThat(spacesTags).containsExactly("spaces");
     }
 
@@ -240,6 +240,10 @@ class OpenApiContractTest extends SecurityIntegrationTest {
         JsonNode getSpace = paths.path("/api/v1/spaces/{slug}").path("get");
         JsonNode createSpace = paths.path("/api/v1/spaces").path("post");
         JsonNode putSpace = paths.path("/api/v1/spaces/{slug}").path("put");
+        JsonNode listMembers = paths.path("/api/v1/spaces/{slug}/members").path("get");
+        JsonNode addMember = paths.path("/api/v1/spaces/{slug}/members").path("post");
+        JsonNode changeRole = paths.path("/api/v1/spaces/{slug}/members/role").path("put");
+        JsonNode removeMember = paths.path("/api/v1/spaces/{slug}/members").path("delete");
 
         // when
         // then
@@ -247,6 +251,37 @@ class OpenApiContractTest extends SecurityIntegrationTest {
         assertProblemResponses(getSpace, "GET /api/v1/spaces/{slug}", "400", "401", "404");
         assertProblemResponses(createSpace, "POST /api/v1/spaces", "400", "401", "403", "409");
         assertProblemResponses(putSpace, "PUT /api/v1/spaces/{slug}", "400", "401", "403", "409");
+        assertProblemResponses(listMembers, "GET /api/v1/spaces/{slug}/members", "400", "401", "404");
+        assertProblemResponses(addMember, "POST /api/v1/spaces/{slug}/members", "400", "401", "403", "404");
+        assertProblemResponses(changeRole, "PUT /api/v1/spaces/{slug}/members/role", "400", "401", "403", "404");
+        assertProblemResponses(removeMember, "DELETE /api/v1/spaces/{slug}/members", "400", "401", "403", "404");
+    }
+
+    @Test
+    void theContractHasTheMembershipOperations() throws Exception {
+        // given
+        JsonNode document = MAPPER.readTree(generatedContract());
+        JsonNode members = document.path("paths").path("/api/v1/spaces/{slug}/members");
+        JsonNode role = document.path("paths").path("/api/v1/spaces/{slug}/members/role");
+
+        // when
+        String listId = members.path("get").path("operationId").asString();
+        String addId = members.path("post").path("operationId").asString();
+        String changeId = role.path("put").path("operationId").asString();
+        String removeId = members.path("delete").path("operationId").asString();
+        JsonNode changeParameters = role.path("put").path("parameters");
+        String issuerLocation =
+                parameterNamed(changeParameters, "issuer").path("in").asString();
+        String subjectLocation =
+                parameterNamed(changeParameters, "subject").path("in").asString();
+
+        // then
+        assertThat(listId).isEqualTo("listSpaceMembers");
+        assertThat(addId).isEqualTo("addSpaceMember");
+        assertThat(changeId).isEqualTo("changeSpaceMemberRole");
+        assertThat(removeId).isEqualTo("removeSpaceMember");
+        assertThat(issuerLocation).isEqualTo("query");
+        assertThat(subjectLocation).isEqualTo("query");
     }
 
     @Test

@@ -2,6 +2,7 @@ package dev.wakey.spaces.internal;
 
 import dev.wakey.spaces.Space;
 import dev.wakey.spaces.SpaceMember;
+import dev.wakey.spaces.SpaceMemberId;
 import dev.wakey.spaces.SpaceRole;
 import dev.wakey.spaces.SpaceView;
 import java.time.Clock;
@@ -96,11 +97,28 @@ public class SpaceStore {
         return viewsOf(page, roles);
     }
 
-    public void addMember(UUID spaceId, SpaceMember member) {
+    public SpaceMember addMember(UUID spaceId, SpaceMember member) {
         SpaceMemberKey key = new SpaceMemberKey(spaceId, member.issuer(), member.subject());
-        if (members.findById(key).isEmpty()) {
-            insertMember(key, member.role());
+        Optional<SpaceMemberEntity> existing = members.findById(key);
+        if (existing.isPresent()) {
+            return toMember(existing.get());
         }
+        insertMember(key, member.role());
+        return members.findById(key).map(SpaceStore::toMember).orElse(member);
+    }
+
+    /** Lists members ordered by issuer and subject, resuming after the given identity. */
+    public List<SpaceMember> listMembers(UUID spaceId, SpaceMemberId after, int rowLimit) {
+        List<SpaceMemberEntity> sameIssuer =
+                members.findByKeySpaceIdAndKeyIssuerAndKeySubjectGreaterThanOrderByKeySubjectAsc(
+                        spaceId, after.issuer(), after.subject(), Limit.of(rowLimit));
+        List<SpaceMemberEntity> laterIssuers =
+                members.findByKeySpaceIdAndKeyIssuerGreaterThanOrderByKeyIssuerAscKeySubjectAsc(
+                        spaceId, after.issuer(), Limit.of(rowLimit));
+        List<SpaceMember> page = new ArrayList<>(rowLimit);
+        addMembers(page, sameIssuer, rowLimit);
+        addMembers(page, laterIssuers, rowLimit);
+        return page;
     }
 
     private void insertMember(SpaceMemberKey key, SpaceRole role) {
@@ -108,6 +126,15 @@ public class SpaceStore {
             aggregates.insert(new SpaceMemberEntity(key, role));
         } catch (DuplicateKeyException exception) {
             log.debug("Membership {} already exists", key, exception);
+        }
+    }
+
+    private static void addMembers(List<SpaceMember> target, List<SpaceMemberEntity> entities, int rowLimit) {
+        for (SpaceMemberEntity entity : entities) {
+            if (target.size() >= rowLimit) {
+                return;
+            }
+            target.add(toMember(entity));
         }
     }
 
@@ -131,6 +158,11 @@ public class SpaceStore {
 
     public SpaceView toView(SpaceEntity entity, @Nullable SpaceRole role) {
         return new SpaceView(entity.id(), entity.slug(), entity.name(), entity.version(), role);
+    }
+
+    private static SpaceMember toMember(SpaceMemberEntity entity) {
+        SpaceMemberKey key = entity.key();
+        return new SpaceMember(key.issuer(), key.subject(), entity.role());
     }
 
     private Map<UUID, SpaceRole> rolesOf(List<UUID> spaceIds, String issuer, String subject) {

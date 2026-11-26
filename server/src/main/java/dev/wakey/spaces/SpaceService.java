@@ -87,9 +87,15 @@ public class SpaceService {
     }
 
     /** Adds a member to a space the caller manages; an existing membership keeps its role. */
-    public void addMember(CurrentUser actor, @InvalidSlug String slug, @Valid SpaceMember member) {
+    public SpaceMember addMember(CurrentUser actor, @InvalidSlug String slug, @Valid SpaceMember member) {
         SpaceEntity space = requireManageableSpace(actor, slug);
-        store.addMember(space.id(), member);
+        return store.addMember(space.id(), member);
+    }
+
+    /** Lists the members of a space the caller can read, ordered by issuer and subject. */
+    public List<SpaceMember> listMembers(CurrentUser actor, @InvalidSlug String slug, SpaceMemberId after, int limit) {
+        SpaceView space = view(actor, slug);
+        return store.listMembers(space.id(), after, limit);
     }
 
     /** Changes a member's role and invalidates that user's sessions when the role really changes. */

@@ -55,10 +55,65 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/spaces/{slug}/members": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["listSpaceMembers"];
+        put?: never;
+        /** Add a member to a space */
+        post: operations["addSpaceMember"];
+        /** Remove a member from a space */
+        delete: operations["removeSpaceMember"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/spaces/{slug}/members/role": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Change a member's role */
+        put: operations["changeSpaceMemberRole"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /** @description A membership to add */
+        AddSpaceMemberRequest: {
+            /**
+             * @description The OIDC issuer of the member
+             * @example https://issuer.example.com
+             */
+            issuer: string;
+            /** @description The role in the space */
+            role: components["schemas"]["SpaceRole"];
+            /**
+             * @description The OIDC subject of the member
+             * @example user-42
+             */
+            subject: string;
+        };
+        /** @description The new role of a member */
+        ChangeSpaceMemberRoleRequest: {
+            /** @description The role in the space */
+            role: components["schemas"]["SpaceRole"];
+        };
         /** @description The desired state of a new space */
         CreateSpaceRequest: {
             /**
@@ -71,6 +126,12 @@ export interface components {
              * @example acme
              */
             slug: string;
+        };
+        CursorPageSpaceMemberResponse: {
+            /** @description The items on this page */
+            items: components["schemas"]["SpaceMemberResponse"][];
+            /** @description The cursor of the next page, or null on the last page */
+            nextCursor: string | null;
         };
         CursorPageSpaceResponse: {
             /** @description The items on this page */
@@ -118,6 +179,21 @@ export interface components {
              * @example 1
              */
             version?: number;
+        };
+        /** @description A membership of a space */
+        SpaceMemberResponse: {
+            /**
+             * @description The OIDC issuer of the member
+             * @example https://issuer.example.com
+             */
+            issuer: string;
+            /** @description The role in the space */
+            role: components["schemas"]["SpaceRole"];
+            /**
+             * @description The OIDC subject of the member
+             * @example user-42
+             */
+            subject: string;
         };
         /** @description A space as seen by the caller */
         SpaceResponse: {
@@ -397,6 +473,243 @@ export interface operations {
             };
             /** @description The space changed since the supplied version. */
             409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
+                };
+            };
+        };
+    };
+    listSpaceMembers: {
+        parameters: {
+            query?: {
+                /** @description The page size, at least 1; values above the instance maximum are capped. */
+                limit?: number;
+                cursor?: string;
+            };
+            header?: never;
+            path: {
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CursorPageSpaceMemberResponse"];
+                };
+            };
+            /** @description The limit or the cursor is invalid. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description Authentication is required. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description The requested resource was not found. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
+                };
+            };
+        };
+    };
+    addSpaceMember: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AddSpaceMemberRequest"];
+            };
+        };
+        responses: {
+            /** @description The membership exists; an existing membership keeps its role. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SpaceMemberResponse"];
+                };
+            };
+            /** @description The request contains invalid fields. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description Authentication is required. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description Access is denied. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description The requested resource was not found. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
+                };
+            };
+        };
+    };
+    removeSpaceMember: {
+        parameters: {
+            query: {
+                issuer: string;
+                subject: string;
+            };
+            header?: never;
+            path: {
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The member was removed. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description The request contains invalid fields. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description Authentication is required. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description Access is denied. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description The requested resource was not found. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
+                };
+            };
+        };
+    };
+    changeSpaceMemberRole: {
+        parameters: {
+            query: {
+                issuer: string;
+                subject: string;
+            };
+            header?: never;
+            path: {
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ChangeSpaceMemberRoleRequest"];
+            };
+        };
+        responses: {
+            /** @description The role was changed. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description The request contains invalid fields. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description Authentication is required. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description Access is denied. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description The requested resource was not found. */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };
