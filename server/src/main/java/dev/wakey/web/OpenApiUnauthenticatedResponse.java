@@ -14,20 +14,20 @@ final class OpenApiUnauthenticatedResponse {
 
     private OpenApiUnauthenticatedResponse() {}
 
-    static OperationCustomizer customizer(String problemDetailRef) {
+    static OperationCustomizer customizer(String errorSchemaRef) {
         return (operation, handlerMethod) -> {
             ApiResponses responses = operation.getResponses();
             if (responses == null) {
                 responses = new ApiResponses();
                 operation.setResponses(responses);
             }
-            responses.addApiResponse(UNAUTHORIZED, problemResponse(problemDetailRef));
+            responses.addApiResponse(UNAUTHORIZED, errorResponse(errorSchemaRef));
             return operation;
         };
     }
 
-    private static ApiResponse problemResponse(String problemDetailRef) {
-        Schema<?> schema = new Schema<>().$ref(problemDetailRef);
+    private static ApiResponse errorResponse(String errorSchemaRef) {
+        Schema<?> schema = new Schema<>().$ref(errorSchemaRef);
         MediaType mediaType = new MediaType().schema(schema);
         Content content = new Content();
         content.addMediaType(org.springframework.http.MediaType.APPLICATION_PROBLEM_JSON_VALUE, mediaType);

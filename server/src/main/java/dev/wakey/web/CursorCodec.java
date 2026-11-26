@@ -5,7 +5,7 @@ import java.util.Base64;
 
 /**
  * Encodes and decodes the opaque keyset cursor. The payload carries only the sort value; an oversized or
- * malformed cursor is rejected as a 400 {@code invalid_cursor} problem rather than silently ignored.
+ * malformed cursor is rejected with a 400 {@code invalid_cursor} error rather than silently ignored.
  */
 public final class CursorCodec {
 

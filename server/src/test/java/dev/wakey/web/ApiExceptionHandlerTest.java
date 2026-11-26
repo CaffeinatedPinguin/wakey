@@ -23,14 +23,14 @@ import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
 import tools.jackson.databind.json.JsonMapper;
 
-class ApiProblemDetailsTest {
+class ApiExceptionHandlerTest {
 
     private static final ObjectMapper MAPPER = JsonMapper.builder().build();
 
     private static final String SECRET = "do-not-leak-this-detail";
 
     @Test
-    void validationErrorsAreProblemDetailsWithPointers() throws Exception {
+    void validationErrorsAreRenderedWithPointers() throws Exception {
         // given
         MockMvc mvc = mvcFor(new ValidationController());
         MockHttpServletRequestBuilder request = post("/api/v1/test-items")
@@ -141,7 +141,7 @@ class ApiProblemDetailsTest {
     }
 
     @Test
-    void missingResourceIsProblemNotFound() throws Exception { // given
+    void missingResourceIsNotFound() throws Exception { // given
         MockMvc mvc = mvcFor(new MissingController());
 
         // when

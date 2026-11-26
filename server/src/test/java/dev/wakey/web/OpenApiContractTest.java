@@ -43,7 +43,7 @@ class OpenApiContractTest extends SecurityIntegrationTest {
     // Every entry needs a justification in ADR 0006 before it is added.
     private static final Set<String> PUBLIC_OPERATIONS = Set.of();
 
-    private static final String PROBLEM_DETAIL_REF = "#/components/schemas/ProblemDetail";
+    private static final String ERROR_SCHEMA_REF = "#/components/schemas/ProblemDetail";
 
     private static final ObjectMapper MAPPER = JsonMapper.builder()
             .enable(SerializationFeature.ORDER_MAP_ENTRIES_BY_KEYS)
@@ -247,14 +247,14 @@ class OpenApiContractTest extends SecurityIntegrationTest {
 
         // when
         // then
-        assertProblemResponses(listSpaces, "GET /api/v1/spaces", "400", "401");
-        assertProblemResponses(getSpace, "GET /api/v1/spaces/{slug}", "400", "401", "404");
-        assertProblemResponses(createSpace, "POST /api/v1/spaces", "400", "401", "403", "409");
-        assertProblemResponses(putSpace, "PUT /api/v1/spaces/{slug}", "400", "401", "403", "409");
-        assertProblemResponses(listMembers, "GET /api/v1/spaces/{slug}/members", "400", "401", "404");
-        assertProblemResponses(addMember, "POST /api/v1/spaces/{slug}/members", "400", "401", "403", "404");
-        assertProblemResponses(changeRole, "PUT /api/v1/spaces/{slug}/members/role", "400", "401", "403", "404");
-        assertProblemResponses(removeMember, "DELETE /api/v1/spaces/{slug}/members", "400", "401", "403", "404");
+        assertErrorResponses(listSpaces, "GET /api/v1/spaces", "400", "401");
+        assertErrorResponses(getSpace, "GET /api/v1/spaces/{slug}", "400", "401", "404");
+        assertErrorResponses(createSpace, "POST /api/v1/spaces", "400", "401", "403", "409");
+        assertErrorResponses(putSpace, "PUT /api/v1/spaces/{slug}", "400", "401", "403", "409");
+        assertErrorResponses(listMembers, "GET /api/v1/spaces/{slug}/members", "400", "401", "404");
+        assertErrorResponses(addMember, "POST /api/v1/spaces/{slug}/members", "400", "401", "403", "404");
+        assertErrorResponses(changeRole, "PUT /api/v1/spaces/{slug}/members/role", "400", "401", "403", "404");
+        assertErrorResponses(removeMember, "DELETE /api/v1/spaces/{slug}/members", "400", "401", "403", "404");
     }
 
     @Test
@@ -319,13 +319,13 @@ class OpenApiContractTest extends SecurityIntegrationTest {
         assertThat(versionDescription).contains("version", "concurrent", "409");
     }
 
-    private static void assertProblemResponses(JsonNode operation, String label, String... statuses) {
+    private static void assertErrorResponses(JsonNode operation, String label, String... statuses) {
         for (String status : statuses) {
             JsonNode response = operation.path("responses").path(status);
             JsonNode mediaType = response.path("content").path(MediaType.APPLICATION_PROBLEM_JSON_VALUE);
             String reference = mediaType.path("schema").path("$ref").asString();
             assertThat(response.isMissingNode()).as(label + " " + status).isFalse();
-            assertThat(reference).as(label + " " + status).isEqualTo(PROBLEM_DETAIL_REF);
+            assertThat(reference).as(label + " " + status).isEqualTo(ERROR_SCHEMA_REF);
         }
     }
 

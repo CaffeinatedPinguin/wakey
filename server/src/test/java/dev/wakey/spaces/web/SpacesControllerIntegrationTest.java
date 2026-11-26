@@ -42,7 +42,7 @@ class SpacesControllerIntegrationTest extends SecurityIntegrationTest {
 
     private static final String ADMIN_ROLE = "ROLE_ADMIN";
 
-    private static final String PROBLEM_JSON = "application/problem+json";
+    private static final String ERROR_MEDIA_TYPE = "application/problem+json";
 
     private static final String ISSUER = "https://issuer.example.com";
 
@@ -96,7 +96,7 @@ class SpacesControllerIntegrationTest extends SecurityIntegrationTest {
     }
 
     @Test
-    void nonAdminPutIsForbiddenAsProblem() throws Exception {
+    void nonAdminPutIsForbidden() throws Exception {
         // given
         String subject = uniqueSubject("non-admin");
         String slug = uniqueSlug("non-admin-write");
@@ -108,12 +108,12 @@ class SpacesControllerIntegrationTest extends SecurityIntegrationTest {
         JsonNode body = jsonOf(result);
         String code = body.path("code").asString();
         assertThat(statusOf(result)).isEqualTo(403);
-        assertThat(contentTypeOf(result)).isEqualTo(PROBLEM_JSON);
+        assertThat(contentTypeOf(result)).isEqualTo(ERROR_MEDIA_TYPE);
         assertThat(code).isEqualTo(CommonError.FORBIDDEN.getCode());
     }
 
     @Test
-    void strangerGetsProblemNotFoundForAnotherSpace() throws Exception {
+    void strangerGetsNotFoundForAnotherSpace() throws Exception {
         // given
         String owner = uniqueSubject("owner");
         String stranger = uniqueSubject("stranger");
@@ -128,7 +128,7 @@ class SpacesControllerIntegrationTest extends SecurityIntegrationTest {
         JsonNode body = jsonOf(result);
         String code = body.path("code").asString();
         assertThat(statusOf(result)).isEqualTo(404);
-        assertThat(contentTypeOf(result)).isEqualTo(PROBLEM_JSON);
+        assertThat(contentTypeOf(result)).isEqualTo(ERROR_MEDIA_TYPE);
         assertThat(code).isEqualTo(CommonError.NOT_FOUND.getCode());
     }
 
@@ -244,12 +244,12 @@ class SpacesControllerIntegrationTest extends SecurityIntegrationTest {
         JsonNode body = jsonOf(result);
         String code = body.path("code").asString();
         assertThat(statusOf(result)).isEqualTo(400);
-        assertThat(contentTypeOf(result)).isEqualTo(PROBLEM_JSON);
+        assertThat(contentTypeOf(result)).isEqualTo(ERROR_MEDIA_TYPE);
         assertThat(code).isEqualTo(CommonError.INVALID_CURSOR.getCode());
     }
 
     @Test
-    void invalidSlugIsAValidationProblemWithPointer() throws Exception {
+    void invalidSlugIsAValidationErrorWithPointer() throws Exception {
         // given
         String admin = uniqueSubject("admin-invalid-slug");
 
@@ -264,14 +264,14 @@ class SpacesControllerIntegrationTest extends SecurityIntegrationTest {
         String pointer = firstError.path("pointer").asString();
         String fieldCode = firstError.path("code").asString();
         assertThat(statusOf(result)).isEqualTo(400);
-        assertThat(contentTypeOf(result)).isEqualTo(PROBLEM_JSON);
+        assertThat(contentTypeOf(result)).isEqualTo(ERROR_MEDIA_TYPE);
         assertThat(code).isEqualTo(CommonError.VALIDATION_FAILED.getCode());
         assertThat(pointer).isEqualTo("/slug");
         assertThat(fieldCode).isEqualTo(SpaceError.INVALID_SLUG.getCode());
     }
 
     @Test
-    void blankNameIsAValidationProblemWithPointer() throws Exception {
+    void blankNameIsAValidationErrorWithPointer() throws Exception {
         // given
         String admin = uniqueSubject("admin-blank");
         String slug = uniqueSlug("blank-name");
@@ -302,7 +302,7 @@ class SpacesControllerIntegrationTest extends SecurityIntegrationTest {
         JsonNode body = jsonOf(result);
         String code = body.path("code").asString();
         assertThat(statusOf(result)).isEqualTo(403);
-        assertThat(contentTypeOf(result)).isEqualTo(PROBLEM_JSON);
+        assertThat(contentTypeOf(result)).isEqualTo(ERROR_MEDIA_TYPE);
         assertThat(code).isEqualTo(CommonError.FORBIDDEN.getCode());
     }
 
@@ -325,10 +325,10 @@ class SpacesControllerIntegrationTest extends SecurityIntegrationTest {
         String badLimitCode = badLimitBody.path("code").asString();
         String wrongMethodCode = wrongMethodBody.path("code").asString();
         assertThat(statusOf(badLimit)).isEqualTo(400);
-        assertThat(contentTypeOf(badLimit)).isEqualTo(PROBLEM_JSON);
+        assertThat(contentTypeOf(badLimit)).isEqualTo(ERROR_MEDIA_TYPE);
         assertThat(badLimitCode).isEqualTo(CommonError.BAD_REQUEST.getCode());
         assertThat(statusOf(wrongMethod)).isEqualTo(405);
-        assertThat(contentTypeOf(wrongMethod)).isEqualTo(PROBLEM_JSON);
+        assertThat(contentTypeOf(wrongMethod)).isEqualTo(ERROR_MEDIA_TYPE);
         assertThat(wrongMethodCode).isEqualTo(CommonError.METHOD_NOT_ALLOWED.getCode());
     }
 
@@ -388,7 +388,7 @@ class SpacesControllerIntegrationTest extends SecurityIntegrationTest {
         String pointer = firstError.path("pointer").asString();
         String fieldCode = firstError.path("code").asString();
         assertThat(statusOf(refused)).isEqualTo(409);
-        assertThat(contentTypeOf(refused)).isEqualTo(PROBLEM_JSON);
+        assertThat(contentTypeOf(refused)).isEqualTo(ERROR_MEDIA_TYPE);
         assertThat(code).isEqualTo(SpaceError.SLUG_TAKEN.getCode());
         assertThat(pointer).isEqualTo("/slug");
         assertThat(fieldCode).isEqualTo(SpaceError.SLUG_TAKEN.getCode());
@@ -470,7 +470,7 @@ class SpacesControllerIntegrationTest extends SecurityIntegrationTest {
     }
 
     @Test
-    void aNegativeVersionIsAValidationProblemWithPointer() throws Exception {
+    void aNegativeVersionIsAValidationErrorWithPointer() throws Exception {
         // given
         String admin = uniqueSubject("negative-version");
         String slug = uniqueSlug("negative-version");
@@ -636,7 +636,7 @@ class SpacesControllerIntegrationTest extends SecurityIntegrationTest {
 
         // then
         assertThat(statusOf(result)).isEqualTo(400);
-        assertThat(contentTypeOf(result)).isEqualTo(PROBLEM_JSON);
+        assertThat(contentTypeOf(result)).isEqualTo(ERROR_MEDIA_TYPE);
     }
 
     private MvcResult postSpace(String subject, String slug, String name) throws Exception {

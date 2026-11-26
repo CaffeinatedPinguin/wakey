@@ -21,9 +21,9 @@ public class ApiConfiguration {
 
     private static final String VERSION = "v1";
 
-    private static final String PROBLEM_DETAIL_SCHEMA = "ProblemDetail";
+    private static final String ERROR_SCHEMA_NAME = "ProblemDetail";
 
-    private static final String PROBLEM_DETAIL_REF = "#/components/schemas/" + PROBLEM_DETAIL_SCHEMA;
+    private static final String ERROR_SCHEMA_REF = "#/components/schemas/" + ERROR_SCHEMA_NAME;
 
     @Bean
     GroupedOpenApi publicApi(ApiProperties apiProperties, List<ErrorCodeSet> errorCodeSets) {
@@ -32,7 +32,7 @@ public class ApiConfiguration {
                 .group(GROUP)
                 .pathsToMatch(ApiPaths.API_V1_ALL)
                 .addOpenApiCustomizer(openApi -> documentPublicApi(openApi, apiProperties, codes))
-                .addOperationCustomizer(OpenApiUnauthenticatedResponse.customizer(PROBLEM_DETAIL_REF))
+                .addOperationCustomizer(OpenApiUnauthenticatedResponse.customizer(ERROR_SCHEMA_REF))
                 .build();
     }
 
@@ -43,7 +43,7 @@ public class ApiConfiguration {
         if (components == null) {
             components = new Components();
         }
-        components.addSchemas(PROBLEM_DETAIL_SCHEMA, ProblemDetailSchema.schema(codes));
+        components.addSchemas(ERROR_SCHEMA_NAME, ApiExceptionSchema.schema(codes));
         openApi.setComponents(components);
         OpenApiPageLimit.document(openApi.getPaths(), apiProperties.maxPageSize());
     }

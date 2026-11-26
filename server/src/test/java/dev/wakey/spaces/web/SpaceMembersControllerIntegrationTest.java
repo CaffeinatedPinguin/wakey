@@ -45,7 +45,7 @@ class SpaceMembersControllerIntegrationTest extends SecurityIntegrationTest {
 
     private static final String ADMIN_ROLE = "ROLE_ADMIN";
 
-    private static final String PROBLEM_JSON = "application/problem+json";
+    private static final String ERROR_MEDIA_TYPE = "application/problem+json";
 
     private static final String ISSUER = "https://issuer.example.com";
 
@@ -119,8 +119,8 @@ class SpaceMembersControllerIntegrationTest extends SecurityIntegrationTest {
         MvcResult longSubject = addMemberAs(admin, true, slug, memberBody(tooLong, SpaceRole.VIEWER));
 
         // then
-        assertValidationProblem(blank, "/subject");
-        assertValidationProblem(longSubject, "/subject");
+        assertValidationError(blank, "/subject");
+        assertValidationError(longSubject, "/subject");
     }
 
     @Test
@@ -213,7 +213,7 @@ class SpaceMembersControllerIntegrationTest extends SecurityIntegrationTest {
         JsonNode body = jsonOf(result);
         String code = body.path("code").asString();
         assertThat(statusOf(result)).isEqualTo(404);
-        assertThat(contentTypeOf(result)).isEqualTo(PROBLEM_JSON);
+        assertThat(contentTypeOf(result)).isEqualTo(ERROR_MEDIA_TYPE);
         assertThat(code).isEqualTo(CommonError.NOT_FOUND.getCode());
     }
 
@@ -289,11 +289,11 @@ class SpaceMembersControllerIntegrationTest extends SecurityIntegrationTest {
         return repository.findById(session.getId()) != null;
     }
 
-    private static void assertValidationProblem(MvcResult result, String pointer) throws Exception {
+    private static void assertValidationError(MvcResult result, String pointer) throws Exception {
         JsonNode body = jsonOf(result);
         String code = body.path("code").asString();
         assertThat(statusOf(result)).isEqualTo(400);
-        assertThat(contentTypeOf(result)).isEqualTo(PROBLEM_JSON);
+        assertThat(contentTypeOf(result)).isEqualTo(ERROR_MEDIA_TYPE);
         assertThat(code).isEqualTo(CommonError.VALIDATION_FAILED.getCode());
         assertThat(errorPointers(body)).contains(pointer);
     }

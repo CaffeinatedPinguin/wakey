@@ -18,12 +18,12 @@ import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
 import tools.jackson.databind.json.JsonMapper;
 
-class ProblemResponseSecurityTest extends SecurityIntegrationTest {
+class ExceptionResponseSecurityTest extends SecurityIntegrationTest {
 
     private static final ObjectMapper MAPPER = JsonMapper.builder().build();
 
     @Test
-    void unauthenticatedResponseIsProblemJson() throws Exception {
+    void unauthenticatedResponseIsErrorJson() throws Exception {
         // when
         MvcResult result = mockMvc().perform(get("/api/v1/me")).andReturn();
 
@@ -40,7 +40,7 @@ class ProblemResponseSecurityTest extends SecurityIntegrationTest {
     }
 
     @Test
-    void forbiddenResponseIsProblemJson() throws Exception {
+    void forbiddenResponseIsErrorJson() throws Exception {
         // given
         var request = post("/logout").with(oidcLogin());
 
@@ -60,7 +60,7 @@ class ProblemResponseSecurityTest extends SecurityIntegrationTest {
     }
 
     @Test
-    void securityProblemsUseTheSameShapeAsMvcProblems() throws Exception {
+    void securityExceptionsUseTheSameShapeAsMvcExceptions() throws Exception {
         // given
         MockHttpServletRequestBuilder unauthenticatedRequest = get("/api/v1/me");
         MockHttpServletRequestBuilder missingResourceRequest =

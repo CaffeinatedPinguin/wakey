@@ -60,8 +60,8 @@ class SpacesWebConfiguration {
     }
 
     @Bean
-    GlobalOperationCustomizer spacesProblemResponses() {
-        return new SpacesProblemResponses();
+    GlobalOperationCustomizer spacesExceptionResponses() {
+        return new SpacesExceptionResponses();
     }
 
     private static void documentParameters(Operation operation) {

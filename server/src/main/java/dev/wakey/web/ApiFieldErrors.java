@@ -13,48 +13,48 @@ import org.jspecify.annotations.Nullable;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 
-/** Turns Bean Validation failures into the {@code errors[]} entries of a Problem Details body. */
-final class FieldProblems {
+/** Turns Bean Validation failures into the {@code errors[]} entries of an error body. */
+final class ApiFieldErrors {
 
     private static final String DEFAULT_CODE = CommonError.BAD_REQUEST.getCode();
 
     private static final List<String> NON_PARAMS = List.of("message", "groups", "payload");
 
-    private FieldProblems() {}
+    private ApiFieldErrors() {}
 
-    static List<FieldProblem> of(MethodArgumentNotValidException exception) {
-        List<FieldProblem> problems = new ArrayList<>();
+    static List<ApiFieldError> of(MethodArgumentNotValidException exception) {
+        List<ApiFieldError> errors = new ArrayList<>();
         for (FieldError fieldError : exception.getBindingResult().getFieldErrors()) {
-            problems.add(fieldProblem(fieldError));
+            errors.add(fieldError(fieldError));
         }
-        return problems;
+        return errors;
     }
 
-    static List<FieldProblem> of(ConstraintViolationException exception) {
+    static List<ApiFieldError> of(ConstraintViolationException exception) {
         Set<ConstraintViolation<?>> violations = exception.getConstraintViolations();
-        List<FieldProblem> problems = new ArrayList<>(violations.size());
+        List<ApiFieldError> errors = new ArrayList<>(violations.size());
         for (ConstraintViolation<?> violation : violations) {
-            problems.add(fieldProblem(violation));
+            errors.add(fieldError(violation));
         }
-        return problems;
+        return errors;
     }
 
-    private static FieldProblem fieldProblem(FieldError error) {
+    private static ApiFieldError fieldError(FieldError error) {
         @Nullable String code = error.getCode();
         String fieldCode = code == null ? DEFAULT_CODE : code;
         String pointer = pointerOf(error.getField());
         Map<String, Object> params = error.contains(ConstraintViolation.class) ? paramsOf(error) : Map.of();
-        return new FieldProblem(pointer, snakeCase(fieldCode), params);
+        return new ApiFieldError(pointer, snakeCase(fieldCode), params);
     }
 
-    private static FieldProblem fieldProblem(ConstraintViolation<?> violation) {
+    private static ApiFieldError fieldError(ConstraintViolation<?> violation) {
         String annotation = violation
                 .getConstraintDescriptor()
                 .getAnnotation()
                 .annotationType()
                 .getSimpleName();
         String pointer = pointerOf(violation.getPropertyPath());
-        return new FieldProblem(pointer, snakeCase(annotation), paramsOf(violation));
+        return new ApiFieldError(pointer, snakeCase(annotation), paramsOf(violation));
     }
 
     private static Map<String, Object> paramsOf(FieldError error) {

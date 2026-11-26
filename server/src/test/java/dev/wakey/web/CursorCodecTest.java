@@ -24,15 +24,15 @@ class CursorCodecTest {
     }
 
     @Test
-    void tamperedCursorIsRejectedAsProblem() {
+    void tamperedCursorIsRejected() {
         // when
         Throwable thrown = catchThrowable(() -> CursorCodec.decode("not-base64!"));
 
         // then
         assertThat(thrown).isInstanceOf(ApiException.class);
-        ApiException problem = (ApiException) Objects.requireNonNull(thrown);
-        String code = problem.getErrorCode().getCode();
-        assertThat(problem.getErrorCode()).isEqualTo(CommonError.INVALID_CURSOR);
+        ApiException exception = (ApiException) Objects.requireNonNull(thrown);
+        String code = exception.getErrorCode().getCode();
+        assertThat(exception.getErrorCode()).isEqualTo(CommonError.INVALID_CURSOR);
         assertThat(code).isEqualTo(CommonError.INVALID_CURSOR.getCode());
     }
 
@@ -46,8 +46,8 @@ class CursorCodecTest {
 
         // then
         assertThat(thrown).isInstanceOf(ApiException.class);
-        ApiException problem = (ApiException) Objects.requireNonNull(thrown);
-        assertThat(problem.getErrorCode()).isEqualTo(CommonError.INVALID_CURSOR);
+        ApiException exception = (ApiException) Objects.requireNonNull(thrown);
+        assertThat(exception.getErrorCode()).isEqualTo(CommonError.INVALID_CURSOR);
     }
 
     @Test

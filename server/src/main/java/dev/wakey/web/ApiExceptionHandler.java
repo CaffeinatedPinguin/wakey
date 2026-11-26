@@ -18,7 +18,7 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.context.request.WebRequest;
 import org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExceptionHandler;
 
-/** The single place that renders every HTTP error as RFC 9457 Problem Details. */
+/** The single place that renders every HTTP error as an RFC 9457 error body. */
 @Slf4j
 @RestControllerAdvice
 public class ApiExceptionHandler extends ResponseEntityExceptionHandler {
@@ -26,65 +26,65 @@ public class ApiExceptionHandler extends ResponseEntityExceptionHandler {
     @Override
     protected ResponseEntity<Object> createResponseEntity(
             @Nullable Object body, HttpHeaders headers, HttpStatusCode status, WebRequest request) {
-        ProblemDetail problem = body instanceof ProblemDetail detail ? detail : ProblemDetail.forStatus(status);
+        ProblemDetail detail = body instanceof ProblemDetail existing ? existing : ProblemDetail.forStatus(status);
         CommonError error = CommonError.forStatus(status);
-        ProblemDetails.apply(problem, error);
-        return super.createResponseEntity(problem, headers, status, request);
+        ApiExceptionBodies.apply(detail, error);
+        return super.createResponseEntity(detail, headers, status, request);
     }
 
     @Override
     protected @Nullable ResponseEntity<Object> handleMethodArgumentNotValid(
             MethodArgumentNotValidException exception, HttpHeaders headers, HttpStatusCode status, WebRequest request) {
-        ProblemDetail problem = ProblemDetails.of(CommonError.VALIDATION_FAILED, FieldProblems.of(exception));
-        return customResponse(problem, headers, status);
+        ProblemDetail detail = ApiExceptionBodies.of(CommonError.VALIDATION_FAILED, ApiFieldErrors.of(exception));
+        return customResponse(detail, headers, status);
     }
 
     @Override
     protected @Nullable ResponseEntity<Object> handleHttpMessageNotReadable(
             HttpMessageNotReadableException exception, HttpHeaders headers, HttpStatusCode status, WebRequest request) {
-        return customResponse(ProblemDetails.of(CommonError.INVALID_BODY), headers, status);
+        return customResponse(ApiExceptionBodies.of(CommonError.INVALID_BODY), headers, status);
     }
 
     @ExceptionHandler(ApiException.class)
     ResponseEntity<ProblemDetail> apiException(ApiException exception) {
         ErrorCode error = exception.getErrorCode();
-        ProblemDetail problem = ProblemDetails.of(error, exception.getFieldProblems());
-        return problemResponse(error.getStatus(), problem);
+        ProblemDetail detail = ApiExceptionBodies.of(error, exception.getFieldErrors());
+        return errorResponse(error.getStatus(), detail);
     }
 
     @ExceptionHandler(ConstraintViolationException.class)
     ResponseEntity<ProblemDetail> constraintViolation(ConstraintViolationException exception) {
-        ProblemDetail problem = ProblemDetails.of(CommonError.VALIDATION_FAILED, FieldProblems.of(exception));
-        return problemResponse(CommonError.VALIDATION_FAILED.getStatus(), problem);
+        ProblemDetail detail = ApiExceptionBodies.of(CommonError.VALIDATION_FAILED, ApiFieldErrors.of(exception));
+        return errorResponse(CommonError.VALIDATION_FAILED.getStatus(), detail);
     }
 
     @ExceptionHandler(AccessDeniedException.class)
     ProblemDetail forbidden() {
-        return ProblemDetails.of(CommonError.FORBIDDEN);
+        return ApiExceptionBodies.of(CommonError.FORBIDDEN);
     }
 
     @ExceptionHandler(AuthenticationException.class)
     ProblemDetail unauthenticated() {
-        return ProblemDetails.of(CommonError.UNAUTHENTICATED);
+        return ApiExceptionBodies.of(CommonError.UNAUTHENTICATED);
     }
 
     @ExceptionHandler(Exception.class)
     ResponseEntity<ProblemDetail> unexpected(Exception exception) {
         log.error("unexpected request failure", exception);
-        return problemResponse(CommonError.INTERNAL_ERROR.getStatus(), ProblemDetails.of(CommonError.INTERNAL_ERROR));
+        return errorResponse(CommonError.INTERNAL_ERROR.getStatus(), ApiExceptionBodies.of(CommonError.INTERNAL_ERROR));
     }
 
     private static ResponseEntity<Object> customResponse(
-            ProblemDetail problem, HttpHeaders headers, HttpStatusCode status) {
+            ProblemDetail detail, HttpHeaders headers, HttpStatusCode status) {
         return ResponseEntity.status(status)
                 .headers(headers)
                 .contentType(MediaType.APPLICATION_PROBLEM_JSON)
-                .body(problem);
+                .body(detail);
     }
 
-    private static ResponseEntity<ProblemDetail> problemResponse(HttpStatus status, ProblemDetail problem) {
+    private static ResponseEntity<ProblemDetail> errorResponse(HttpStatus status, ProblemDetail detail) {
         return ResponseEntity.status(status)
                 .contentType(MediaType.APPLICATION_PROBLEM_JSON)
-                .body(problem);
+                .body(detail);
     }
 }

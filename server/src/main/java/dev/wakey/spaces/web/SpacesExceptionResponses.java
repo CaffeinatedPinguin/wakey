@@ -12,9 +12,9 @@ import org.springdoc.core.customizers.GlobalOperationCustomizer;
 import org.springframework.web.method.HandlerMethod;
 
 /** Documents the error answers that each spaces operation really returns. */
-final class SpacesProblemResponses implements GlobalOperationCustomizer {
+final class SpacesExceptionResponses implements GlobalOperationCustomizer {
 
-    private static final String PROBLEM_DETAIL_REF = "#/components/schemas/ProblemDetail";
+    private static final String ERROR_SCHEMA_REF = "#/components/schemas/ProblemDetail";
 
     private static final String BAD_REQUEST = "400";
 
@@ -102,11 +102,11 @@ final class SpacesProblemResponses implements GlobalOperationCustomizer {
             responses = new ApiResponses();
             operation.setResponses(responses);
         }
-        responses.addApiResponse(status, problemResponse(description));
+        responses.addApiResponse(status, errorResponse(description));
     }
 
-    private static ApiResponse problemResponse(String description) {
-        Schema<?> schema = new Schema<>().$ref(PROBLEM_DETAIL_REF);
+    private static ApiResponse errorResponse(String description) {
+        Schema<?> schema = new Schema<>().$ref(ERROR_SCHEMA_REF);
         MediaType mediaType = new MediaType().schema(schema);
         Content content = new Content();
         content.addMediaType(org.springframework.http.MediaType.APPLICATION_PROBLEM_JSON_VALUE, mediaType);

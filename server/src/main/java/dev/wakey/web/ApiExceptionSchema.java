@@ -7,10 +7,10 @@ import io.swagger.v3.oas.models.media.Schema;
 import io.swagger.v3.oas.models.media.StringSchema;
 import java.util.List;
 
-/** Builds the {@code ProblemDetail} schema of the public contract, including every known error code. */
-final class ProblemDetailSchema {
+/** Builds the shared error schema of the public contract, including every known error code. */
+final class ApiExceptionSchema {
 
-    private ProblemDetailSchema() {}
+    private ApiExceptionSchema() {}
 
     static Schema<?> schema(List<String> codes) {
         ObjectSchema fieldError = new ObjectSchema();
