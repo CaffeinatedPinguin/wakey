@@ -20,6 +20,7 @@ English translation (backlog item 13).
 | [decisions/0007-static-checks.md](decisions/0007-static-checks.md) | Formatter, Error Prone/NullAway, Checkstyle and ESLint rules | Changing build checks or a lint rule |
 | [decisions/0008-postgresql-only.md](decisions/0008-postgresql-only.md) | PostgreSQL-only places, registry and migration path | Adding a PostgreSQL-only feature |
 | [decisions/0009-theme.md](decisions/0009-theme.md) | Theme as the app standard: layers, component rules, mobile and deviations | Theme, colours, sizes or mobile layout |
+| [decisions/0010-components-in-stage-4.md](decisions/0010-components-in-stage-4.md) | Minimal components from stage 4, their state policy and module direction | Incidents, components or status page work |
 | [research/backlog.md](research/backlog.md) | Open research topics and when each is needed | Planning the next stage or a research task |
 | [research/ui-ux-brief.md](research/ui-ux-brief.md) | Brief that produced the UI/UX spec | Revisiting UI/UX research scope |
 | [research/stack-server.md](research/stack-server.md) | Server language, framework and async model options (item 1) | Choosing or revisiting the server stack |

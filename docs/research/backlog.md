@@ -11,9 +11,9 @@ Lista tematów do zbadania osobnym agentem albo z ekspertem, zanim dojdzie do da
 | 1.5 | Frontend: biblioteka komponentów, formularze, wykresy | przed etapem 1, wykresy przed 5 | zamknięte: `docs/decisions/0004-frontend.md` |
 | 2 | Pomiary sieciowe w Javie (serwer) i Go (agent) | przed etapem 1 | serwer zamknięty: `docs/decisions/0003-network-checks.md`; agent: `docs/research/net-go.md`, szczegóły w repo agenta |
 | 3 | UI/UX | przed etapem 1, najpóźniej przed 5 | agent (brief: `docs/research/ui-ux-brief.md`) |
-| 4 | Dostawcy w UE (VPS, email, magazyn, watchdog) | przed etapem 2 | agent |
-| 5 | Kanały push i treść powiadomień | przed etapem 2 | agent |
-| 6 | Semantyka heartbeatów i cronów | przed etapem 3 | agent |
+| 4 | Dostawcy w UE (VPS, email, magazyn, watchdog) | przed etapem 2 | właściciel; decyzja w ADR (fala 2a), bez raportu |
+| 5 | Kanały push i treść powiadomień | przed etapem 2 | właściciel; Pushover ze spec, treść w makietach 2b, ADR z fali 2a |
+| 6 | Semantyka heartbeatów i cronów | przed etapem 3 | agent (fala 3a) |
 | 7 | Format publicznego JSON status page | przed etapem 5 | agent |
 | 8 | Kanał agenta przez firewalle i proxy | przed etapem 6 | agent |
 | 9 | Format pliku konfiguracyjnego i importy | przed etapem 7 | agent |
