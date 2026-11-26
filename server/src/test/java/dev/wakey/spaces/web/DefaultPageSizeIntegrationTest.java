@@ -63,7 +63,7 @@ class DefaultPageSizeIntegrationTest extends SecurityIntegrationTest {
 
     private void seedSpace(String slug) {
         CurrentUser admin = new CurrentUser("https://issuer.example.com", "fixture-admin", true);
-        bean(SpaceService.class).put(admin, slug, "Default page space");
+        bean(SpaceService.class).put(admin, slug, "Default page space", null);
     }
 
     private static String uniqueSlug(String prefix) {

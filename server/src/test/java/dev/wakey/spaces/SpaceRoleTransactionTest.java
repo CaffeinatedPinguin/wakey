@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.catchThrowable;
 
 import dev.wakey.security.CurrentUser;
+import dev.wakey.security.UserSessions;
 import dev.wakey.testsupport.PostgresIntegrationTest;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
@@ -27,7 +28,7 @@ class SpaceRoleTransactionTest extends PostgresIntegrationTest {
         SpaceService service = bean(SpaceService.class);
         String slug = uniqueSlug("rollback");
         String subject = uniqueSubject("role-change");
-        service.put(ADMIN, slug, "Rollback space");
+        service.put(ADMIN, slug, "Rollback space", null);
         service.addMember(ADMIN, slug, new SpaceMember(ISSUER, subject, SpaceRole.VIEWER));
         CurrentUser member = new CurrentUser(ISSUER, subject, false);
 

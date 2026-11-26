@@ -19,6 +19,7 @@ public enum CommonError implements ErrorCode {
     METHOD_NOT_ALLOWED(HttpStatus.METHOD_NOT_ALLOWED, "The HTTP method is not allowed for this resource."),
     NOT_ACCEPTABLE(HttpStatus.NOT_ACCEPTABLE, "The requested media type cannot be produced."),
     UNSUPPORTED_MEDIA_TYPE(HttpStatus.UNSUPPORTED_MEDIA_TYPE, "The request media type is not supported."),
+    VERSION_CONFLICT(HttpStatus.CONFLICT, "The resource changed since the supplied version."),
     INTERNAL_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "An unexpected error occurred.");
 
     private final HttpStatus status;

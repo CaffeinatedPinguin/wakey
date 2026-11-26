@@ -41,7 +41,7 @@ class SpaceListQueryCountTest extends PostgresIntegrationTest {
     private static void seed(SpaceService service, String prefix) {
         String suffix = UUID.randomUUID().toString().substring(0, 8);
         String slug = prefix + "-" + suffix;
-        service.put(ADMIN, slug, "Page space");
+        service.put(ADMIN, slug, "Page space", null);
     }
 
     @TestConfiguration(proxyBeanMethods = false)

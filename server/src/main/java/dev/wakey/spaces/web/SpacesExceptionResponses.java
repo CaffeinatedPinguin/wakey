@@ -66,11 +66,11 @@ final class SpacesExceptionResponses implements GlobalOperationCustomizer {
     }
 
     private static void documentPut(Operation operation) {
-        String conflictCode = SpaceError.VERSION_CONFLICT.getCode();
+        String conflictCode = CommonError.VERSION_CONFLICT.getCode();
         operation.setDescription(PUT_DESCRIPTION + conflictCode + ".");
         add(operation, BAD_REQUEST, CommonError.BAD_REQUEST.getDetail());
         add(operation, FORBIDDEN, CommonError.FORBIDDEN.getDetail());
-        add(operation, CONFLICT, SpaceError.VERSION_CONFLICT.getDetail());
+        add(operation, CONFLICT, CommonError.VERSION_CONFLICT.getDetail());
     }
 
     private static void documentMemberList(Operation operation) {

@@ -13,6 +13,7 @@ import dev.wakey.web.ErrorCode;
 import jakarta.validation.ConstraintViolation;
 import jakarta.validation.ConstraintViolationException;
 import jakarta.validation.Path;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -24,10 +25,14 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import org.junit.jupiter.api.Test;
+import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
-import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextImpl;
+import org.springframework.security.oauth2.core.oidc.OidcIdToken;
+import org.springframework.security.oauth2.core.oidc.user.DefaultOidcUser;
+import org.springframework.security.oauth2.core.oidc.user.OidcUser;
+import org.springframework.security.oauth2.core.oidc.user.OidcUserAuthority;
 import org.springframework.security.web.context.HttpSessionSecurityContextRepository;
 import org.springframework.session.FindByIndexNameSessionRepository;
 import org.springframework.session.Session;
@@ -54,8 +59,8 @@ class SpaceServiceIntegrationTest extends PostgresIntegrationTest {
         String name = "Created space";
 
         // when
-        PutResult first = service.put(ADMIN, slug, name);
-        PutResult second = service.put(ADMIN, slug, "  " + name + "  ");
+        PutResult first = service.put(ADMIN, slug, name, null);
+        PutResult second = service.put(ADMIN, slug, "  " + name + "  ", null);
 
         // then
         Space firstSpace = first.space();
@@ -73,10 +78,10 @@ class SpaceServiceIntegrationTest extends PostgresIntegrationTest {
         // given
         SpaceService service = service();
         String slug = uniqueSlug("rename");
-        PutResult created = service.put(ADMIN, slug, "Old name");
+        PutResult created = service.put(ADMIN, slug, "Old name", null);
 
         // when
-        PutResult renamed = service.put(ADMIN, slug, "New name");
+        PutResult renamed = service.put(ADMIN, slug, "New name", null);
         SpaceView stored = service.view(ADMIN, slug);
 
         // then
@@ -93,7 +98,7 @@ class SpaceServiceIntegrationTest extends PostgresIntegrationTest {
         // given
         SpaceService service = service();
         String slug = uniqueSlug("stale");
-        service.put(ADMIN, slug, "Original name");
+        service.put(ADMIN, slug, "Original name", null);
         long firstRead = service.view(ADMIN, slug).version();
         long secondRead = service.view(ADMIN, slug).version();
 
@@ -106,9 +111,27 @@ class SpaceServiceIntegrationTest extends PostgresIntegrationTest {
         Space renamedSpace = renamed.space();
         long renamedVersion = renamedSpace.version();
         assertThat(renamedVersion).isEqualTo(firstRead + 1);
-        assertError(stale, SpaceError.VERSION_CONFLICT);
+        assertThat(stale).isInstanceOf(OptimisticLockingFailureException.class);
         assertThat(stored.name()).isEqualTo("First rename");
         assertThat(stored.version()).isEqualTo(firstRead + 1);
+    }
+
+    @Test
+    void aStaleVersionIsAConflictThroughTheVersionColumn() {
+        // given
+        SpaceService service = service();
+        String slug = uniqueSlug("stale-column");
+        service.put(ADMIN, slug, "Original name", null);
+        long staleVersion = service.view(ADMIN, slug).version();
+        service.put(ADMIN, slug, "Renamed name", staleVersion);
+
+        // when
+        Throwable stale = catchThrowable(() -> service.put(ADMIN, slug, "Renamed name", staleVersion));
+
+        // then
+        SpaceView stored = service.view(ADMIN, slug);
+        assertThat(stale).isInstanceOf(OptimisticLockingFailureException.class);
+        assertThat(stored.name()).isEqualTo("Renamed name");
     }
 
     @Test
@@ -119,9 +142,9 @@ class SpaceServiceIntegrationTest extends PostgresIntegrationTest {
         String newSlug = uniqueSlug("denied-new");
 
         // when
-        Throwable creation = catchThrowable(() -> service.put(EDITOR, newSlug, "Denied"));
-        Throwable rename = catchThrowable(() -> service.put(EDITOR, existing.slug(), "Renamed by editor"));
-        Throwable viewerCreation = catchThrowable(() -> service.put(VIEWER, newSlug, "Denied"));
+        Throwable creation = catchThrowable(() -> service.put(EDITOR, newSlug, "Denied", null));
+        Throwable rename = catchThrowable(() -> service.put(EDITOR, existing.slug(), "Renamed by editor", null));
+        Throwable viewerCreation = catchThrowable(() -> service.put(VIEWER, newSlug, "Denied", null));
 
         // then
         assertError(creation, CommonError.FORBIDDEN);
@@ -144,7 +167,7 @@ class SpaceServiceIntegrationTest extends PostgresIntegrationTest {
                 () -> service.changeRole(STRANGER, space.slug(), new SpaceMember(ISSUER, subject, SpaceRole.EDITOR)));
         Throwable remove =
                 catchThrowable(() -> service.removeMember(STRANGER, space.slug(), new SpaceMemberId(ISSUER, subject)));
-        Throwable write = catchThrowable(() -> service.put(STRANGER, uniqueSlug("stranger-write"), "Denied"));
+        Throwable write = catchThrowable(() -> service.put(STRANGER, uniqueSlug("stranger-write"), "Denied", null));
         List<SpaceView> visible = service.listVisible(STRANGER, null, 100);
 
         // then
@@ -166,7 +189,7 @@ class SpaceServiceIntegrationTest extends PostgresIntegrationTest {
         // when
         SpaceView read = service.view(VIEWER, slug);
         List<SpaceView> visible = service.listVisible(VIEWER, null, 100);
-        Throwable write = catchThrowable(() -> service.put(VIEWER, uniqueSlug("viewer-write"), "Denied"));
+        Throwable write = catchThrowable(() -> service.put(VIEWER, uniqueSlug("viewer-write"), "Denied", null));
         Throwable add = catchThrowable(() -> service.addMember(
                 VIEWER, slug, new SpaceMember(ISSUER, uniqueSubject("viewer-target"), SpaceRole.VIEWER)));
         Throwable change = catchThrowable(
@@ -189,7 +212,8 @@ class SpaceServiceIntegrationTest extends PostgresIntegrationTest {
         SpaceService service = service();
         Space ownSpace = seedSpace("editor-own");
         String foreignSlug = uniqueSlug("editor-foreign");
-        Space foreignSpace = service.put(ADMIN, foreignSlug, "Foreign space").space();
+        Space foreignSpace =
+                service.put(ADMIN, foreignSlug, "Foreign space", null).space();
         String ownSlug = ownSpace.slug();
         String externalForeignSlug = foreignSpace.slug();
         String subject = uniqueSubject("managed");
@@ -224,7 +248,7 @@ class SpaceServiceIntegrationTest extends PostgresIntegrationTest {
         SpaceService service = service();
         Space memberSpace = seedSpace("visible");
         Space foreignSpace =
-                service.put(ADMIN, uniqueSlug("hidden"), "Hidden space").space();
+                service.put(ADMIN, uniqueSlug("hidden"), "Hidden space", null).space();
         String memberSlug = memberSpace.slug();
         String foreignSlug = foreignSpace.slug();
 
@@ -263,8 +287,8 @@ class SpaceServiceIntegrationTest extends PostgresIntegrationTest {
         // given
         SpaceService service = service();
         Space space = seedSpace("view-one");
-        Space foreignSpace =
-                service.put(ADMIN, uniqueSlug("view-hidden"), "Hidden view").space();
+        Space foreignSpace = service.put(ADMIN, uniqueSlug("view-hidden"), "Hidden view", null)
+                .space();
         String slug = space.slug();
         String foreignSlug = foreignSpace.slug();
 
@@ -298,8 +322,8 @@ class SpaceServiceIntegrationTest extends PostgresIntegrationTest {
         String blankSlug = uniqueSlug("name-blank");
 
         // when
-        Throwable blankName = catchThrowable(() -> service.put(ADMIN, blankSlug, "   "));
-        Throwable longName = catchThrowable(() -> service.put(ADMIN, longSlug, tooLongName));
+        Throwable blankName = catchThrowable(() -> service.put(ADMIN, blankSlug, "   ", null));
+        Throwable longName = catchThrowable(() -> service.put(ADMIN, longSlug, tooLongName, null));
 
         // then
         List<ConstraintViolation<?>> blankViolations = violationsOf(blankName);
@@ -431,7 +455,7 @@ class SpaceServiceIntegrationTest extends PostgresIntegrationTest {
         SpaceService service = service();
         String slug = uniqueSlug("two-issuers");
         String subject = uniqueSubject("shared-subject");
-        service.put(ADMIN, slug, "Two issuers");
+        service.put(ADMIN, slug, "Two issuers", null);
         CurrentUser firstMember = new CurrentUser("https://issuer-one.example", subject, false);
         CurrentUser secondMember = new CurrentUser("https://issuer-two.example", subject, false);
         service.addMember(ADMIN, slug, new SpaceMember(firstMember.issuer(), subject, SpaceRole.VIEWER));
@@ -487,6 +511,41 @@ class SpaceServiceIntegrationTest extends PostgresIntegrationTest {
     }
 
     @Test
+    void removingAMemberEndsTheirSessions() {
+        // given
+        SpaceService service = service();
+        Space space = seedSpace("remove-ends");
+        String subject = uniqueSubject("removed-ends");
+        service.addMember(ADMIN, space.slug(), new SpaceMember(ISSUER, subject, SpaceRole.VIEWER));
+        Session session = createSession(subject);
+
+        // when
+        service.removeMember(ADMIN, space.slug(), new SpaceMemberId(ISSUER, subject));
+
+        // then
+        assertThat(sessionExists(session)).isFalse();
+    }
+
+    @Test
+    void removingAMemberKeepsTheSessionsOfTheSameSubjectFromAnotherIssuer() {
+        // given
+        SpaceService service = service();
+        Space space = seedSpace("remove-issuer");
+        String subject = uniqueSubject("shared-subject");
+        String otherIssuer = "https://other-issuer.example";
+        service.addMember(ADMIN, space.slug(), new SpaceMember(ISSUER, subject, SpaceRole.VIEWER));
+        Session removedSession = createSession(ISSUER, subject);
+        Session otherIssuerSession = createSession(otherIssuer, subject);
+
+        // when
+        service.removeMember(ADMIN, space.slug(), new SpaceMemberId(ISSUER, subject));
+
+        // then
+        assertThat(sessionExists(removedSession)).isFalse();
+        assertThat(sessionExists(otherIssuerSession)).isTrue();
+    }
+
+    @Test
     void addingAMemberKeepsSessions() {
         // given
         SpaceService service = service();
@@ -515,7 +574,7 @@ class SpaceServiceIntegrationTest extends PostgresIntegrationTest {
 
         // when
         try {
-            Callable<PutResult> put = () -> service.put(ADMIN, slug, name);
+            Callable<PutResult> put = () -> service.put(ADMIN, slug, name, null);
             List<Future<PutResult>> futures = executor.invokeAll(List.of(put, put));
             for (Future<PutResult> future : futures) {
                 results.add(future.get());
@@ -602,7 +661,7 @@ class SpaceServiceIntegrationTest extends PostgresIntegrationTest {
 
     private Space seedSpace(String prefix) {
         SpaceService service = service();
-        PutResult created = service.put(ADMIN, uniqueSlug(prefix), "Space " + prefix);
+        PutResult created = service.put(ADMIN, uniqueSlug(prefix), "Space " + prefix, null);
         Space space = created.space();
         String slug = space.slug();
         service.addMember(ADMIN, slug, new SpaceMember(ISSUER, EDITOR.subject(), SpaceRole.EDITOR));
@@ -623,21 +682,33 @@ class SpaceServiceIntegrationTest extends PostgresIntegrationTest {
         assertThat(exception.getErrorCode()).isEqualTo(expected);
     }
 
-    private Session createSession(String principal) {
-        JdbcIndexedSessionRepository repository = bean(JdbcIndexedSessionRepository.class);
-        return createSession(repository, principal);
+    private Session createSession(String subject) {
+        return createSession(ISSUER, subject);
     }
 
-    private static <S extends Session> S createSession(SessionRepository<S> repository, String principal) {
+    private Session createSession(String issuer, String subject) {
+        JdbcIndexedSessionRepository repository = bean(JdbcIndexedSessionRepository.class);
+        return createSession(repository, issuer, subject);
+    }
+
+    private static <S extends Session> S createSession(SessionRepository<S> repository, String issuer, String subject) {
         S session = repository.createSession();
-        List<SimpleGrantedAuthority> authorities = List.of(new SimpleGrantedAuthority("ROLE_USER"));
-        Authentication authentication =
-                UsernamePasswordAuthenticationToken.authenticated(principal, "n/a", authorities);
+        Authentication authentication = authentication(issuer, subject);
         SecurityContextImpl context = new SecurityContextImpl(authentication);
         session.setAttribute(HttpSessionSecurityContextRepository.SPRING_SECURITY_CONTEXT_KEY, context);
-        session.setAttribute(FindByIndexNameSessionRepository.PRINCIPAL_NAME_INDEX_NAME, principal);
+        session.setAttribute(FindByIndexNameSessionRepository.PRINCIPAL_NAME_INDEX_NAME, subject);
         repository.save(session);
         return session;
+    }
+
+    private static Authentication authentication(String issuer, String subject) {
+        Map<String, Object> claims = Map.of("sub", subject, "iss", issuer);
+        Instant issuedAt = Instant.EPOCH;
+        Instant expiresAt = issuedAt.plusSeconds(600);
+        OidcIdToken idToken = new OidcIdToken("id-token", issuedAt, expiresAt, claims);
+        OidcUserAuthority authority = new OidcUserAuthority(idToken);
+        OidcUser user = new DefaultOidcUser(List.of(authority), idToken);
+        return UsernamePasswordAuthenticationToken.authenticated(user, "n/a", List.of(authority));
     }
 
     private boolean sessionExists(Session session) {

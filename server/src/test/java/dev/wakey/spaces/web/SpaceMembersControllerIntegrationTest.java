@@ -14,8 +14,10 @@ import dev.wakey.spaces.SpaceRole;
 import dev.wakey.spaces.SpaceService;
 import dev.wakey.testsupport.SecurityIntegrationTest;
 import dev.wakey.web.CommonError;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
@@ -25,6 +27,10 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextImpl;
+import org.springframework.security.oauth2.core.oidc.OidcIdToken;
+import org.springframework.security.oauth2.core.oidc.user.DefaultOidcUser;
+import org.springframework.security.oauth2.core.oidc.user.OidcUser;
+import org.springframework.security.oauth2.core.oidc.user.OidcUserAuthority;
 import org.springframework.security.web.context.HttpSessionSecurityContextRepository;
 import org.springframework.session.FindByIndexNameSessionRepository;
 import org.springframework.session.Session;
@@ -259,7 +265,7 @@ class SpaceMembersControllerIntegrationTest extends SecurityIntegrationTest {
 
     private void seedSpace(String slug) {
         SpaceService service = bean(SpaceService.class);
-        service.put(fixtureAdmin(), slug, "Members space");
+        service.put(fixtureAdmin(), slug, "Members space", null);
     }
 
     private void addMemberToSpace(String slug, String subject, SpaceRole role) {
@@ -267,21 +273,29 @@ class SpaceMembersControllerIntegrationTest extends SecurityIntegrationTest {
         service.addMember(fixtureAdmin(), slug, new SpaceMember(ISSUER, subject, role));
     }
 
-    private Session createSession(String principal) {
+    private Session createSession(String subject) {
         JdbcIndexedSessionRepository repository = bean(JdbcIndexedSessionRepository.class);
-        return createSession(repository, principal);
+        return createSession(repository, subject);
     }
 
-    private static <S extends Session> S createSession(SessionRepository<S> repository, String principal) {
+    private static <S extends Session> S createSession(SessionRepository<S> repository, String subject) {
         S session = repository.createSession();
-        List<SimpleGrantedAuthority> authorities = List.of(new SimpleGrantedAuthority("ROLE_USER"));
-        Authentication authentication =
-                UsernamePasswordAuthenticationToken.authenticated(principal, "n/a", authorities);
+        Authentication authentication = authentication(subject);
         SecurityContextImpl context = new SecurityContextImpl(authentication);
         session.setAttribute(HttpSessionSecurityContextRepository.SPRING_SECURITY_CONTEXT_KEY, context);
-        session.setAttribute(FindByIndexNameSessionRepository.PRINCIPAL_NAME_INDEX_NAME, principal);
+        session.setAttribute(FindByIndexNameSessionRepository.PRINCIPAL_NAME_INDEX_NAME, subject);
         repository.save(session);
         return session;
+    }
+
+    private static Authentication authentication(String subject) {
+        Map<String, Object> claims = Map.of("sub", subject, "iss", ISSUER);
+        Instant issuedAt = Instant.EPOCH;
+        Instant expiresAt = issuedAt.plusSeconds(600);
+        OidcIdToken idToken = new OidcIdToken("id-token", issuedAt, expiresAt, claims);
+        OidcUserAuthority authority = new OidcUserAuthority(idToken);
+        OidcUser user = new DefaultOidcUser(List.of(authority), idToken);
+        return UsernamePasswordAuthenticationToken.authenticated(user, "n/a", List.of(authority));
     }
 
     private boolean sessionExists(Session session) {

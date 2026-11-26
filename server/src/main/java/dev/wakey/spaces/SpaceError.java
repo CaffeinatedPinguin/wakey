@@ -5,12 +5,11 @@ import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 
-/** The error codes of the spaces module: slugs, versions and member fields. */
+/** The error codes of the spaces module: slugs and member fields. */
 @Getter
 @RequiredArgsConstructor
 public enum SpaceError implements ErrorCode {
     SLUG_TAKEN(HttpStatus.CONFLICT, "A space with that slug already exists."),
-    VERSION_CONFLICT(HttpStatus.CONFLICT, "The space changed since the supplied version."),
     INVALID_NAME(
             HttpStatus.BAD_REQUEST,
             "A space name must have 1-"

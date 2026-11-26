@@ -31,9 +31,9 @@ class ErrorCodeWireFormatTest {
         assertCode(CommonError.METHOD_NOT_ALLOWED, "method_not_allowed", HttpStatus.METHOD_NOT_ALLOWED);
         assertCode(CommonError.NOT_ACCEPTABLE, "not_acceptable", HttpStatus.NOT_ACCEPTABLE);
         assertCode(CommonError.UNSUPPORTED_MEDIA_TYPE, "unsupported_media_type", HttpStatus.UNSUPPORTED_MEDIA_TYPE);
+        assertCode(CommonError.VERSION_CONFLICT, "version_conflict", HttpStatus.CONFLICT);
         assertCode(CommonError.INTERNAL_ERROR, "internal_error", HttpStatus.INTERNAL_SERVER_ERROR);
         assertCode(SpaceError.SLUG_TAKEN, "slug_taken", HttpStatus.CONFLICT);
-        assertCode(SpaceError.VERSION_CONFLICT, "version_conflict", HttpStatus.CONFLICT);
         assertCode(SpaceError.INVALID_NAME, "invalid_name", HttpStatus.BAD_REQUEST);
         assertCode(SpaceError.INVALID_SLUG, "invalid_slug", HttpStatus.BAD_REQUEST);
         assertCode(SpaceError.INVALID_SUBJECT, "invalid_subject", HttpStatus.BAD_REQUEST);

@@ -428,9 +428,11 @@ class SpacesControllerIntegrationTest extends SecurityIntegrationTest {
         // then
         JsonNode staleBody = jsonOf(stale);
         String staleCode = staleBody.path("code").asString();
+        String staleDetail = staleBody.path("detail").asString();
         String storedName = jsonOf(read).path("name").asString();
         assertThat(statusOf(stale)).isEqualTo(409);
-        assertThat(staleCode).isEqualTo(SpaceError.VERSION_CONFLICT.getCode());
+        assertThat(staleCode).isEqualTo(CommonError.VERSION_CONFLICT.getCode());
+        assertThat(staleDetail).isEqualTo(CommonError.VERSION_CONFLICT.getDetail());
         assertThat(storedName).isEqualTo("Original name");
     }
 
@@ -672,7 +674,7 @@ class SpacesControllerIntegrationTest extends SecurityIntegrationTest {
     private Space seedSpace(String slug, String name, String member, SpaceRole role) {
         SpaceService service = bean(SpaceService.class);
         CurrentUser admin = fixtureAdmin();
-        PutResult created = service.put(admin, slug, name);
+        PutResult created = service.put(admin, slug, name, null);
         service.addMember(admin, slug, new SpaceMember(ISSUER, member, role));
         return created.space();
     }

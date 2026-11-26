@@ -149,7 +149,7 @@ export interface components {
         };
         ProblemDetail: {
             /** @enum {string} */
-            code?: "bad_request" | "validation_failed" | "invalid_body" | "invalid_cursor" | "unauthenticated" | "forbidden" | "not_found" | "method_not_allowed" | "not_acceptable" | "unsupported_media_type" | "internal_error" | "slug_taken" | "version_conflict" | "invalid_name" | "invalid_slug" | "invalid_subject";
+            code?: "bad_request" | "validation_failed" | "invalid_body" | "invalid_cursor" | "unauthenticated" | "forbidden" | "not_found" | "method_not_allowed" | "not_acceptable" | "unsupported_media_type" | "version_conflict" | "internal_error" | "slug_taken" | "invalid_name" | "invalid_slug" | "invalid_subject";
             detail?: string;
             errors?: {
                 code?: string;
@@ -471,7 +471,7 @@ export interface operations {
                     "application/problem+json": components["schemas"]["ProblemDetail"];
                 };
             };
-            /** @description The space changed since the supplied version. */
+            /** @description The resource changed since the supplied version. */
             409: {
                 headers: {
                     [name: string]: unknown;

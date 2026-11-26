@@ -111,7 +111,7 @@
       "ProblemDetail" : {
         "properties" : {
           "code" : {
-            "enum" : [ "bad_request", "validation_failed", "invalid_body", "invalid_cursor", "unauthenticated", "forbidden", "not_found", "method_not_allowed", "not_acceptable", "unsupported_media_type", "internal_error", "slug_taken", "version_conflict", "invalid_name", "invalid_slug", "invalid_subject" ],
+            "enum" : [ "bad_request", "validation_failed", "invalid_body", "invalid_cursor", "unauthenticated", "forbidden", "not_found", "method_not_allowed", "not_acceptable", "unsupported_media_type", "version_conflict", "internal_error", "slug_taken", "invalid_name", "invalid_slug", "invalid_subject" ],
             "type" : "string"
           },
           "detail" : {
@@ -542,7 +542,7 @@
                 }
               }
             },
-            "description" : "The space changed since the supplied version."
+            "description" : "The resource changed since the supplied version."
           }
         },
         "summary" : "Create or rename a space idempotently",

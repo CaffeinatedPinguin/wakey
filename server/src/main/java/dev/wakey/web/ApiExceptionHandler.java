@@ -3,6 +3,7 @@ package dev.wakey.web;
 import jakarta.validation.ConstraintViolationException;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
+import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpStatusCode;
@@ -61,6 +62,12 @@ public class ApiExceptionHandler extends ResponseEntityExceptionHandler {
     @ExceptionHandler(AccessDeniedException.class)
     ProblemDetail forbidden() {
         return ApiExceptionBodies.of(CommonError.FORBIDDEN);
+    }
+
+    @ExceptionHandler(OptimisticLockingFailureException.class)
+    ResponseEntity<ProblemDetail> versionConflict() {
+        ErrorCode error = CommonError.VERSION_CONFLICT;
+        return errorResponse(error.getStatus(), ApiExceptionBodies.of(error));
     }
 
     @ExceptionHandler(AuthenticationException.class)

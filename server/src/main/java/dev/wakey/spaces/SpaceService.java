@@ -1,6 +1,7 @@
 package dev.wakey.spaces;
 
 import dev.wakey.security.CurrentUser;
+import dev.wakey.security.UserSessions;
 import dev.wakey.spaces.internal.SpaceEntity;
 import dev.wakey.spaces.internal.SpaceStore;
 import dev.wakey.web.ApiException;
@@ -10,7 +11,6 @@ import java.util.List;
 import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import org.jspecify.annotations.Nullable;
-import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.validation.annotation.Validated;
@@ -28,14 +28,10 @@ public class SpaceService {
 
     private final UserSessions sessions;
 
-    /** Creates a space or renames it by slug without a version check. */
-    public PutResult put(CurrentUser actor, @InvalidSlug String slug, @InvalidName String name) {
-        return put(actor, slug, name, null);
-    }
-
     /**
-     * Creates a space or renames it by slug. A repeat with the same name changes nothing while a
-     * different name bumps the version; a stale {@code expectedVersion} is a conflict.
+     * Creates a space or renames it by slug. A repeat without a version and with the same name
+     * changes nothing while a different name bumps the version; a stale {@code expectedVersion} is
+     * a conflict.
      */
     public PutResult put(
             CurrentUser actor, @InvalidSlug String slug, @InvalidName String name, @Nullable Long expectedVersion) {
@@ -121,26 +117,12 @@ public class SpaceService {
     }
 
     private PutResult keepOrRename(SpaceEntity existing, String name, @Nullable Long expectedVersion) {
-        requireMatchingVersion(existing, expectedVersion);
-        if (existing.name().equals(name)) {
+        if (expectedVersion == null && existing.name().equals(name)) {
             return new PutResult(store.toSpace(existing), false);
         }
-        SpaceEntity renamed = rename(existing, name);
+        long version = expectedVersion == null ? existing.version() : expectedVersion;
+        SpaceEntity renamed = store.rename(existing, name, version);
         return new PutResult(store.toSpace(renamed), false);
-    }
-
-    private SpaceEntity rename(SpaceEntity existing, String name) {
-        try {
-            return store.rename(existing, name);
-        } catch (OptimisticLockingFailureException exception) {
-            throw new ApiException(SpaceError.VERSION_CONFLICT, exception);
-        }
-    }
-
-    private static void requireMatchingVersion(SpaceEntity existing, @Nullable Long expectedVersion) {
-        if (expectedVersion != null && existing.version() != expectedVersion) {
-            throw new ApiException(SpaceError.VERSION_CONFLICT);
-        }
     }
 
     private SpaceEntity requireManageableSpace(CurrentUser actor, String slug) {

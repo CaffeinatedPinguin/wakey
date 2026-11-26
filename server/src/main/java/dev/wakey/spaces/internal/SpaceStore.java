@@ -53,10 +53,10 @@ public class SpaceStore {
         }
     }
 
-    public SpaceEntity rename(SpaceEntity existing, String name) {
-        SpaceEntity renamed = new SpaceEntity(
-                existing.id(), existing.slug(), name, existing.version(), existing.createdAt(), clock.instant());
-        return spaces.save(renamed);
+    public SpaceEntity rename(SpaceEntity existing, String name, long version) {
+        SpaceEntity renamed =
+                new SpaceEntity(existing.id(), existing.slug(), name, version, existing.createdAt(), clock.instant());
+        return aggregates.update(renamed);
     }
 
     public Optional<SpaceRole> findRole(UUID spaceId, String issuer, String subject) {
