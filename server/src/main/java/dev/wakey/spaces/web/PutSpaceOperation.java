@@ -15,10 +15,7 @@ import org.springframework.web.bind.annotation.RequestMethod;
 @Target(ElementType.METHOD)
 @Retention(RetentionPolicy.RUNTIME)
 @Documented
-@RequestMapping(
-        path = SpacesHttp.PATH + "/{slug}",
-        method = RequestMethod.PUT,
-        produces = MediaType.APPLICATION_JSON_VALUE)
+@RequestMapping(path = "/{slug}", method = RequestMethod.PUT, produces = MediaType.APPLICATION_JSON_VALUE)
 @Operation(summary = "Create or rename a space idempotently")
 @ApiResponse(responseCode = "200", description = "OK", useReturnTypeSchema = true)
 @CreatedWithLocation

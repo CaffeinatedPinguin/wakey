@@ -5,7 +5,6 @@ import dev.wakey.web.ApiPaths;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Schema;
 import org.springframework.http.MediaType;
-import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -16,8 +15,7 @@ final class MeController {
 
     @Operation(operationId = "getMe", summary = "Return the authenticated user")
     @GetMapping(path = ME_PATH, produces = MediaType.APPLICATION_JSON_VALUE)
-    MeResponse me(Authentication authentication) {
-        CurrentUser user = CurrentUser.from(authentication);
+    MeResponse me(CurrentUser user) {
         return new MeResponse(user.issuer(), user.subject(), user.admin());
     }
 

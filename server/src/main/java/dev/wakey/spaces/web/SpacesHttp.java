@@ -9,7 +9,6 @@ import dev.wakey.web.CommonError;
 import dev.wakey.web.CursorCodec;
 import java.net.URI;
 import org.jspecify.annotations.Nullable;
-import org.springframework.http.MediaType;
 import org.springframework.web.util.UriComponentsBuilder;
 
 /** The cursor and link helpers of the spaces HTTP surface. */
@@ -18,10 +17,6 @@ final class SpacesHttp {
     static final String PATH = ApiPaths.API_V1 + "/spaces";
 
     static final String MEMBERS_PATH = PATH + "/{slug}/members";
-
-    static final String MEMBER_ROLE_PATH = MEMBERS_PATH + "/role";
-
-    static final String JSON = MediaType.APPLICATION_JSON_VALUE;
 
     private static final String MEMBER_SEPARATOR = ":";
 

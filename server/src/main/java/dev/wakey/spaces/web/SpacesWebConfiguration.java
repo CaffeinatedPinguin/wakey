@@ -8,8 +8,10 @@ import io.swagger.v3.oas.models.OpenAPI;
 import io.swagger.v3.oas.models.Operation;
 import io.swagger.v3.oas.models.media.Schema;
 import io.swagger.v3.oas.models.parameters.Parameter;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import org.jspecify.annotations.Nullable;
 import org.springdoc.core.customizers.GlobalOpenApiCustomizer;
 import org.springdoc.core.customizers.GlobalOperationCustomizer;
 import org.springframework.context.annotation.Bean;
@@ -20,7 +22,13 @@ import org.springframework.web.method.HandlerMethod;
 @Configuration(proxyBeanMethods = false)
 class SpacesWebConfiguration {
 
+    private static final String SPACE_RESPONSE_SCHEMA = "SpaceResponse";
+
     private static final String SPACE_ROLE_SCHEMA = "SpaceRole";
+
+    private static final String SPACE_ROLE_REF = "#/components/schemas/" + SPACE_ROLE_SCHEMA;
+
+    private static final String ROLE_PROPERTY = "role";
 
     private static final String LIMIT_PARAMETER = "limit";
 
@@ -38,8 +46,8 @@ class SpacesWebConfiguration {
     }
 
     @Bean
-    GlobalOpenApiCustomizer spaceRoleIsNullable() {
-        return SpacesWebConfiguration::markSpaceRoleNullable;
+    GlobalOpenApiCustomizer spaceResponseRoleIsNullable() {
+        return SpacesWebConfiguration::makeSpaceResponseRoleNullable;
     }
 
     @Bean
@@ -54,9 +62,7 @@ class SpacesWebConfiguration {
 
     private static boolean isSpacesController(HandlerMethod handlerMethod) {
         Class<?> beanType = handlerMethod.getBeanType();
-        return beanType == SpacesController.class
-                || beanType == SpaceMembersController.class
-                || beanType == SpaceMemberRolesController.class;
+        return beanType == SpacesController.class || beanType == SpaceMembersController.class;
     }
 
     @Bean
@@ -98,20 +104,53 @@ class SpacesWebConfiguration {
         }
     }
 
-    private static void markSpaceRoleNullable(OpenAPI openApi) {
-        Components components = openApi.getComponents();
-        if (components != null) {
-            markSpaceRoleNullable(components);
+    private static void makeSpaceResponseRoleNullable(OpenAPI openApi) {
+        Schema<?> role = spaceResponseRole(openApi);
+        if (role != null) {
+            makeNullable(role);
         }
     }
 
-    private static void markSpaceRoleNullable(Components components) {
-        Map<String, Schema> schemas = components.getSchemas();
-        if (schemas != null) {
-            Schema<?> role = schemas.get(SPACE_ROLE_SCHEMA);
-            if (role != null) {
-                role.addType("null");
-            }
+    private static @Nullable Schema<?> spaceResponseRole(OpenAPI openApi) {
+        Components components = openApi.getComponents();
+        if (components == null) {
+            return null;
         }
+        return spaceResponseRole(components);
+    }
+
+    private static @Nullable Schema<?> spaceResponseRole(Components components) {
+        Map<String, Schema> schemas = components.getSchemas();
+        if (schemas == null) {
+            return null;
+        }
+        return spaceResponseRole(schemas);
+    }
+
+    private static @Nullable Schema<?> spaceResponseRole(Map<String, Schema> schemas) {
+        Schema<?> response = schemas.get(SPACE_RESPONSE_SCHEMA);
+        if (response == null) {
+            return null;
+        }
+        return spaceResponseRole(response);
+    }
+
+    private static @Nullable Schema<?> spaceResponseRole(Schema<?> response) {
+        Map<String, Schema> properties = response.getProperties();
+        if (properties == null) {
+            return null;
+        }
+        return properties.get(ROLE_PROPERTY);
+    }
+
+    private static void makeNullable(Schema<?> role) {
+        role.set$ref(null);
+        role.setTypes(null);
+        Schema<?> nullType = new Schema<>();
+        nullType.addType("null");
+        List<Schema> alternatives = new ArrayList<>();
+        alternatives.add(new Schema<>().$ref(SPACE_ROLE_REF));
+        alternatives.add(nullType);
+        role.setAnyOf(alternatives);
     }
 }

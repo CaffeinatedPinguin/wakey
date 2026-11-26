@@ -95,16 +95,16 @@ class OpenApiContractTest extends SecurityIntegrationTest {
                 cursorPage.path("properties").path("nextCursor").path("type");
         List<String> spaceRequired = valuesOf(space.path("required"));
         List<String> cursorPageRequired = valuesOf(cursorPage.path("required"));
-        List<String> roleType = valuesOf(role.path("type"));
+        List<String> roleTypes = unionTypes(role);
         List<String> spaceRoleType = valuesOf(spaceRole.path("type"));
         List<String> nextCursorType = valuesOf(nextCursorSchema);
 
         // then
         assertThat(spaceRequired).containsExactlyInAnyOrder("slug", "name", "version", "role");
         assertThat(cursorPageRequired).containsExactlyInAnyOrder("items", "nextCursor");
-        String roleReference = role.path("$ref").asString();
+        String roleReference = referenceOf(role);
         assertThat(roleReference).isEqualTo("#/components/schemas/SpaceRole");
-        assertThat(roleType).contains("null");
+        assertThat(roleTypes).contains("null");
         assertThat(spaceRoleType).contains("string");
         assertThat(nextCursorType).contains("string", "null");
     }
@@ -119,7 +119,7 @@ class OpenApiContractTest extends SecurityIntegrationTest {
 
         // when
         List<String> roleValues = valuesOf(spaceRole.path("enum"));
-        String roleReference = role.path("$ref").asString();
+        String roleReference = referenceOf(role);
 
         // then
         assertThat(roleValues).containsExactly("EDITOR", "VIEWER");
@@ -127,7 +127,7 @@ class OpenApiContractTest extends SecurityIntegrationTest {
     }
 
     @Test
-    void theContractStillHasTheSpaceRoleAsANullableNamedSchema() throws Exception {
+    void theResponseRoleIsNullableWhileTheSpaceRoleIsNot() throws Exception {
         // given
         JsonNode document = MAPPER.readTree(generatedContract());
         JsonNode schemas = document.path("components").path("schemas");
@@ -135,14 +135,40 @@ class OpenApiContractTest extends SecurityIntegrationTest {
         JsonNode spaceRole = schemas.path("SpaceRole");
 
         // when
-        String roleReference = role.path("$ref").asString();
+        String roleReference = referenceOf(role);
         List<String> spaceRoleType = valuesOf(spaceRole.path("type"));
-        List<String> roleType = valuesOf(role.path("type"));
+        List<String> roleTypes = unionTypes(role);
 
         // then
         assertThat(roleReference).isEqualTo("#/components/schemas/SpaceRole");
-        assertThat(spaceRoleType).contains("string", "null");
-        assertThat(roleType).contains("null");
+        assertThat(spaceRoleType).containsExactly("string");
+        assertThat(roleTypes).contains("null");
+    }
+
+    @Test
+    void aRoleInARequestIsNotNullable() throws Exception {
+        // given
+        JsonNode document = MAPPER.readTree(generatedContract());
+        JsonNode schemas = document.path("components").path("schemas");
+        JsonNode spaceRole = schemas.path("SpaceRole");
+        JsonNode addMember = schemas.path("AddSpaceMemberRequest");
+        JsonNode changeRole = schemas.path("ChangeSpaceMemberRoleRequest");
+
+        // when
+        List<String> spaceRoleType = valuesOf(spaceRole.path("type"));
+        List<String> addRequired = valuesOf(addMember.path("required"));
+        List<String> changeRequired = valuesOf(changeRole.path("required"));
+        JsonNode addRole = addMember.path("properties").path("role");
+        JsonNode changeRoleRole = changeRole.path("properties").path("role");
+
+        // then
+        assertThat(spaceRoleType).containsExactly("string");
+        assertThat(addRequired).contains("role");
+        assertThat(changeRequired).contains("role");
+        assertThat(referenceOf(addRole)).isEqualTo("#/components/schemas/SpaceRole");
+        assertThat(referenceOf(changeRoleRole)).isEqualTo("#/components/schemas/SpaceRole");
+        assertThat(unionTypes(addRole)).doesNotContain("null");
+        assertThat(unionTypes(changeRoleRole)).doesNotContain("null");
     }
 
     @Test
@@ -357,6 +383,28 @@ class OpenApiContractTest extends SecurityIntegrationTest {
             values.add(node.asString());
         }
         return values;
+    }
+
+    private static List<String> unionTypes(JsonNode schema) {
+        JsonNode type = schema.path("type");
+        List<String> types = new ArrayList<>(valuesOf(type));
+        for (JsonNode alternative : schema.path("anyOf")) {
+            JsonNode alternativeType = alternative.path("type");
+            types.addAll(valuesOf(alternativeType));
+        }
+        return types;
+    }
+
+    private static String referenceOf(JsonNode schema) {
+        if (schema.has("$ref")) {
+            return schema.path("$ref").asString();
+        }
+        for (JsonNode alternative : schema.path("anyOf")) {
+            if (alternative.has("$ref")) {
+                return alternative.path("$ref").asString();
+            }
+        }
+        return "";
     }
 
     @Test

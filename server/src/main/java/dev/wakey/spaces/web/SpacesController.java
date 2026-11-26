@@ -8,16 +8,18 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Positive;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 /** The HTTP adapter for spaces; all access rules and validation live in the spaces module. */
 @RestController
+@RequestMapping(SpacesHttp.PATH)
 @Tag(name = "spaces")
 @RequiredArgsConstructor
 final class SpacesController {
@@ -26,28 +28,24 @@ final class SpacesController {
 
     private final ApiProperties apiProperties;
 
-    @GetMapping(path = SpacesHttp.PATH, produces = SpacesHttp.JSON)
+    @GetMapping(produces = MediaType.APPLICATION_JSON_VALUE)
     CursorPage<SpaceResponse> listSpaces(
             @RequestParam(required = false) @Positive Integer limit,
             @RequestParam(required = false) String cursor,
-            Authentication authentication) {
-        CurrentUser actor = CurrentUser.from(authentication);
+            CurrentUser actor) {
         int pageSize = apiProperties.pageSize(limit);
         String afterSlug = SpacesHttp.afterSlug(cursor);
         var rows = spaces.listVisible(actor, afterSlug, pageSize + 1);
         return CursorPage.of(rows, pageSize, view -> view.slug(), SpaceResponse::from);
     }
 
-    @GetMapping(path = SpacesHttp.PATH + "/{slug}", produces = SpacesHttp.JSON)
-    SpaceResponse getSpace(@PathVariable String slug, Authentication authentication) {
-        CurrentUser actor = CurrentUser.from(authentication);
+    @GetMapping(path = "/{slug}", produces = MediaType.APPLICATION_JSON_VALUE)
+    SpaceResponse getSpace(@PathVariable String slug, CurrentUser actor) {
         return SpaceResponse.from(spaces.view(actor, slug));
     }
 
     @CreateSpaceOperation
-    ResponseEntity<SpaceResponse> createSpace(
-            @Valid @RequestBody CreateSpaceRequest request, Authentication authentication) {
-        CurrentUser actor = CurrentUser.from(authentication);
+    ResponseEntity<SpaceResponse> createSpace(@Valid @RequestBody CreateSpaceRequest request, CurrentUser actor) {
         var result = spaces.create(actor, request.slug(), request.name());
         String storedSlug = result.space().slug();
         var view = spaces.view(actor, storedSlug);
@@ -56,8 +54,7 @@ final class SpacesController {
 
     @PutSpaceOperation
     ResponseEntity<SpaceResponse> putSpace(
-            @PathVariable String slug, @Valid @RequestBody PutSpaceRequest request, Authentication authentication) {
-        CurrentUser actor = CurrentUser.from(authentication);
+            @PathVariable String slug, @Valid @RequestBody PutSpaceRequest request, CurrentUser actor) {
         var result = spaces.put(actor, slug, request.name(), request.version());
         String storedSlug = result.space().slug();
         var view = spaces.view(actor, storedSlug);

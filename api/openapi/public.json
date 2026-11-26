@@ -203,9 +203,12 @@
             "type" : "string"
           },
           "role" : {
-            "$ref" : "#/components/schemas/SpaceRole",
-            "description" : "The caller's membership role, or null for an Admin who is not a member",
-            "type" : "null"
+            "anyOf" : [ {
+              "$ref" : "#/components/schemas/SpaceRole"
+            }, {
+              "type" : "null"
+            } ],
+            "description" : "The caller's membership role, or null for an Admin who is not a member"
           },
           "slug" : {
             "description" : "The stable space slug",
@@ -225,7 +228,7 @@
       },
       "SpaceRole" : {
         "enum" : [ "EDITOR", "VIEWER" ],
-        "type" : [ "string", "null" ]
+        "type" : "string"
       }
     }
   },

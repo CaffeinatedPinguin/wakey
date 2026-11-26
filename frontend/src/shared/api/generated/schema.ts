@@ -203,7 +203,7 @@ export interface components {
              */
             name: string;
             /** @description The caller's membership role, or null for an Admin who is not a member */
-            role: components["schemas"]["SpaceRole"];
+            role: components["schemas"]["SpaceRole"] | null;
             /**
              * @description The stable space slug
              * @example acme
@@ -216,8 +216,8 @@ export interface components {
              */
             version: number;
         };
-        /** @enum {string|null} */
-        SpaceRole: "EDITOR" | "VIEWER" | null;
+        /** @enum {string} */
+        SpaceRole: "EDITOR" | "VIEWER";
     };
     responses: never;
     parameters: never;
