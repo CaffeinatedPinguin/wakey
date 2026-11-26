@@ -18,10 +18,15 @@ final class MeController {
     @GetMapping(path = ME_PATH, produces = MediaType.APPLICATION_JSON_VALUE)
     MeResponse me(Authentication authentication) {
         CurrentUser user = CurrentUser.from(authentication);
-        return new MeResponse(user.subject(), user.admin());
+        return new MeResponse(user.issuer(), user.subject(), user.admin());
     }
 
     record MeResponse(
+            @Schema(
+                    description = "The OIDC issuer of the authenticated user",
+                    requiredMode = Schema.RequiredMode.REQUIRED)
+            String issuer,
+
             @Schema(
                     description = "The OIDC subject of the authenticated user",
                     requiredMode = Schema.RequiredMode.REQUIRED)

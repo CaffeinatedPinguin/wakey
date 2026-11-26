@@ -56,11 +56,13 @@ class DefaultPageSizeIntegrationTest extends SecurityIntegrationTest {
     }
 
     private static RequestPostProcessor adminLogin(String subject) {
-        return oidcLogin().idToken(token -> token.subject(subject)).authorities(new SimpleGrantedAuthority(ADMIN_ROLE));
+        return oidcLogin()
+                .idToken(token -> token.subject(subject).issuer("https://issuer.example.com"))
+                .authorities(new SimpleGrantedAuthority(ADMIN_ROLE));
     }
 
     private void seedSpace(String slug) {
-        CurrentUser admin = new CurrentUser("fixture-admin", true);
+        CurrentUser admin = new CurrentUser("https://issuer.example.com", "fixture-admin", true);
         bean(SpaceService.class).put(admin, slug, "Default page space");
     }
 

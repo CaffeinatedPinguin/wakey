@@ -1,6 +1,7 @@
 package dev.wakey.web;
 
 import java.util.List;
+import java.util.Map;
 import lombok.Getter;
 import org.jspecify.annotations.Nullable;
 
@@ -24,6 +25,12 @@ public class ApiException extends RuntimeException {
 
     public ApiException(ErrorCode errorCode, List<FieldProblem> fieldProblems) {
         this(errorCode, fieldProblems, null);
+    }
+
+    /** An error that points at one field with the error's own code. */
+    public static ApiException withField(ErrorCode errorCode, String pointer) {
+        FieldProblem problem = new FieldProblem(pointer, errorCode.getCode(), Map.of());
+        return new ApiException(errorCode, List.of(problem));
     }
 
     private ApiException(ErrorCode errorCode, List<FieldProblem> fieldProblems, @Nullable Throwable cause) {

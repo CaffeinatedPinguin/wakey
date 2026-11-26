@@ -1,5 +1,6 @@
 package dev.wakey.web;
 
+import jakarta.validation.ConstraintViolationException;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
 import org.springframework.http.HttpHeaders;
@@ -49,6 +50,12 @@ public class ApiExceptionHandler extends ResponseEntityExceptionHandler {
         ErrorCode error = exception.getErrorCode();
         ProblemDetail problem = ProblemDetails.of(error, exception.getFieldProblems());
         return problemResponse(error.getStatus(), problem);
+    }
+
+    @ExceptionHandler(ConstraintViolationException.class)
+    ResponseEntity<ProblemDetail> constraintViolation(ConstraintViolationException exception) {
+        ProblemDetail problem = ProblemDetails.of(CommonError.VALIDATION_FAILED, FieldProblems.of(exception));
+        return problemResponse(CommonError.VALIDATION_FAILED.getStatus(), problem);
     }
 
     @ExceptionHandler(AccessDeniedException.class)

@@ -1,12 +1,9 @@
 package dev.wakey.spaces;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.catchThrowable;
 
 import dev.wakey.testsupport.ContractFile;
-import dev.wakey.web.ApiException;
 import java.nio.file.Files;
-import java.util.ArrayList;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 import tools.jackson.databind.JsonNode;
@@ -24,7 +21,7 @@ class SpaceSlugTest {
         List<String> valid = List.of("abc", "acme", "acme-space", "a1b", fortyCharacters);
 
         // when
-        List<String> accepted = valid.stream().map(SpaceSlug::requireValid).toList();
+        List<String> accepted = valid.stream().filter(SpaceSlug::isValid).toList();
 
         // then
         assertThat(accepted).containsExactlyElementsOf(valid);
@@ -37,14 +34,10 @@ class SpaceSlugTest {
         List<String> invalid = List.of("ab", "1abc", "-abc", "Abc", "abc-", "abc d", "", fortyOneCharacters);
 
         // when
-        List<Class<?>> rejectionTypes = new ArrayList<>();
-        for (String candidate : invalid) {
-            Throwable rejection = catchThrowable(() -> SpaceSlug.requireValid(candidate));
-            rejectionTypes.add(rejection.getClass());
-        }
+        List<String> accepted = invalid.stream().filter(SpaceSlug::isValid).toList();
 
         // then
-        assertThat(rejectionTypes).hasSize(invalid.size()).containsOnly(ApiException.class);
+        assertThat(accepted).isEmpty();
     }
 
     @Test

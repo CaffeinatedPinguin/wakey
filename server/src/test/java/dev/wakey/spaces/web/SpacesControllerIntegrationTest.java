@@ -12,6 +12,7 @@ import dev.wakey.security.CurrentUser;
 import dev.wakey.spaces.PutResult;
 import dev.wakey.spaces.Space;
 import dev.wakey.spaces.SpaceError;
+import dev.wakey.spaces.SpaceMember;
 import dev.wakey.spaces.SpaceRole;
 import dev.wakey.spaces.SpaceService;
 import dev.wakey.testsupport.SecurityIntegrationTest;
@@ -42,6 +43,8 @@ class SpacesControllerIntegrationTest extends SecurityIntegrationTest {
     private static final String ADMIN_ROLE = "ROLE_ADMIN";
 
     private static final String PROBLEM_JSON = "application/problem+json";
+
+    private static final String ISSUER = "https://issuer.example.com";
 
     @Test
     void adminPutsASpaceAndRepeatingItIsIdempotent() throws Exception {
@@ -668,22 +671,23 @@ class SpacesControllerIntegrationTest extends SecurityIntegrationTest {
 
     private Space seedSpace(String slug, String name, String member, SpaceRole role) {
         SpaceService service = bean(SpaceService.class);
-        PutResult created = service.put(fixtureAdmin(), slug, name);
-        service.addMember(fixtureAdmin(), slug, member, role);
+        CurrentUser admin = fixtureAdmin();
+        PutResult created = service.put(admin, slug, name);
+        service.addMember(admin, slug, new SpaceMember(ISSUER, member, role));
         return created.space();
     }
 
     private static RequestPostProcessor login(String subject, boolean admin) {
         if (admin) {
             return oidcLogin()
-                    .idToken(token -> token.subject(subject))
+                    .idToken(token -> token.subject(subject).issuer(ISSUER))
                     .authorities(new SimpleGrantedAuthority(ADMIN_ROLE));
         }
-        return oidcLogin().idToken(token -> token.subject(subject));
+        return oidcLogin().idToken(token -> token.subject(subject).issuer(ISSUER));
     }
 
     private static CurrentUser fixtureAdmin() {
-        return new CurrentUser("fixture-admin", true);
+        return new CurrentUser(ISSUER, "fixture-admin", true);
     }
 
     private static String nameBody(String name) {

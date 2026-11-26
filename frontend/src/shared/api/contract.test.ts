@@ -50,7 +50,11 @@ describe('generated closed sets', () => {
 
 describe('generated API types', () => {
   it('aliases every operation type', () => {
-    expectTypeOf<GetMeResponse>().toEqualTypeOf<{ admin: boolean; subject: string }>()
+    expectTypeOf<GetMeResponse>().toEqualTypeOf<{
+      admin: boolean
+      issuer: string
+      subject: string
+    }>()
     expectTypeOf<CreateSpaceResponse>().toEqualTypeOf<GetSpaceResponse>()
     expectTypeOf<CreateSpaceRequest>().toEqualTypeOf<{ name: string; slug: string }>()
     expectTypeOf<GetSpaceResponse>().toEqualTypeOf<{

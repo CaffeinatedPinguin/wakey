@@ -1,6 +1,7 @@
 package dev.wakey.spaces.internal;
 
 import dev.wakey.spaces.Space;
+import dev.wakey.spaces.SpaceMember;
 import dev.wakey.spaces.SpaceRole;
 import dev.wakey.spaces.SpaceView;
 import java.time.Clock;
@@ -57,12 +58,12 @@ public class SpaceStore {
         return spaces.save(renamed);
     }
 
-    public Optional<SpaceRole> findRole(UUID spaceId, String subject) {
-        SpaceMemberKey key = new SpaceMemberKey(spaceId, subject);
+    public Optional<SpaceRole> findRole(UUID spaceId, String issuer, String subject) {
+        SpaceMemberKey key = new SpaceMemberKey(spaceId, issuer, subject);
         return members.findById(key).map(SpaceMemberEntity::role);
     }
 
-    public List<SpaceView> listAll(String subject, String cursor, int rowLimit) {
+    public List<SpaceView> listAll(String issuer, String subject, String cursor, int rowLimit) {
         List<SpaceEntity> page = spaces.findBySlugGreaterThanOrderBySlug(cursor, Limit.of(rowLimit));
         if (page.isEmpty()) {
             return List.of();
@@ -71,7 +72,7 @@ public class SpaceStore {
         for (SpaceEntity space : page) {
             ids.add(space.id());
         }
-        Map<UUID, SpaceRole> roles = rolesOf(ids, subject);
+        Map<UUID, SpaceRole> roles = rolesOf(ids, issuer, subject);
         return viewsOf(page, roles);
     }
 
@@ -79,8 +80,8 @@ public class SpaceStore {
      * Lists a member's spaces in two queries per page: it loads all memberships of the one user
      * (that user's spaces are few) and then pages the spaces by slug.
      */
-    public List<SpaceView> listForMember(String subject, String cursor, int rowLimit) {
-        List<SpaceMemberEntity> memberships = members.findByKeySubject(subject);
+    public List<SpaceView> listForMember(String issuer, String subject, String cursor, int rowLimit) {
+        List<SpaceMemberEntity> memberships = members.findByKeyIssuerAndKeySubject(issuer, subject);
         if (memberships.isEmpty()) {
             return List.of();
         }
@@ -95,10 +96,10 @@ public class SpaceStore {
         return viewsOf(page, roles);
     }
 
-    public void addMember(UUID spaceId, String subject, SpaceRole role) {
-        SpaceMemberKey key = new SpaceMemberKey(spaceId, subject);
+    public void addMember(UUID spaceId, SpaceMember member) {
+        SpaceMemberKey key = new SpaceMemberKey(spaceId, member.issuer(), member.subject());
         if (members.findById(key).isEmpty()) {
-            insertMember(key, role);
+            insertMember(key, member.role());
         }
     }
 
@@ -110,13 +111,13 @@ public class SpaceStore {
         }
     }
 
-    public void updateRole(UUID spaceId, String subject, SpaceRole role) {
-        SpaceMemberKey key = new SpaceMemberKey(spaceId, subject);
-        members.save(new SpaceMemberEntity(key, role));
+    public void updateRole(UUID spaceId, SpaceMember member) {
+        SpaceMemberKey key = new SpaceMemberKey(spaceId, member.issuer(), member.subject());
+        members.save(new SpaceMemberEntity(key, member.role()));
     }
 
-    public boolean removeMember(UUID spaceId, String subject) {
-        SpaceMemberKey key = new SpaceMemberKey(spaceId, subject);
+    public boolean removeMember(UUID spaceId, String issuer, String subject) {
+        SpaceMemberKey key = new SpaceMemberKey(spaceId, issuer, subject);
         if (members.findById(key).isEmpty()) {
             return false;
         }
@@ -132,8 +133,8 @@ public class SpaceStore {
         return new SpaceView(entity.id(), entity.slug(), entity.name(), entity.version(), role);
     }
 
-    private Map<UUID, SpaceRole> rolesOf(List<UUID> spaceIds, String subject) {
-        List<SpaceMemberEntity> found = members.findByKeySpaceIdInAndKeySubject(spaceIds, subject);
+    private Map<UUID, SpaceRole> rolesOf(List<UUID> spaceIds, String issuer, String subject) {
+        List<SpaceMemberEntity> found = members.findByKeySpaceIdInAndKeyIssuerAndKeySubject(spaceIds, issuer, subject);
         Map<UUID, SpaceRole> roles = new HashMap<>();
         for (SpaceMemberEntity member : found) {
             SpaceMemberKey key = member.key();

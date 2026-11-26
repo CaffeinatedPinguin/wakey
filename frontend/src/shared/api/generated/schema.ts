@@ -81,6 +81,8 @@ export interface components {
         MeResponse: {
             /** @description Whether the user is an instance administrator */
             admin: boolean;
+            /** @description The OIDC issuer of the authenticated user */
+            issuer: string;
             /** @description The OIDC subject of the authenticated user */
             subject: string;
         };

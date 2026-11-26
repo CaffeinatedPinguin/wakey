@@ -17,7 +17,9 @@ import org.springframework.session.Session;
 @Import(SpaceRoleTransactionTest.FailingSessionsConfiguration.class)
 class SpaceRoleTransactionTest extends PostgresIntegrationTest {
 
-    private static final CurrentUser ADMIN = new CurrentUser("transaction-admin", true);
+    private static final String ISSUER = "https://issuer.example.com";
+
+    private static final CurrentUser ADMIN = new CurrentUser(ISSUER, "transaction-admin", true);
 
     @Test
     void aFailingSessionInvalidationRollsBackTheRoleChange() {
@@ -26,11 +28,12 @@ class SpaceRoleTransactionTest extends PostgresIntegrationTest {
         String slug = uniqueSlug("rollback");
         String subject = uniqueSubject("role-change");
         service.put(ADMIN, slug, "Rollback space");
-        service.addMember(ADMIN, slug, subject, SpaceRole.VIEWER);
-        CurrentUser member = new CurrentUser(subject, false);
+        service.addMember(ADMIN, slug, new SpaceMember(ISSUER, subject, SpaceRole.VIEWER));
+        CurrentUser member = new CurrentUser(ISSUER, subject, false);
 
         // when
-        Throwable failure = catchThrowable(() -> service.changeRole(ADMIN, slug, subject, SpaceRole.EDITOR));
+        Throwable failure = catchThrowable(
+                () -> service.changeRole(ADMIN, slug, new SpaceMember(ISSUER, subject, SpaceRole.EDITOR)));
         SpaceView view = service.view(member, slug);
 
         // then
@@ -63,7 +66,7 @@ class SpaceRoleTransactionTest extends PostgresIntegrationTest {
         }
 
         @Override
-        public void invalidateAll(String subject) {
+        public void invalidateAll(String issuer, String subject) {
             throw new IllegalStateException("session store unavailable");
         }
     }

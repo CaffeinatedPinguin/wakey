@@ -43,12 +43,16 @@
             "description" : "Whether the user is an instance administrator",
             "type" : "boolean"
           },
+          "issuer" : {
+            "description" : "The OIDC issuer of the authenticated user",
+            "type" : "string"
+          },
           "subject" : {
             "description" : "The OIDC subject of the authenticated user",
             "type" : "string"
           }
         },
-        "required" : [ "admin", "subject" ],
+        "required" : [ "admin", "issuer", "subject" ],
         "type" : "object"
       },
       "ProblemDetail" : {

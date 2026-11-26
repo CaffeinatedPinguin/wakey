@@ -1,10 +1,5 @@
 package dev.wakey.spaces;
 
-import dev.wakey.web.ApiException;
-import dev.wakey.web.CommonError;
-import dev.wakey.web.FieldProblem;
-import java.util.List;
-import java.util.Map;
 import java.util.regex.Pattern;
 
 /**
@@ -25,13 +20,5 @@ public final class SpaceSlug {
 
     public static boolean isValid(String candidate) {
         return COMPILED.matcher(candidate).matches();
-    }
-
-    public static String requireValid(String candidate) {
-        if (!isValid(candidate)) {
-            FieldProblem problem = new FieldProblem("/slug", SpaceError.INVALID_SLUG.getCode(), Map.of());
-            throw new ApiException(CommonError.VALIDATION_FAILED, List.of(problem));
-        }
-        return candidate;
     }
 }

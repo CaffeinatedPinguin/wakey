@@ -8,7 +8,8 @@ import org.springframework.data.repository.ListCrudRepository;
 /** Derived queries over memberships, including the composite identifier parts. */
 public interface SpaceMemberRepository extends ListCrudRepository<SpaceMemberEntity, SpaceMemberKey> {
 
-    List<SpaceMemberEntity> findByKeySubject(String subject);
+    List<SpaceMemberEntity> findByKeyIssuerAndKeySubject(String issuer, String subject);
 
-    List<SpaceMemberEntity> findByKeySpaceIdInAndKeySubject(Collection<UUID> spaceIds, String subject);
+    List<SpaceMemberEntity> findByKeySpaceIdInAndKeyIssuerAndKeySubject(
+            Collection<UUID> spaceIds, String issuer, String subject);
 }

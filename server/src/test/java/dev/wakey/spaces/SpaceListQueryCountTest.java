@@ -17,7 +17,7 @@ import org.springframework.jdbc.datasource.DriverManagerDataSource;
 @Import(SpaceListQueryCountTest.CountingDataConfiguration.class)
 class SpaceListQueryCountTest extends PostgresIntegrationTest {
 
-    private static final CurrentUser ADMIN = new CurrentUser("query-count-admin", true);
+    private static final CurrentUser ADMIN = new CurrentUser("https://issuer.example.com", "query-count-admin", true);
 
     @Test
     void listingAPageRunsAtMostTwoQueries() {
