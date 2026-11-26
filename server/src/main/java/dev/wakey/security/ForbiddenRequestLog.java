@@ -17,14 +17,8 @@ import org.springframework.web.servlet.HandlerExceptionResolver;
 @Component
 final class ForbiddenRequestLog implements AccessDeniedHandler {
 
-    private static final String ACCESS_DENIED = "access-denied";
-
     private static final int FORBIDDEN_STATUS =
             CommonError.FORBIDDEN.getStatus().value();
-
-    private static final String CSRF_TOKEN_MISSING = "csrf-token-missing";
-
-    private static final String CSRF_TOKEN_INVALID = "csrf-token-invalid";
 
     private final HandlerExceptionResolver resolver;
 
@@ -34,10 +28,10 @@ final class ForbiddenRequestLog implements AccessDeniedHandler {
 
     @Override
     public void handle(HttpServletRequest request, HttpServletResponse response, AccessDeniedException exception) {
-        String reason = reasonFor(exception);
+        RejectReason reason = reasonFor(exception);
         String method = request.getMethod();
         String path = request.getRequestURI();
-        log.warn("request rejected: reason={} method={} path={}", reason, method, path);
+        log.warn("request rejected: reason={} method={} path={}", reason.getWireName(), method, path);
         if (response.isCommitted()) {
             return;
         }
@@ -46,12 +40,12 @@ final class ForbiddenRequestLog implements AccessDeniedHandler {
         }
     }
 
-    private static String reasonFor(AccessDeniedException exception) {
-        String reason = ACCESS_DENIED;
+    private static RejectReason reasonFor(AccessDeniedException exception) {
+        RejectReason reason = RejectReason.ACCESS_DENIED;
         if (exception instanceof MissingCsrfTokenException) {
-            reason = CSRF_TOKEN_MISSING;
+            reason = RejectReason.CSRF_TOKEN_MISSING;
         } else if (exception instanceof InvalidCsrfTokenException) {
-            reason = CSRF_TOKEN_INVALID;
+            reason = RejectReason.CSRF_TOKEN_INVALID;
         }
         return reason;
     }

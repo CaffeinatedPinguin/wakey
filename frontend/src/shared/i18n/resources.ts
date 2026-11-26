@@ -77,9 +77,6 @@ export const commonResources = {
         cancel: 'Anuluj',
         errors: {
           nameRequired: 'Podaj nazwę.',
-          nameTooLong: 'Nazwa może mieć najwyżej {{max}} znaków.',
-          slugInvalid:
-            'Slug musi mieć {{min}}–{{max}} znaków: małe litery, cyfry i myślniki, zaczynać się literą i nie kończyć myślnikiem.',
         },
       },
       notFound: {
@@ -171,9 +168,6 @@ export const commonResources = {
         cancel: 'Cancel',
         errors: {
           nameRequired: 'Enter a name.',
-          nameTooLong: 'The name may be at most {{max}} characters long.',
-          slugInvalid:
-            'The slug must be {{min}}–{{max}} characters: lowercase letters, digits and hyphens, start with a letter and not end with a hyphen.',
         },
       },
       notFound: {

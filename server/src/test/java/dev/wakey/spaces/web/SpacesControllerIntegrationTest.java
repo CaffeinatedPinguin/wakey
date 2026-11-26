@@ -42,7 +42,7 @@ class SpacesControllerIntegrationTest extends SecurityIntegrationTest {
 
     private static final String ADMIN_ROLE = "ROLE_ADMIN";
 
-    private static final String ERROR_MEDIA_TYPE = "application/problem+json";
+    private static final String ERROR_MEDIA_TYPE = MediaType.APPLICATION_PROBLEM_JSON_VALUE;
 
     private static final String ISSUER = "https://issuer.example.com";
 

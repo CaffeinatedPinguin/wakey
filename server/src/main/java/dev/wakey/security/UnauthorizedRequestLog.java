@@ -15,8 +15,6 @@ import org.springframework.web.servlet.HandlerExceptionResolver;
 @Component
 final class UnauthorizedRequestLog implements AuthenticationEntryPoint {
 
-    private static final String MISSING_AUTHENTICATION = "missing-authentication";
-
     private static final int UNAUTHENTICATED_STATUS =
             CommonError.UNAUTHENTICATED.getStatus().value();
 
@@ -30,7 +28,11 @@ final class UnauthorizedRequestLog implements AuthenticationEntryPoint {
     public void commence(HttpServletRequest request, HttpServletResponse response, AuthenticationException exception) {
         String method = request.getMethod();
         String path = request.getRequestURI();
-        log.info("request rejected: reason={} method={} path={}", MISSING_AUTHENTICATION, method, path);
+        log.info(
+                "request rejected: reason={} method={} path={}",
+                RejectReason.MISSING_AUTHENTICATION.getWireName(),
+                method,
+                path);
         if (response.isCommitted()) {
             return;
         }

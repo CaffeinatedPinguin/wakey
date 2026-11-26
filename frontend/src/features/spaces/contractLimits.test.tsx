@@ -64,6 +64,8 @@ describe('space limits from the contract', () => {
     fireEvent.change(slugInput(), { target: { value: 'valid-slug' } })
     fireEvent.click(screen.getByRole('button', { name: 'Utwórz' }))
 
-    expect(await screen.findByText(`Nazwa może mieć najwyżej ${NAME_MAX} znaków.`)).toBeDefined()
+    expect(
+      await screen.findByText(`Nazwa musi mieć 1–${NAME_MAX} znaków bez znaków sterujących.`),
+    ).toBeDefined()
   })
 })

@@ -1,6 +1,7 @@
 package dev.wakey.spaces.web;
 
 import dev.wakey.spaces.SpaceError;
+import dev.wakey.spaces.SpaceRole;
 import dev.wakey.spaces.SpaceSlug;
 import dev.wakey.web.ErrorCodeSet;
 import io.swagger.v3.oas.models.Components;
@@ -24,7 +25,7 @@ class SpacesWebConfiguration {
 
     private static final String SPACE_RESPONSE_SCHEMA = "SpaceResponse";
 
-    private static final String SPACE_ROLE_SCHEMA = "SpaceRole";
+    private static final String SPACE_ROLE_SCHEMA = SpaceRole.class.getSimpleName();
 
     private static final String SPACE_ROLE_REF = "#/components/schemas/" + SPACE_ROLE_SCHEMA;
 

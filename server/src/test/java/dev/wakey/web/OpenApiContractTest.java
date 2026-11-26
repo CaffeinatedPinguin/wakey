@@ -5,6 +5,7 @@ import static org.springframework.security.test.web.servlet.request.SecurityMock
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.request;
 
+import dev.wakey.spaces.SpaceRole;
 import dev.wakey.spaces.SpaceSlug;
 import dev.wakey.testsupport.ContractFile;
 import dev.wakey.testsupport.SecurityIntegrationTest;
@@ -44,6 +45,8 @@ class OpenApiContractTest extends SecurityIntegrationTest {
     private static final Set<String> PUBLIC_OPERATIONS = Set.of();
 
     private static final String ERROR_SCHEMA_REF = "#/components/schemas/ProblemDetail";
+
+    private static final String SPACE_ROLE_REFERENCE = "#/components/schemas/" + SpaceRole.class.getSimpleName();
 
     private static final ObjectMapper MAPPER = JsonMapper.builder()
             .enable(SerializationFeature.ORDER_MAP_ENTRIES_BY_KEYS)
@@ -103,7 +106,7 @@ class OpenApiContractTest extends SecurityIntegrationTest {
         assertThat(spaceRequired).containsExactlyInAnyOrder("slug", "name", "version", "role");
         assertThat(cursorPageRequired).containsExactlyInAnyOrder("items", "nextCursor");
         String roleReference = referenceOf(role);
-        assertThat(roleReference).isEqualTo("#/components/schemas/SpaceRole");
+        assertThat(roleReference).isEqualTo(SPACE_ROLE_REFERENCE);
         assertThat(roleTypes).contains("null");
         assertThat(spaceRoleType).contains("string");
         assertThat(nextCursorType).contains("string", "null");
@@ -123,7 +126,7 @@ class OpenApiContractTest extends SecurityIntegrationTest {
 
         // then
         assertThat(roleValues).containsExactly("EDITOR", "VIEWER");
-        assertThat(roleReference).isEqualTo("#/components/schemas/SpaceRole");
+        assertThat(roleReference).isEqualTo(SPACE_ROLE_REFERENCE);
     }
 
     @Test
@@ -140,7 +143,7 @@ class OpenApiContractTest extends SecurityIntegrationTest {
         List<String> roleTypes = unionTypes(role);
 
         // then
-        assertThat(roleReference).isEqualTo("#/components/schemas/SpaceRole");
+        assertThat(roleReference).isEqualTo(SPACE_ROLE_REFERENCE);
         assertThat(spaceRoleType).containsExactly("string");
         assertThat(roleTypes).contains("null");
     }
@@ -165,8 +168,8 @@ class OpenApiContractTest extends SecurityIntegrationTest {
         assertThat(spaceRoleType).containsExactly("string");
         assertThat(addRequired).contains("role");
         assertThat(changeRequired).contains("role");
-        assertThat(referenceOf(addRole)).isEqualTo("#/components/schemas/SpaceRole");
-        assertThat(referenceOf(changeRoleRole)).isEqualTo("#/components/schemas/SpaceRole");
+        assertThat(referenceOf(addRole)).isEqualTo(SPACE_ROLE_REFERENCE);
+        assertThat(referenceOf(changeRoleRole)).isEqualTo(SPACE_ROLE_REFERENCE);
         assertThat(unionTypes(addRole)).doesNotContain("null");
         assertThat(unionTypes(changeRoleRole)).doesNotContain("null");
     }

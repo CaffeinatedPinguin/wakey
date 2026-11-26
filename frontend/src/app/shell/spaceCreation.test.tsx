@@ -3,6 +3,11 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import type { Me } from '../../features/auth'
 import { ErrorCode } from '../../shared/api/generated/enums'
 import type { SpaceRole } from '../../shared/api/generated/enums'
+import {
+  CREATE_SPACE_REQUEST_NAME_MAX_LENGTH,
+  CREATE_SPACE_REQUEST_SLUG_MAX_LENGTH,
+  CREATE_SPACE_REQUEST_SLUG_MIN_LENGTH,
+} from '../../shared/api/generated/limits'
 import { appConfig } from '../../shared/config'
 import { signedInUser } from '../../test/data'
 import { installMockApi } from '../../test/mockApi'
@@ -232,18 +237,29 @@ describe('create space dialog reopening', () => {
   })
 })
 
+// The server copies the constraint limits into params, so the fixture does too.
+const SERVER_FIELD_ERRORS = [
+  {
+    code: ErrorCode.INVALID_NAME,
+    pointer: '/name',
+    params: { max: CREATE_SPACE_REQUEST_NAME_MAX_LENGTH },
+  },
+  {
+    code: ErrorCode.INVALID_SLUG,
+    pointer: '/slug',
+    params: {
+      min: CREATE_SPACE_REQUEST_SLUG_MIN_LENGTH,
+      max: CREATE_SPACE_REQUEST_SLUG_MAX_LENGTH,
+    },
+  },
+]
+
 describe('create space dialog server validation', () => {
   it('server validation errors are shown on the form fields', async () => {
     api.spaces = [alpha]
     api.createError = {
       status: 400,
-      data: {
-        code: ErrorCode.VALIDATION_FAILED,
-        errors: [
-          { code: ErrorCode.INVALID_NAME, pointer: '/name', params: { max: 100 } },
-          { code: ErrorCode.INVALID_SLUG, pointer: '/slug' },
-        ],
-      },
+      data: { code: ErrorCode.VALIDATION_FAILED, errors: SERVER_FIELD_ERRORS },
     }
     renderApp('/')
     await screen.findByText('Przestrzeń: Alpha')

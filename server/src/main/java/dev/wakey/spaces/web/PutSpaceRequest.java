@@ -10,7 +10,7 @@ import org.jspecify.annotations.Nullable;
 @Schema(description = "The desired state of a space")
 public record PutSpaceRequest(
         @Schema(
-                description = "The display name, 1-100 characters after trimming",
+                description = "The display name, 1-" + SpaceName.MAX_LENGTH + " characters after trimming",
                 example = "Acme",
                 maxLength = SpaceName.MAX_LENGTH)
         @NotNull

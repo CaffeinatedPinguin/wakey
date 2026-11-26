@@ -4,9 +4,7 @@ import type { TFunction } from 'i18next'
 import type { ChangeEvent } from 'react'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { ApiException, toApiException } from '../../../shared/api/apiException'
 import { applyApiException } from '../../../shared/api/formErrors'
-import { ErrorCode } from '../../../shared/api/generated/enums'
 import {
   CREATE_SPACE_REQUEST_NAME_MAX_LENGTH,
   CREATE_SPACE_REQUEST_SLUG_MAX_LENGTH,
@@ -32,28 +30,6 @@ export interface CreateSpaceForm {
   onSlugChange: (event: ChangeEvent<HTMLInputElement>) => void
 }
 
-const SLUG_LIMITS = {
-  min: CREATE_SPACE_REQUEST_SLUG_MIN_LENGTH,
-  max: CREATE_SPACE_REQUEST_SLUG_MAX_LENGTH,
-}
-
-// The server copies the constraint attributes into `params`; an error body that
-// omits them still shows the slug rule from the contract instead of a gap.
-function withSlugLimits(error: unknown): ApiException {
-  const exception = toApiException(error)
-  const errors = exception.errors.map((fieldError) =>
-    fieldError.code === ErrorCode.INVALID_SLUG
-      ? { ...fieldError, params: { ...SLUG_LIMITS, ...fieldError.params } }
-      : fieldError,
-  )
-  return new ApiException({
-    status: exception.status,
-    code: exception.code,
-    errors,
-    detail: exception.detail,
-  })
-}
-
 function validateSpace(values: SpaceFormValues, t: TFunction): Record<string, string> {
   const errors: Record<string, string> = {}
   const name = values.name.trim()
@@ -62,12 +38,10 @@ function validateSpace(values: SpaceFormValues, t: TFunction): Record<string, st
     errors.name = t('spaces.create.errors.nameRequired')
   }
   if (nameLength > CREATE_SPACE_REQUEST_NAME_MAX_LENGTH) {
-    errors.name = t('spaces.create.errors.nameTooLong', {
-      max: CREATE_SPACE_REQUEST_NAME_MAX_LENGTH,
-    })
+    errors.name = t('errors.invalid_name', { max: CREATE_SPACE_REQUEST_NAME_MAX_LENGTH })
   }
   if (!isValidSlug(values.slug)) {
-    errors.slug = t('spaces.create.errors.slugInvalid', {
+    errors.slug = t('errors.invalid_slug', {
       min: CREATE_SPACE_REQUEST_SLUG_MIN_LENGTH,
       max: CREATE_SPACE_REQUEST_SLUG_MAX_LENGTH,
     })
@@ -97,7 +71,7 @@ export function useCreateSpaceForm({
   const handlers = createHandlers(form, slugEdited, setSlugEdited)
   const close = createClose(resetForm, onClose)
   const onError = (error: unknown): void => {
-    setFormError(applyApiException(form, withSlugLimits(error), t))
+    setFormError(applyApiException(form, error, t))
   }
   const submitValues = createSubmit(create, close, onCreated, onError)
   const submit = (values: SpaceFormValues): void => {
