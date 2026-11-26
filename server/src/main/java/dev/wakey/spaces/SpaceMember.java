@@ -1,20 +1,16 @@
 package dev.wakey.spaces;
 
-import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
-import jakarta.validation.constraints.Size;
 import org.jspecify.annotations.Nullable;
 
 /**
  * A membership identity and role: the OIDC issuer and subject pair plus the role in the space. The
- * length limits are the schema invariants and are checked at the service boundary.
+ * one identity rule is shared with the declarative constraints of the web layer.
  */
 public record SpaceMember(
-        @NotBlank @Size(max = SpaceMember.ISSUER_MAX_LENGTH) @InvalidSubject
-        String issuer,
+        @InvalidIssuer String issuer,
 
-        @NotBlank @Size(max = SpaceMember.SUBJECT_MAX_LENGTH) @InvalidSubject
-        String subject,
+        @InvalidSubject String subject,
 
         @NotNull SpaceRole role) {
 
@@ -32,7 +28,7 @@ public record SpaceMember(
         return isValidIdentity(value, SUBJECT_MAX_LENGTH);
     }
 
-    private static boolean isValidIdentity(@Nullable String value, int maxLength) {
+    static boolean isValidIdentity(@Nullable String value, int maxLength) {
         return value != null
                 && !value.isBlank()
                 && value.length() <= maxLength

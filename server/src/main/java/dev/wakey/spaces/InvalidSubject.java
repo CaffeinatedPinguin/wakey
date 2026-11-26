@@ -9,8 +9,9 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 /**
- * Rejects control, format, line or paragraph separator characters and unpaired surrogates in a member
- * identity; the wire code is {@code invalid_subject}.
+ * Checks a member subject against the one identity rule: not blank, at most {@link #max()} characters
+ * and no control, format, line or paragraph separator characters. The wire code is
+ * {@code invalid_subject}.
  */
 @Documented
 @Constraint(validatedBy = InvalidSubjectValidator.class)
@@ -23,4 +24,6 @@ public @interface InvalidSubject {
     Class<?>[] groups() default {};
 
     Class<? extends Payload>[] payload() default {};
+
+    int max() default SpaceMember.SUBJECT_MAX_LENGTH;
 }

@@ -5,10 +5,23 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { AppThemeProvider } from '../../../app/App'
 import i18n from '../../../app/i18n'
 import { ErrorCode } from '../../../shared/api/generated/enums'
+import {
+  CREATE_SPACE_REQUEST_NAME_MAX_LENGTH,
+  CREATE_SPACE_REQUEST_SLUG_MAX_LENGTH,
+  CREATE_SPACE_REQUEST_SLUG_MIN_LENGTH,
+} from '../../../shared/api/generated/limits'
 import { installMockApi } from '../../../test/mockApi'
 import type { MockReply, MockRequest } from '../../../test/mockApi'
 import { CreateSpaceDialog } from './CreateSpaceDialog'
 import type { CreateSpaceDialogProps } from './CreateSpaceDialog'
+
+const SLUG_MIN = String(CREATE_SPACE_REQUEST_SLUG_MIN_LENGTH)
+const SLUG_MAX = String(CREATE_SPACE_REQUEST_SLUG_MAX_LENGTH)
+const NAME_MAX = String(CREATE_SPACE_REQUEST_NAME_MAX_LENGTH)
+const SLUG_RULE = `${SLUG_MIN}–${SLUG_MAX} znaków`
+const SLUG_HINT = `${SLUG_RULE}: małe litery, cyfry i myślniki; zaczyna się literą i nie kończy się myślnikiem.`
+const SLUG_ERROR = `Slug musi mieć ${SLUG_RULE}: małe litery, cyfry i myślniki, zaczynać się literą i nie kończyć myślnikiem.`
+const NAME_INVALID = `Nazwa musi mieć 1–${NAME_MAX} znaków bez znaków sterujących.`
 
 function renderDialog(overrides: Partial<CreateSpaceDialogProps> = {}): {
   onCreated: ReturnType<typeof vi.fn>
@@ -60,11 +73,7 @@ afterEach(async () => {
 describe('create space dialog slug', () => {
   it('the slug hint states the whole rule', () => {
     renderDialog()
-    expect(
-      screen.getByText(
-        '3–40 znaków: małe litery, cyfry i myślniki; zaczyna się literą i nie kończy się myślnikiem.',
-      ),
-    ).toBeDefined()
+    expect(screen.getByText(SLUG_HINT)).toBeDefined()
   })
 
   it('the slug follows the name until it is edited by hand', () => {
@@ -89,11 +98,7 @@ describe('create space dialog slug', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Utwórz' }))
 
-    expect(
-      await screen.findByText(
-        'Slug musi mieć 3–40 znaków: małe litery, cyfry i myślniki, zaczynać się literą i nie kończyć myślnikiem.',
-      ),
-    ).toBeDefined()
+    expect(await screen.findByText(SLUG_ERROR)).toBeDefined()
     expect(onCreated).not.toHaveBeenCalled()
   })
 })
@@ -182,7 +187,7 @@ describe('create space dialog server errors', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Utwórz' }))
 
     expect(await screen.findByText('Dane formularza są nieprawidłowe.')).toBeDefined()
-    expect(screen.queryByText('Nazwa musi mieć 1–100 znaków bez znaków sterujących.')).toBeNull()
+    expect(screen.queryByText(NAME_INVALID)).toBeNull()
   })
 })
 
@@ -219,8 +224,19 @@ describe('create space dialog server validation', () => {
       data: {
         code: ErrorCode.VALIDATION_FAILED,
         errors: [
-          { code: ErrorCode.INVALID_NAME, pointer: '/name', params: { max: 100 } },
-          { code: ErrorCode.INVALID_SLUG, pointer: '/slug' },
+          {
+            code: ErrorCode.INVALID_NAME,
+            pointer: '/name',
+            params: { max: CREATE_SPACE_REQUEST_NAME_MAX_LENGTH },
+          },
+          {
+            code: ErrorCode.INVALID_SLUG,
+            pointer: '/slug',
+            params: {
+              min: CREATE_SPACE_REQUEST_SLUG_MIN_LENGTH,
+              max: CREATE_SPACE_REQUEST_SLUG_MAX_LENGTH,
+            },
+          },
         ],
       },
     }))
@@ -230,14 +246,8 @@ describe('create space dialog server validation', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Utwórz' }))
 
-    expect(
-      await screen.findByText('Nazwa musi mieć 1–100 znaków bez znaków sterujących.'),
-    ).toBeDefined()
-    expect(
-      screen.getByText(
-        'Slug musi mieć 3–40 znaków: małe litery, cyfry i myślniki, zaczynać się literą i nie kończyć myślnikiem.',
-      ),
-    ).toBeDefined()
+    expect(await screen.findByText(NAME_INVALID)).toBeDefined()
+    expect(screen.getByText(SLUG_ERROR)).toBeDefined()
   })
 })
 

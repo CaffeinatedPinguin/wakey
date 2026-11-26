@@ -8,7 +8,6 @@
             "description" : "The OIDC issuer of the member",
             "example" : "https://issuer.example.com",
             "maxLength" : 255,
-            "minLength" : 0,
             "type" : "string"
           },
           "role" : {
@@ -19,7 +18,6 @@
             "description" : "The OIDC subject of the member",
             "example" : "user-42",
             "maxLength" : 255,
-            "minLength" : 0,
             "type" : "string"
           }
         },
@@ -49,6 +47,8 @@
           "slug" : {
             "description" : "The stable space slug",
             "example" : "acme",
+            "maxLength" : 40,
+            "minLength" : 3,
             "pattern" : "^[a-z][a-z0-9-]{1,38}[a-z0-9]$",
             "type" : "string"
           }
@@ -111,7 +111,7 @@
       "ProblemDetail" : {
         "properties" : {
           "code" : {
-            "enum" : [ "bad_request", "validation_failed", "invalid_body", "invalid_cursor", "unauthenticated", "forbidden", "not_found", "method_not_allowed", "not_acceptable", "unsupported_media_type", "version_conflict", "internal_error", "slug_taken", "invalid_name", "invalid_slug", "invalid_subject" ],
+            "enum" : [ "bad_request", "validation_failed", "invalid_body", "invalid_cursor", "unauthenticated", "forbidden", "not_found", "method_not_allowed", "not_acceptable", "unsupported_media_type", "version_conflict", "internal_error", "slug_taken", "invalid_name", "invalid_slug", "invalid_subject", "invalid_issuer" ],
             "type" : "string"
           },
           "detail" : {
@@ -563,19 +563,15 @@
         }, {
           "in" : "query",
           "name" : "issuer",
-          "required" : true,
+          "required" : false,
           "schema" : {
-            "maxLength" : 255,
-            "minLength" : 0,
             "type" : "string"
           }
         }, {
           "in" : "query",
           "name" : "subject",
-          "required" : true,
+          "required" : false,
           "schema" : {
-            "maxLength" : 255,
-            "minLength" : 0,
             "type" : "string"
           }
         } ],
@@ -791,19 +787,15 @@
         }, {
           "in" : "query",
           "name" : "issuer",
-          "required" : true,
+          "required" : false,
           "schema" : {
-            "maxLength" : 255,
-            "minLength" : 0,
             "type" : "string"
           }
         }, {
           "in" : "query",
           "name" : "subject",
-          "required" : true,
+          "required" : false,
           "schema" : {
-            "maxLength" : 255,
-            "minLength" : 0,
             "type" : "string"
           }
         } ],

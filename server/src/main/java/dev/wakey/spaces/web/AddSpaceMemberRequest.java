@@ -1,12 +1,11 @@
 package dev.wakey.spaces.web;
 
+import dev.wakey.spaces.InvalidIssuer;
 import dev.wakey.spaces.InvalidSubject;
 import dev.wakey.spaces.SpaceMember;
 import dev.wakey.spaces.SpaceRole;
 import io.swagger.v3.oas.annotations.media.Schema;
-import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
-import jakarta.validation.constraints.Size;
 
 /** A membership to add; the limits are the same ones the domain record enforces. */
 @Schema(description = "A membership to add")
@@ -16,9 +15,7 @@ public record AddSpaceMemberRequest(
                 example = "https://issuer.example.com",
                 maxLength = SpaceMember.ISSUER_MAX_LENGTH,
                 requiredMode = Schema.RequiredMode.REQUIRED)
-        @NotBlank
-        @Size(max = SpaceMember.ISSUER_MAX_LENGTH)
-        @InvalidSubject
+        @InvalidIssuer
         String issuer,
 
         @Schema(
@@ -26,8 +23,6 @@ public record AddSpaceMemberRequest(
                 example = "user-42",
                 maxLength = SpaceMember.SUBJECT_MAX_LENGTH,
                 requiredMode = Schema.RequiredMode.REQUIRED)
-        @NotBlank
-        @Size(max = SpaceMember.SUBJECT_MAX_LENGTH)
         @InvalidSubject
         String subject,
 

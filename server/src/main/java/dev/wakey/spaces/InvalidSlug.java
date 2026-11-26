@@ -20,4 +20,8 @@ public @interface InvalidSlug {
     Class<?>[] groups() default {};
 
     Class<? extends Payload>[] payload() default {};
+
+    int min() default SpaceSlug.MIN_LENGTH;
+
+    int max() default SpaceSlug.MAX_LENGTH;
 }

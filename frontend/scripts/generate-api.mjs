@@ -227,6 +227,9 @@ function limitEntries(document, operations) {
     for (const propertyName of Object.keys(properties).sort()) {
       const property = properties[propertyName]
       const prefix = `${upperSnake(schemaName)}_${upperSnake(propertyName)}`
+      if (typeof property?.minLength === 'number') {
+        entries.push({ name: `${prefix}_MIN_LENGTH`, value: String(property.minLength) })
+      }
       if (typeof property?.maxLength === 'number') {
         entries.push({ name: `${prefix}_MAX_LENGTH`, value: String(property.maxLength) })
       }

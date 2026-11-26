@@ -1,7 +1,9 @@
-import { CREATE_SPACE_REQUEST_SLUG_PATTERN } from '../../shared/api/generated/limits'
+import {
+  CREATE_SPACE_REQUEST_SLUG_MAX_LENGTH,
+  CREATE_SPACE_REQUEST_SLUG_PATTERN,
+} from '../../shared/api/generated/limits'
 
 const SLUG_PATTERN = new RegExp(CREATE_SPACE_REQUEST_SLUG_PATTERN)
-const SLUG_MAX_LENGTH = 40
 
 // NFD splits every Polish letter into a base letter and a combining mark,
 // except ł, which has no decomposition and needs its own mapping.
@@ -25,7 +27,7 @@ export function slugFromName(name: string): string {
     .join('')
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-+|-+$/g, '')
-  const truncated = base.slice(0, SLUG_MAX_LENGTH)
+  const truncated = base.slice(0, CREATE_SPACE_REQUEST_SLUG_MAX_LENGTH)
   const candidate = truncated.replace(/-+$/, '')
   return isValidSlug(candidate) ? candidate : ''
 }

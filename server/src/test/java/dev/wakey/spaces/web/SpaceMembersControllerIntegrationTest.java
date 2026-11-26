@@ -9,6 +9,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 
 import dev.wakey.security.CurrentUser;
+import dev.wakey.spaces.SpaceError;
 import dev.wakey.spaces.SpaceMember;
 import dev.wakey.spaces.SpaceRole;
 import dev.wakey.spaces.SpaceService;
@@ -127,6 +128,38 @@ class SpaceMembersControllerIntegrationTest extends SecurityIntegrationTest {
         // then
         assertValidationError(blank, "/subject");
         assertValidationError(longSubject, "/subject");
+    }
+
+    @Test
+    void aBlankSubjectGivesOneCodeWithItsLimit() throws Exception {
+        // given
+        String admin = uniqueSubject("blank-subject-one-code");
+        String slug = uniqueSlug("blank-subject-one-code");
+        seedSpace(slug);
+
+        // when
+        MvcResult result = addMemberAs(admin, true, slug, memberBody("   ", SpaceRole.VIEWER));
+
+        // then
+        assertOneFieldError(
+                result, "/subject", SpaceError.INVALID_SUBJECT.getCode(), "max", SpaceMember.SUBJECT_MAX_LENGTH);
+    }
+
+    @Test
+    void aTooLongIssuerGivesOneCode() throws Exception {
+        // given
+        String admin = uniqueSubject("issuer-one-code");
+        String slug = uniqueSlug("issuer-one-code");
+        seedSpace(slug);
+        String tooLongIssuer = "x".repeat(SpaceMember.ISSUER_MAX_LENGTH + 1);
+        String target = uniqueSubject("issuer-target");
+
+        // when
+        MvcResult result = addMemberAs(admin, true, slug, memberBody(tooLongIssuer, target, SpaceRole.VIEWER));
+
+        // then
+        assertOneFieldError(
+                result, "/issuer", SpaceError.INVALID_ISSUER.getCode(), "max", SpaceMember.ISSUER_MAX_LENGTH);
     }
 
     @Test
@@ -312,6 +345,24 @@ class SpaceMembersControllerIntegrationTest extends SecurityIntegrationTest {
         assertThat(errorPointers(body)).contains(pointer);
     }
 
+    private static void assertOneFieldError(MvcResult result, String pointer, String code, String param, int value)
+            throws Exception {
+        JsonNode body = jsonOf(result);
+        JsonNode errors = body.path("errors");
+        JsonNode error = errors.path(0);
+        String bodyCode = body.path("code").asString();
+        String errorPointer = error.path("pointer").asString();
+        String errorCode = error.path("code").asString();
+        int errorParam = error.path("params").path(param).asInt();
+        assertThat(statusOf(result)).isEqualTo(400);
+        assertThat(contentTypeOf(result)).isEqualTo(ERROR_MEDIA_TYPE);
+        assertThat(bodyCode).isEqualTo(CommonError.VALIDATION_FAILED.getCode());
+        assertThat(errors.size()).isEqualTo(1);
+        assertThat(errorPointer).isEqualTo(pointer);
+        assertThat(errorCode).isEqualTo(code);
+        assertThat(errorParam).isEqualTo(value);
+    }
+
     private static List<String> errorPointers(JsonNode body) {
         List<String> pointers = new ArrayList<>();
         for (JsonNode error : body.path("errors")) {
@@ -322,7 +373,11 @@ class SpaceMembersControllerIntegrationTest extends SecurityIntegrationTest {
     }
 
     private static String memberBody(String subject, SpaceRole role) {
-        return "{\"issuer\":\"" + ISSUER + "\",\"subject\":\"" + subject + "\",\"role\":\"" + role.name() + "\"}";
+        return memberBody(ISSUER, subject, role);
+    }
+
+    private static String memberBody(String issuer, String subject, SpaceRole role) {
+        return "{\"issuer\":\"" + issuer + "\",\"subject\":\"" + subject + "\",\"role\":\"" + role.name() + "\"}";
     }
 
     private static String roleBody(SpaceRole role) {

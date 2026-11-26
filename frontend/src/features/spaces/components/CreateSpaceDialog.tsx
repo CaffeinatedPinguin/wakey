@@ -1,6 +1,10 @@
 import { Alert, Button, Group, Modal, Stack, TextInput } from '@mantine/core'
 import type { ReactElement } from 'react'
 import { useTranslation } from 'react-i18next'
+import {
+  CREATE_SPACE_REQUEST_SLUG_MAX_LENGTH,
+  CREATE_SPACE_REQUEST_SLUG_MIN_LENGTH,
+} from '../../../shared/api/generated/limits'
 import { useCreateSpaceForm } from '../hooks/useCreateSpaceForm'
 import type { CreateSpaceForm } from '../hooks/useCreateSpaceForm'
 
@@ -23,7 +27,10 @@ function SpaceFormFields({ spaceForm }: { spaceForm: CreateSpaceForm }): ReactEl
       />
       <TextInput
         label={t('spaces.create.slug')}
-        description={t('spaces.create.slugHint')}
+        description={t('spaces.create.slugHint', {
+          min: CREATE_SPACE_REQUEST_SLUG_MIN_LENGTH,
+          max: CREATE_SPACE_REQUEST_SLUG_MAX_LENGTH,
+        })}
         {...form.getInputProps('slug')}
         onChange={spaceForm.onSlugChange}
       />

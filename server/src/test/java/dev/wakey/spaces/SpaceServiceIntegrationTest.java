@@ -363,7 +363,7 @@ class SpaceServiceIntegrationTest extends PostgresIntegrationTest {
         assertThat(addEmptyViolations)
                 .extracting(SpaceServiceIntegrationTest::propertyName)
                 .containsOnly("subject");
-        assertThat(constraintNames(addEmptyViolations)).contains("NotBlank");
+        assertThat(constraintNames(addEmptyViolations)).contains("InvalidSubject");
     }
 
     @Test
@@ -398,12 +398,13 @@ class SpaceServiceIntegrationTest extends PostgresIntegrationTest {
         assertThat(violations)
                 .extracting(SpaceServiceIntegrationTest::propertyName)
                 .containsOnly("subject");
-        assertThat(constraintNames(violations)).contains("Size");
-        ConstraintViolation<?> sizeViolation = violations.stream()
-                .filter(violation -> "Size".equals(constraintName(violation)))
+        assertThat(constraintNames(violations)).contains("InvalidSubject");
+        ConstraintViolation<?> subjectViolation = violations.stream()
+                .filter(violation -> "InvalidSubject".equals(constraintName(violation)))
                 .findFirst()
                 .orElseThrow();
-        Map<String, Object> attributes = sizeViolation.getConstraintDescriptor().getAttributes();
+        Map<String, Object> attributes =
+                subjectViolation.getConstraintDescriptor().getAttributes();
         assertThat(attributes).containsEntry("max", SpaceMember.SUBJECT_MAX_LENGTH);
     }
 
@@ -422,7 +423,7 @@ class SpaceServiceIntegrationTest extends PostgresIntegrationTest {
         assertThat(violations)
                 .extracting(SpaceServiceIntegrationTest::propertyName)
                 .containsOnly("subject");
-        assertThat(constraintNames(violations)).contains("NotBlank");
+        assertThat(constraintNames(violations)).contains("InvalidSubject");
     }
 
     @Test

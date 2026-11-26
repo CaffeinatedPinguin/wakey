@@ -24,8 +24,13 @@ public enum SpaceError implements ErrorCode {
                     + " lowercase letters, digits or hyphens, start with a letter and end with a letter or digit."),
     INVALID_SUBJECT(
             HttpStatus.BAD_REQUEST,
-            "A member identity must have 1-"
+            "A member subject must have 1-"
                     + SpaceMember.SUBJECT_MAX_LENGTH
+                    + " characters without control or bidirectional formatting characters."),
+    INVALID_ISSUER(
+            HttpStatus.BAD_REQUEST,
+            "A member issuer must have 1-"
+                    + SpaceMember.ISSUER_MAX_LENGTH
                     + " characters without control or bidirectional formatting characters.");
 
     private final HttpStatus status;

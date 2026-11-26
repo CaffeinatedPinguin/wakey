@@ -11,6 +11,8 @@ public record CreateSpaceRequest(
         @Schema(
                 description = "The stable space slug",
                 example = "acme",
+                minLength = SpaceSlug.MIN_LENGTH,
+                maxLength = SpaceSlug.MAX_LENGTH,
                 pattern = SpaceSlug.PATTERN,
                 requiredMode = Schema.RequiredMode.REQUIRED)
         @NotNull

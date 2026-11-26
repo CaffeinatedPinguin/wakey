@@ -7,6 +7,7 @@ export const ErrorCode = {
   INTERNAL_ERROR: 'internal_error',
   INVALID_BODY: 'invalid_body',
   INVALID_CURSOR: 'invalid_cursor',
+  INVALID_ISSUER: 'invalid_issuer',
   INVALID_NAME: 'invalid_name',
   INVALID_SLUG: 'invalid_slug',
   INVALID_SUBJECT: 'invalid_subject',

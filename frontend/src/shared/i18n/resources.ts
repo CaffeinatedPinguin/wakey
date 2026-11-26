@@ -37,9 +37,10 @@ export const commonResources = {
       invalid_body: 'Treść żądania jest nieprawidłowa.',
       invalid_cursor: 'Nieprawidłowy kursor stronicowania.',
       invalid_name: 'Nazwa musi mieć 1–{{max}} znaków bez znaków sterujących.',
+      invalid_issuer: 'Nieprawidłowy wystawca: 1–{{max}} znaków bez znaków sterujących.',
       invalid_slug:
-        'Slug musi mieć 3–40 znaków: małe litery, cyfry i myślniki, zaczynać się literą i nie kończyć myślnikiem.',
-      invalid_subject: 'Nieprawidłowy podmiot.',
+        'Slug musi mieć {{min}}–{{max}} znaków: małe litery, cyfry i myślniki, zaczynać się literą i nie kończyć myślnikiem.',
+      invalid_subject: 'Nieprawidłowy podmiot: 1–{{max}} znaków bez znaków sterujących.',
       method_not_allowed: 'Ta metoda nie jest dozwolona.',
       not_acceptable: 'Brak akceptowalnego formatu odpowiedzi.',
       not_found: 'Nie znaleziono zasobu.',
@@ -71,14 +72,14 @@ export const commonResources = {
         name: 'Nazwa',
         slug: 'Slug',
         slugHint:
-          '3–40 znaków: małe litery, cyfry i myślniki; zaczyna się literą i nie kończy się myślnikiem.',
+          '{{min}}–{{max}} znaków: małe litery, cyfry i myślniki; zaczyna się literą i nie kończy się myślnikiem.',
         submit: 'Utwórz',
         cancel: 'Anuluj',
         errors: {
           nameRequired: 'Podaj nazwę.',
-          nameTooLong: 'Nazwa może mieć najwyżej 100 znaków.',
+          nameTooLong: 'Nazwa może mieć najwyżej {{max}} znaków.',
           slugInvalid:
-            'Slug musi mieć 3–40 znaków: małe litery, cyfry i myślniki, zaczynać się literą i nie kończyć myślnikiem.',
+            'Slug musi mieć {{min}}–{{max}} znaków: małe litery, cyfry i myślniki, zaczynać się literą i nie kończyć myślnikiem.',
         },
       },
       notFound: {
@@ -128,9 +129,12 @@ export const commonResources = {
       invalid_body: 'The request body is invalid.',
       invalid_cursor: 'The pagination cursor is invalid.',
       invalid_name: 'The name must be 1–{{max}} characters without control characters.',
+      invalid_issuer:
+        'The issuer is invalid: it must have 1–{{max}} characters without control characters.',
       invalid_slug:
-        'The slug must be 3–40 characters: lowercase letters, digits and hyphens, start with a letter and not end with a hyphen.',
-      invalid_subject: 'The subject is invalid.',
+        'The slug must be {{min}}–{{max}} characters: lowercase letters, digits and hyphens, start with a letter and not end with a hyphen.',
+      invalid_subject:
+        'The subject is invalid: it must have 1–{{max}} characters without control characters.',
       method_not_allowed: 'This method is not allowed.',
       not_acceptable: 'No acceptable response format.',
       not_found: 'The resource was not found.',
@@ -162,14 +166,14 @@ export const commonResources = {
         name: 'Name',
         slug: 'Slug',
         slugHint:
-          '3–40 characters: lowercase letters, digits and hyphens; starts with a letter and does not end with a hyphen.',
+          '{{min}}–{{max}} characters: lowercase letters, digits and hyphens; starts with a letter and does not end with a hyphen.',
         submit: 'Create',
         cancel: 'Cancel',
         errors: {
           nameRequired: 'Enter a name.',
-          nameTooLong: 'The name may be at most 100 characters long.',
+          nameTooLong: 'The name may be at most {{max}} characters long.',
           slugInvalid:
-            'The slug must be 3–40 characters: lowercase letters, digits and hyphens, start with a letter and not end with a hyphen.',
+            'The slug must be {{min}}–{{max}} characters: lowercase letters, digits and hyphens, start with a letter and not end with a hyphen.',
         },
       },
       notFound: {

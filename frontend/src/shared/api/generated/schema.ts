@@ -149,7 +149,7 @@ export interface components {
         };
         ProblemDetail: {
             /** @enum {string} */
-            code?: "bad_request" | "validation_failed" | "invalid_body" | "invalid_cursor" | "unauthenticated" | "forbidden" | "not_found" | "method_not_allowed" | "not_acceptable" | "unsupported_media_type" | "version_conflict" | "internal_error" | "slug_taken" | "invalid_name" | "invalid_slug" | "invalid_subject";
+            code?: "bad_request" | "validation_failed" | "invalid_body" | "invalid_cursor" | "unauthenticated" | "forbidden" | "not_found" | "method_not_allowed" | "not_acceptable" | "unsupported_media_type" | "version_conflict" | "internal_error" | "slug_taken" | "invalid_name" | "invalid_slug" | "invalid_subject" | "invalid_issuer";
             detail?: string;
             errors?: {
                 code?: string;
@@ -599,9 +599,9 @@ export interface operations {
     };
     removeSpaceMember: {
         parameters: {
-            query: {
-                issuer: string;
-                subject: string;
+            query?: {
+                issuer?: string;
+                subject?: string;
             };
             header?: never;
             path: {
@@ -658,9 +658,9 @@ export interface operations {
     };
     changeSpaceMemberRole: {
         parameters: {
-            query: {
-                issuer: string;
-                subject: string;
+            query?: {
+                issuer?: string;
+                subject?: string;
             };
             header?: never;
             path: {
