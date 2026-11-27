@@ -4,6 +4,7 @@ import dev.wakey.web.CurrentUser;
 import java.util.Collection;
 import java.util.LinkedHashSet;
 import java.util.Set;
+import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
@@ -11,6 +12,7 @@ import org.springframework.security.core.authority.mapping.GrantedAuthoritiesMap
 import org.springframework.security.oauth2.core.oidc.user.OidcUserAuthority;
 
 /** Adds the Admin authority when the configured claim contains the configured Admin group. */
+@RequiredArgsConstructor
 final class AdminAuthoritiesMapper implements GrantedAuthoritiesMapper {
 
     private static final GrantedAuthority ADMIN_AUTHORITY = new SimpleGrantedAuthority(CurrentUser.ADMIN_ROLE);
@@ -18,11 +20,6 @@ final class AdminAuthoritiesMapper implements GrantedAuthoritiesMapper {
     private final String adminClaim;
 
     private final String adminGroup;
-
-    AdminAuthoritiesMapper(String adminClaim, String adminGroup) {
-        this.adminClaim = adminClaim;
-        this.adminGroup = adminGroup;
-    }
 
     @Override
     public Collection<? extends GrantedAuthority> mapAuthorities(Collection<? extends GrantedAuthority> authorities) {

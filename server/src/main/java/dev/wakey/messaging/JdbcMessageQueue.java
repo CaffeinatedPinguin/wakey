@@ -5,9 +5,11 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.jdbc.core.simple.JdbcClient;
+import org.springframework.stereotype.Component;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 @Slf4j
+@Component
 @RequiredArgsConstructor
 final class JdbcMessageQueue implements MessageQueue {
 

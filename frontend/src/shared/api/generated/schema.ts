@@ -757,11 +757,12 @@ export interface operations {
         parameters: {
             query?: {
                 /**
-                 * @description The maximum number of items to return
+                 * @description The page size, at least 1; values above the instance maximum are capped
                  * @example 20
                  */
                 limit?: number | null;
-                cursor?: string;
+                /** @description The opaque cursor of the next page */
+                cursor?: string | null;
             };
             header?: never;
             path?: never;
@@ -995,11 +996,12 @@ export interface operations {
         parameters: {
             query?: {
                 /**
-                 * @description The maximum number of items to return
+                 * @description The page size, at least 1; values above the instance maximum are capped
                  * @example 20
                  */
                 limit?: number | null;
-                cursor?: string;
+                /** @description The opaque cursor of the next page */
+                cursor?: string | null;
                 /** @description Text matched against the name and the target */
                 q?: string | null;
                 /** @description The current state, derived from the newest result */
@@ -1525,11 +1527,12 @@ export interface operations {
         parameters: {
             query?: {
                 /**
-                 * @description The maximum number of items to return
+                 * @description The page size, at least 1; values above the instance maximum are capped
                  * @example 20
                  */
                 limit?: number | null;
-                cursor?: string;
+                /** @description The opaque cursor of the next page */
+                cursor?: string | null;
             };
             header?: never;
             path: {
