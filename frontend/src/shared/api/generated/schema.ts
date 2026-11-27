@@ -760,9 +760,9 @@ export interface operations {
                  * @description The page size, at least 1; values above the instance maximum are capped
                  * @example 20
                  */
-                limit?: number | null;
+                limit?: number;
                 /** @description The opaque cursor of the next page */
-                cursor?: string | null;
+                cursor?: string;
             };
             header?: never;
             path?: never;
@@ -999,9 +999,9 @@ export interface operations {
                  * @description The page size, at least 1; values above the instance maximum are capped
                  * @example 20
                  */
-                limit?: number | null;
+                limit?: number;
                 /** @description The opaque cursor of the next page */
-                cursor?: string | null;
+                cursor?: string;
                 /** @description Text matched against the name and the target */
                 q?: string | null;
                 /** @description The current state, derived from the newest result */
@@ -1530,9 +1530,9 @@ export interface operations {
                  * @description The page size, at least 1; values above the instance maximum are capped
                  * @example 20
                  */
-                limit?: number | null;
+                limit?: number;
                 /** @description The opaque cursor of the next page */
-                cursor?: string | null;
+                cursor?: string;
             };
             header?: never;
             path: {

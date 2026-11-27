@@ -856,7 +856,7 @@
             "format" : "int32",
             "maximum" : 100,
             "minimum" : 1,
-            "type" : [ "integer", "null" ]
+            "type" : "integer"
           }
         }, {
           "description" : "The opaque cursor of the next page",
@@ -865,7 +865,7 @@
           "required" : false,
           "schema" : {
             "description" : "The opaque cursor of the next page",
-            "type" : [ "string", "null" ]
+            "type" : "string"
           }
         } ],
         "responses" : {
@@ -1165,7 +1165,7 @@
             "format" : "int32",
             "maximum" : 100,
             "minimum" : 1,
-            "type" : [ "integer", "null" ]
+            "type" : "integer"
           }
         }, {
           "description" : "The opaque cursor of the next page",
@@ -1174,7 +1174,7 @@
           "required" : false,
           "schema" : {
             "description" : "The opaque cursor of the next page",
-            "type" : [ "string", "null" ]
+            "type" : "string"
           }
         }, {
           "description" : "Text matched against the name and the target",
@@ -2031,7 +2031,7 @@
             "format" : "int32",
             "maximum" : 100,
             "minimum" : 1,
-            "type" : [ "integer", "null" ]
+            "type" : "integer"
           }
         }, {
           "description" : "The opaque cursor of the next page",
@@ -2040,7 +2040,7 @@
           "required" : false,
           "schema" : {
             "description" : "The opaque cursor of the next page",
-            "type" : [ "string", "null" ]
+            "type" : "string"
           }
         } ],
         "responses" : {
