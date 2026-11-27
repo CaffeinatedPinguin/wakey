@@ -1,5 +1,7 @@
 package dev.wakey.checks.internal;
 
+import dev.wakey.checks.ErrorCategory;
+import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -12,4 +14,10 @@ public interface CheckResultRepository extends ListCrudRepository<CheckResultEnt
     Optional<CheckResultEntity> findFirstByCheckIdOrderByCheckedAtDescIdDesc(UUID checkId);
 
     List<CheckResultEntity> findByCheckIdOrderByCheckedAtDescIdDesc(UUID checkId, Limit limit);
+
+    boolean existsByCheckIdAndCheckedAt(UUID checkId, Instant checkedAt);
+
+    boolean existsByCheckIdAndErrorCategoryIsNull(UUID checkId);
+
+    boolean existsByCheckIdAndErrorCategory(UUID checkId, ErrorCategory errorCategory);
 }

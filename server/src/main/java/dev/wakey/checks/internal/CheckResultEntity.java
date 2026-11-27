@@ -23,11 +23,9 @@ public record CheckResultEntity(
         @Nullable String protocolVersion,
         @Nullable String phases) {
 
-    private static final String DEFAULT_LOCATION = "server";
-
     static CheckResultEntity from(UUID checkId, CheckResult result) {
         @Nullable String providedLocation = result.locationId();
-        String locationId = providedLocation == null ? DEFAULT_LOCATION : providedLocation;
+        String locationId = providedLocation == null ? CheckResult.SERVER_LOCATION : providedLocation;
         return new CheckResultEntity(
                 UUID.randomUUID(),
                 checkId,

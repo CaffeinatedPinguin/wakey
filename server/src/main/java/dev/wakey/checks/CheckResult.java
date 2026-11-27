@@ -15,4 +15,20 @@ public record CheckResult(
         @Nullable Integer httpStatus,
         @Nullable Integer durationMs,
         @Nullable String protocolVersion,
-        @Nullable String phases) {}
+        @Nullable String phases) {
+
+    /** The location used when the caller does not name one. */
+    public static final String SERVER_LOCATION = "server";
+
+    /** Returns this result with the given location. */
+    public CheckResult withLocation(String location) {
+        return new CheckResult(
+                location, checkedAt, state, errorCategory, httpStatus, durationMs, protocolVersion, phases);
+    }
+
+    /** Returns this result with the given state. */
+    public CheckResult withState(CheckState newState) {
+        return new CheckResult(
+                locationId, checkedAt, newState, errorCategory, httpStatus, durationMs, protocolVersion, phases);
+    }
+}
