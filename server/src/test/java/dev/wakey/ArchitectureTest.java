@@ -1,15 +1,19 @@
 package dev.wakey;
 
 import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.classes;
+import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.methods;
 import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noClasses;
 import static com.tngtech.archunit.library.dependencies.SlicesRuleDefinition.slices;
+import static org.assertj.core.api.Assertions.assertThat;
 
 import com.tngtech.archunit.base.DescribedPredicate;
 import com.tngtech.archunit.core.domain.AccessTarget;
 import com.tngtech.archunit.core.domain.Dependency;
 import com.tngtech.archunit.core.domain.JavaClass;
 import com.tngtech.archunit.core.domain.JavaClasses;
+import com.tngtech.archunit.core.domain.JavaMethod;
 import com.tngtech.archunit.core.domain.JavaMethodCall;
+import com.tngtech.archunit.core.domain.JavaParameter;
 import com.tngtech.archunit.core.importer.ClassFileImporter;
 import com.tngtech.archunit.core.importer.ImportOption;
 import com.tngtech.archunit.lang.ArchCondition;
@@ -17,12 +21,15 @@ import com.tngtech.archunit.lang.ArchRule;
 import com.tngtech.archunit.lang.ConditionEvents;
 import com.tngtech.archunit.lang.SimpleConditionEvent;
 import com.tngtech.archunit.library.GeneralCodingRules;
+import dev.wakey.web.CurrentUser;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import org.junit.jupiter.api.Test;
+import org.springframework.security.core.Authentication;
 
 class ArchitectureTest {
 
@@ -30,25 +37,44 @@ class ArchitectureTest {
 
     private static final String SHARED_ROLE = "shared";
 
+    private static final String REST_CONTROLLER = "org.springframework.web.bind.annotation.RestController";
+
+    private static final String AUTHENTICATION = "org.springframework.security.core.Authentication";
+
+    private static final String ME_CONTROLLER = "dev.wakey.security.web.MeController";
+
+    /** The HTTP argument types of the spaces module are its public web contract. */
+    private static final Set<String> PUBLIC_SUBPACKAGES = Set.of("dev.wakey.spaces.web");
+
     /** Every module lists the modules it may depend on; a new module or edge is a deliberate change. */
-    private static final Map<String, Set<String>> MODULE_DEPENDENCIES = Map.of(
-            "config", Set.of(),
-            "leadership", Set.of(),
-            "messaging", Set.of(),
-            "web", Set.of(),
-            "security", Set.of("web"),
-            "executor", Set.of("leadership", "messaging"),
-            "alerts", Set.of("leadership", "messaging"));
+    private static final Map<String, Set<String>> MODULE_DEPENDENCIES = Map.ofEntries(
+            dependencyEntry("audit"),
+            dependencyEntry("checks", "audit", "settings", "spaces", "web"),
+            dependencyEntry("config"),
+            dependencyEntry("leadership"),
+            dependencyEntry("messaging"),
+            dependencyEntry("settings", "audit", "spaces", "web"),
+            dependencyEntry("spaces", "web"),
+            dependencyEntry("tokens", "spaces", "web"),
+            dependencyEntry("web"),
+            dependencyEntry("security", "web", "tokens", "spaces"),
+            dependencyEntry("executor", "leadership", "messaging"),
+            dependencyEntry("alerts", "leadership", "messaging"));
 
     /** Every module belongs to a role; modules of one role may depend only on that role and shared modules. */
-    private static final Map<String, String> MODULE_ROLES = Map.of(
-            "config", SHARED_ROLE,
-            "leadership", SHARED_ROLE,
-            "messaging", SHARED_ROLE,
-            "web", SHARED_ROLE,
-            "security", SHARED_ROLE,
-            "executor", "executor",
-            "alerts", "alerts");
+    private static final Map<String, String> MODULE_ROLES = Map.ofEntries(
+            Map.entry("audit", SHARED_ROLE),
+            Map.entry("checks", SHARED_ROLE),
+            Map.entry("config", SHARED_ROLE),
+            Map.entry("leadership", SHARED_ROLE),
+            Map.entry("messaging", SHARED_ROLE),
+            Map.entry("settings", SHARED_ROLE),
+            Map.entry("spaces", SHARED_ROLE),
+            Map.entry("tokens", SHARED_ROLE),
+            Map.entry("web", SHARED_ROLE),
+            Map.entry("security", SHARED_ROLE),
+            Map.entry("executor", "executor"),
+            Map.entry("alerts", "alerts"));
 
     private static final Set<String> WALL_CLOCK_TYPES = Set.of(
             "java.time.Instant",
@@ -85,7 +111,8 @@ class ArchitectureTest {
                     for (ModuleEdge edge : dependenciesOnOtherModules(javaClass)) {
                         JavaClass target = edge.target();
                         String targetModule = edge.module();
-                        if (isSubpackageOf(target, targetModule)) {
+                        boolean publicSubpackage = PUBLIC_SUBPACKAGES.contains(target.getPackageName());
+                        if (isSubpackageOf(target, targetModule) && !publicSubpackage) {
                             String message = javaClass.getName() + " depends on " + target.getName()
                                     + " in a private subpackage of module '" + targetModule
                                     + "'; depend only on its main package 'dev.wakey." + targetModule + "'.";
@@ -154,6 +181,21 @@ class ArchitectureTest {
                 }
             };
 
+    private static final ArchCondition<JavaMethod> DO_NOT_TAKE_AN_AUTHENTICATION =
+            new ArchCondition<>("not take an Authentication parameter") {
+                @Override
+                public void check(JavaMethod method, ConditionEvents events) {
+                    for (JavaParameter parameter : method.getParameters()) {
+                        String parameterType = parameter.getRawType().getName();
+                        if (AUTHENTICATION.equals(parameterType)) {
+                            String message = method.getFullName()
+                                    + " takes an Authentication parameter; take the resolved actor instead.";
+                            events.add(SimpleConditionEvent.violated(method, message));
+                        }
+                    }
+                }
+            };
+
     private static final JavaClasses CLASSES = new ClassFileImporter()
             .withImportOption(new ImportOption.DoNotIncludeTests())
             .importPackages(ROOT_PACKAGE);
@@ -193,6 +235,19 @@ class ArchitectureTest {
     private static final ArchRule DEPEND_ONLY_ON_MODULES_OF_THE_SAME_ROLE_OR_SHARED_MODULES =
             classes().that().resideInAPackage("dev.wakey..").should(DEPEND_ONLY_ON_SAME_ROLE_OR_SHARED_MODULES);
 
+    private static final ArchRule NO_CONTROLLER_METHOD_TAKES_AN_AUTHENTICATION = methods()
+            .that()
+            .areDeclaredInClassesThat()
+            .areAnnotatedWith(REST_CONTROLLER)
+            .should(DO_NOT_TAKE_AN_AUTHENTICATION)
+            .allowEmptyShould(true);
+
+    private static final ArchRule NO_CONTROLLER_CALLS_THE_CURRENT_USER_FACTORY = noClasses()
+            .that()
+            .areAnnotatedWith(REST_CONTROLLER)
+            .should()
+            .callMethod(CurrentUser.class, "from", Authentication.class);
+
     private static final ArchRule NO_STANDARD_STREAMS = GeneralCodingRules.NO_CLASSES_SHOULD_ACCESS_STANDARD_STREAMS;
 
     private static final ArchRule NO_GENERIC_EXCEPTIONS = GeneralCodingRules.NO_CLASSES_SHOULD_THROW_GENERIC_EXCEPTIONS;
@@ -215,6 +270,18 @@ class ArchitectureTest {
             }
         }
         return edges;
+    }
+
+    private static Map.Entry<String, Set<String>> dependencyEntry(String module, String... dependencies) {
+        return Map.entry(module, Set.of(dependencies));
+    }
+
+    private static Set<String> productionModules() {
+        Set<String> modules = new HashSet<>();
+        for (JavaClass javaClass : CLASSES) {
+            moduleOf(javaClass).ifPresent(modules::add);
+        }
+        return modules;
     }
 
     private static Optional<String> moduleOf(JavaClass javaClass) {
@@ -291,5 +358,39 @@ class ArchitectureTest {
     @Test
     void dependsOnlyOnModulesOfTheSameRoleOrSharedModules() {
         DEPEND_ONLY_ON_MODULES_OF_THE_SAME_ROLE_OR_SHARED_MODULES.check(CLASSES);
+    }
+
+    @Test
+    void noControllerMethodTakesAnAuthenticationParameter() {
+        // when
+        NO_CONTROLLER_METHOD_TAKES_AN_AUTHENTICATION.check(CLASSES);
+        NO_CONTROLLER_CALLS_THE_CURRENT_USER_FACTORY.check(CLASSES);
+
+        // then
+        JavaClass meController = CLASSES.get(ME_CONTROLLER);
+        boolean takesCurrentUser = meController.getMethods().stream().anyMatch(ArchitectureTest::takesCurrentUser);
+        assertThat(takesCurrentUser).isTrue();
+    }
+
+    private static boolean takesCurrentUser(JavaMethod method) {
+        if (!method.getName().equals("me")) {
+            return false;
+        }
+        for (JavaClass parameter : method.getRawParameterTypes()) {
+            if (parameter.isEquivalentTo(CurrentUser.class)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    @Test
+    void everyModuleIsListedExplicitlyInBothMaps() {
+        // when
+        Set<String> modules = productionModules();
+
+        // then
+        assertThat(MODULE_DEPENDENCIES.keySet()).isEqualTo(MODULE_ROLES.keySet());
+        assertThat(modules).isSubsetOf(MODULE_DEPENDENCIES.keySet());
     }
 }

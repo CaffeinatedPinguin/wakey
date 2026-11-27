@@ -1,6 +1,7 @@
 import { act, cleanup, fireEvent, screen } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
-import { apiClient } from '../../shared/api/instances'
+import { ErrorCode } from '../../shared/api/generated/enums'
+import { serverClient } from '../../shared/api/instances'
 import { appConfig } from '../../shared/config'
 import { meQueryKey } from './api/auth.queries'
 import { signedInUser, unauthorizedBody } from '../../test/data'
@@ -27,7 +28,7 @@ function handleRequest(request: MockRequest): MockReply {
     logoutHeader = request.headers['x-xsrf-token']
     return { status: 204 }
   }
-  return { status: 404, data: { code: 'not_found' } }
+  return { status: 404, data: { code: ErrorCode.NOT_FOUND } }
 }
 
 beforeEach(() => {
@@ -120,7 +121,7 @@ describe('cross-origin requests', () => {
       return { status: 204 }
     })
 
-    await apiClient.post('https://other.example/logout')
+    await serverClient.post('https://other.example/logout')
 
     expect(foreignHeader).toBeUndefined()
   })

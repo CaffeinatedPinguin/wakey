@@ -1,4 +1,4 @@
-export const authResources = {
+export const resources = {
   pl: {
     auth: {
       login: {

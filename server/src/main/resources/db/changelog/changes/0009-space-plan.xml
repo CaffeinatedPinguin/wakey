@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        https://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+  <changeSet id="space-plan" author="wakey">
+    <!-- A null plan_name means the instance default plan; no data migration is needed for existing spaces. -->
+    <addColumn tableName="space">
+      <column name="plan_name" type="VARCHAR(64)"/>
+    </addColumn>
+  </changeSet>
+</databaseChangeLog>

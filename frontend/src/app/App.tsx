@@ -16,9 +16,10 @@ interface AppProps {
 
 interface AppThemeProviderProps {
   children: ReactNode
+  env?: 'test'
 }
 
-export function AppThemeProvider({ children }: AppThemeProviderProps): ReactElement {
+export function AppThemeProvider({ children, env }: AppThemeProviderProps): ReactElement {
   const { t } = useTranslation()
   const appTheme = useMemo(
     () =>
@@ -30,6 +31,7 @@ export function AppThemeProvider({ children }: AppThemeProviderProps): ReactElem
   )
   return (
     <MantineProvider
+      {...(env === undefined ? {} : { env })}
       theme={appTheme.theme}
       cssVariablesResolver={appTheme.cssVariablesResolver}
       defaultColorScheme="auto"

@@ -62,7 +62,7 @@ Jak robią inni:
 - **Bean Validation** (Hibernate Validator) sprawdza kształt danych, a ograniczenia trafiają do OpenAPI. Reguły biznesowe (granice planu, weryfikacja celu) leżą w domenie i zwracają błąd w tym samym formacie.
 
 ### Stronicowanie i filtrowanie
-- **Wszędzie kursor (keyset).** Odpowiedź ma postać `{ items, nextCursor }`. Kursor to nieprzezroczysty token zawierający wartość sortowania i `id`. Warunek jest przenośny między bazami: `ts < ? OR (ts = ? AND id < ?)`.
+- **Wszędzie kursor (keyset).** Odpowiedź ma postać `{ items, nextCursor }`. Kursor to nieprzezroczysty token z wartością sortowania (bez `id`; zakodowany base64url; limit długości wynika z najdłuższego klucza sortowania danego endpointu i jest liczony z limitów pól, zły kursor = 400 `invalid_cursor`).
 - Nie ma sumy wyników ani skoku do strony N. Liczniki (np. checki według stanu) zwraca osobny endpoint podsumowania.
 - Filtry to jawne parametry per endpoint. Sortowanie tylko po polach z białej listy (`?sort=name,asc`). Bez RSQL i OData.
 - Maksymalny rozmiar strony jest konfigurowalny na poziomie instancji, domyślnie 100.
@@ -91,7 +91,7 @@ Trzy łańcuchy `SecurityFilterChain`:
 - **użytkownika** (`@Order(2)`) dla `/api/v1/**` oraz `/oauth2/**`, `/login/**`, `/logout`: `oauth2Login` włączany tylko wtedy, gdy istnieje `ClientRegistrationRepository` (bez dostawcy aplikacja wstaje bez logowania), `csrf.spa()` z ciasteczkiem `XSRF-TOKEN` i nagłówkiem `X-XSRF-TOKEN`, a `/api/v1/**` bez uwierzytelnienia dostaje 401 zamiast przekierowania.
 - **domyślny** (`@Order(3)`): `/healthz` publiczne, wszystko inne `denyAll`; anonimowy dostaje 401.
 
-OIDC: rejestracja ma identyfikator `oidc` (`/oauth2/authorization/oidc`) i jest konfigurowana wyłącznie właściwościami Springa (`spring.security.oauth2.client.registration.oidc.*`, `...provider.oidc.*`; w produkcji przez `SPRING_SECURITY_OAUTH2_CLIENT_...`). W `application.yml` nie ma wartości dostawcy. PKCE jest włączone jawnie przez `ClientSettings.requireProofKey(true)` w customizerze rejestracji, bo Boot 4.2 nie ma właściwości `require-proof-key`.
+OIDC: rejestracja ma identyfikator `oidc` (`/oauth2/authorization/oidc`) i jest konfigurowana wyłącznie właściwościami Springa (`spring.security.oauth2.client.registration.oidc.*`, `...provider.oidc.*`; w produkcji przez `SPRING_SECURITY_OAUTH2_CLIENT_...`). W `application.yml` nie ma wartości dostawcy. PKCE jest włączone jawnie przez `ClientSettings.requireProofKey(true)` w customizerze rejestracji, bo Boot 4.2 nie ma właściwości `require-proof-key`. Atrybut nazwy użytkownika jest wymuszony w kodzie na `sub` przy rejestracji klienta OIDC, bo `UserSessions` szuka sesji po subject.
 
 Rola Admin: bean `GrantedAuthoritiesMapper` czyta claim `wakey.security.admin-claim` (domyślnie `groups`) i dodaje `ROLE_ADMIN` tylko wtedy, gdy lista zawiera `wakey.security.admin-group` (pusta wartość oznacza, że nikt nie jest Adminem). Bez JMESPath i bez własnego `OidcUserService`.
 

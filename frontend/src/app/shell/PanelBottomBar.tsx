@@ -5,6 +5,9 @@ import type { CSSProperties, ReactElement } from 'react'
 import { useTranslation } from 'react-i18next'
 import { barNavigation, navigationActiveOptions, navigationActiveStyle } from './panelNavigation'
 
+const BAR_ICON_SIZE = 20
+const BAR_LABEL_GAP = 2
+
 interface PanelBottomBarProps {
   onMore: () => void
 }
@@ -39,15 +42,15 @@ export function PanelBottomBar({ onMore }: PanelBottomBarProps): ReactElement {
           activeProps={{ style: navigationActiveStyle }}
           activeOptions={navigationActiveOptions(to)}
         >
-          <Stack align="center" gap={2}>
-            <Icon size={20} />
+          <Stack align="center" gap={BAR_LABEL_GAP}>
+            <Icon size={BAR_ICON_SIZE} />
             <Text size="xs">{t(labelKey)}</Text>
           </Stack>
         </Link>
       ))}
       <UnstyledButton onClick={onMore} style={itemStyle}>
-        <Stack align="center" gap={2}>
-          <IconDots size={20} />
+        <Stack align="center" gap={BAR_LABEL_GAP}>
+          <IconDots size={BAR_ICON_SIZE} />
           <Text size="xs">{t('common.more')}</Text>
         </Stack>
       </UnstyledButton>

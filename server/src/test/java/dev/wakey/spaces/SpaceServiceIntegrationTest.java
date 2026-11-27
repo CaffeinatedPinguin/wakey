@@ -1,0 +1,818 @@
+package dev.wakey.spaces;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.catchThrowable;
+
+import dev.wakey.settings.PlanAssignment;
+import dev.wakey.spaces.internal.SpaceMemberEntity;
+import dev.wakey.spaces.internal.SpaceMemberRepository;
+import dev.wakey.testsupport.PostgresIntegrationTest;
+import dev.wakey.web.ApiException;
+import dev.wakey.web.CommonError;
+import dev.wakey.web.CurrentUser;
+import dev.wakey.web.ErrorCode;
+import jakarta.validation.ConstraintViolation;
+import jakarta.validation.ConstraintViolationException;
+import jakarta.validation.Path;
+import java.time.Instant;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.UUID;
+import java.util.concurrent.Callable;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import org.junit.jupiter.api.Test;
+import org.springframework.dao.OptimisticLockingFailureException;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextImpl;
+import org.springframework.security.oauth2.core.oidc.OidcIdToken;
+import org.springframework.security.oauth2.core.oidc.user.DefaultOidcUser;
+import org.springframework.security.oauth2.core.oidc.user.OidcUser;
+import org.springframework.security.oauth2.core.oidc.user.OidcUserAuthority;
+import org.springframework.security.web.context.HttpSessionSecurityContextRepository;
+import org.springframework.session.FindByIndexNameSessionRepository;
+import org.springframework.session.Session;
+import org.springframework.session.SessionRepository;
+import org.springframework.session.jdbc.JdbcIndexedSessionRepository;
+import org.springframework.transaction.IllegalTransactionStateException;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.support.TransactionTemplate;
+
+class SpaceServiceIntegrationTest extends PostgresIntegrationTest {
+
+    private static final String ISSUER = "https://issuer.example.com";
+
+    private static final CurrentUser ADMIN = new CurrentUser(ISSUER, "fixture-admin", true);
+
+    private static final CurrentUser EDITOR = new CurrentUser(ISSUER, "fixture-editor", false);
+
+    private static final CurrentUser VIEWER = new CurrentUser(ISSUER, "fixture-viewer", false);
+
+    private static final CurrentUser STRANGER = new CurrentUser(ISSUER, "fixture-stranger", false);
+
+    @Test
+    void adminCreatesASpaceAndPutIsIdempotent() {
+        // given
+        SpaceService service = service();
+        String slug = uniqueSlug("create");
+        String name = "Created space";
+
+        // when
+        PutResult first = service.put(ADMIN, slug, name, null);
+        PutResult second = service.put(ADMIN, slug, "  " + name + "  ", null);
+
+        // then
+        Space firstSpace = first.space();
+        Space secondSpace = second.space();
+        assertThat(first.created()).isTrue();
+        assertThat(firstSpace.slug()).isEqualTo(slug);
+        assertThat(second.created()).isFalse();
+        assertThat(secondSpace.id()).isEqualTo(firstSpace.id());
+        assertThat(secondSpace.version()).isEqualTo(firstSpace.version());
+        assertThat(secondSpace.name()).isEqualTo(name);
+    }
+
+    @Test
+    void renamingASpaceBumpsTheVersion() {
+        // given
+        SpaceService service = service();
+        String slug = uniqueSlug("rename");
+        PutResult created = service.put(ADMIN, slug, "Old name", null);
+
+        // when
+        PutResult renamed = service.put(ADMIN, slug, "New name", null);
+        SpaceView stored = service.view(ADMIN, slug);
+
+        // then
+        Space renamedSpace = renamed.space();
+        Space createdSpace = created.space();
+        assertThat(renamed.created()).isFalse();
+        assertThat(renamedSpace.version()).isEqualTo(createdSpace.version() + 1);
+        assertThat(renamedSpace.name()).isEqualTo("New name");
+        assertThat(stored.name()).isEqualTo("New name");
+    }
+
+    @Test
+    void aStaleVersionNeverOverwritesARename() {
+        // given
+        SpaceService service = service();
+        String slug = uniqueSlug("stale");
+        service.put(ADMIN, slug, "Original name", null);
+        long firstRead = service.view(ADMIN, slug).version();
+        long secondRead = service.view(ADMIN, slug).version();
+
+        // when
+        PutResult renamed = service.put(ADMIN, slug, "First rename", firstRead);
+        Throwable stale = catchThrowable(() -> service.put(ADMIN, slug, "Second rename", secondRead));
+        SpaceView stored = service.view(ADMIN, slug);
+
+        // then
+        Space renamedSpace = renamed.space();
+        long renamedVersion = renamedSpace.version();
+        assertThat(renamedVersion).isEqualTo(firstRead + 1);
+        assertThat(stale).isInstanceOf(OptimisticLockingFailureException.class);
+        assertThat(stored.name()).isEqualTo("First rename");
+        assertThat(stored.version()).isEqualTo(firstRead + 1);
+    }
+
+    @Test
+    void aStaleVersionIsAConflictThroughTheVersionColumn() {
+        // given
+        SpaceService service = service();
+        String slug = uniqueSlug("stale-column");
+        service.put(ADMIN, slug, "Original name", null);
+        long staleVersion = service.view(ADMIN, slug).version();
+        service.put(ADMIN, slug, "Renamed name", staleVersion);
+
+        // when
+        Throwable stale = catchThrowable(() -> service.put(ADMIN, slug, "Renamed name", staleVersion));
+
+        // then
+        SpaceView stored = service.view(ADMIN, slug);
+        assertThat(stale).isInstanceOf(OptimisticLockingFailureException.class);
+        assertThat(stored.name()).isEqualTo("Renamed name");
+    }
+
+    @Test
+    void nonAdminCannotCreateASpace() {
+        // given
+        SpaceService service = service();
+        Space existing = seedSpace("denied");
+        String newSlug = uniqueSlug("denied-new");
+
+        // when
+        Throwable creation = catchThrowable(() -> service.put(EDITOR, newSlug, "Denied", null));
+        Throwable rename = catchThrowable(() -> service.put(EDITOR, existing.slug(), "Renamed by editor", null));
+        Throwable viewerCreation = catchThrowable(() -> service.put(VIEWER, newSlug, "Denied", null));
+
+        // then
+        assertError(creation, CommonError.FORBIDDEN);
+        assertError(rename, CommonError.FORBIDDEN);
+        assertError(viewerCreation, CommonError.FORBIDDEN);
+    }
+
+    @Test
+    void strangerGetsNotFoundForAnotherSpace() {
+        // given
+        SpaceService service = service();
+        Space space = seedSpace("stranger");
+        String subject = uniqueSubject("stranger-target");
+
+        // when
+        Throwable read = catchThrowable(() -> service.view(STRANGER, space.slug()));
+        Throwable add = catchThrowable(
+                () -> members().addMember(STRANGER, space.slug(), new SpaceMember(ISSUER, subject, SpaceRole.VIEWER)));
+        Throwable change = catchThrowable(
+                () -> members().changeRole(STRANGER, space.slug(), new SpaceMember(ISSUER, subject, SpaceRole.EDITOR)));
+        Throwable remove = catchThrowable(
+                () -> members().removeMember(STRANGER, space.slug(), new SpaceMemberId(ISSUER, subject)));
+        Throwable write = catchThrowable(() -> service.put(STRANGER, uniqueSlug("stranger-write"), "Denied", null));
+        List<SpaceView> visible = service.listVisible(STRANGER, null, 100);
+
+        // then
+        assertError(read, CommonError.NOT_FOUND);
+        assertError(add, CommonError.NOT_FOUND);
+        assertError(change, CommonError.NOT_FOUND);
+        assertError(remove, CommonError.NOT_FOUND);
+        assertError(write, CommonError.FORBIDDEN);
+        assertThat(visible).isEmpty();
+    }
+
+    @Test
+    void assigningAPlanRequiresAnAdmin() {
+        // given
+        PlanAssignment assignments = bean(PlanAssignment.class);
+        Space space = seedSpace("plan-admin");
+
+        // when
+        Throwable assigned = catchThrowable(() -> assignments.assign(EDITOR, space.slug(), "default", false));
+
+        // then
+        assertError(assigned, CommonError.FORBIDDEN);
+    }
+
+    @Test
+    void viewerReadsButCannotWrite() {
+        // given
+        SpaceService service = service();
+        Space space = seedSpace("viewer");
+        String slug = space.slug();
+
+        // when
+        SpaceView read = service.view(VIEWER, slug);
+        List<SpaceView> visible = service.listVisible(VIEWER, null, 100);
+        Throwable write = catchThrowable(() -> service.put(VIEWER, uniqueSlug("viewer-write"), "Denied", null));
+        Throwable add = catchThrowable(() -> members()
+                .addMember(VIEWER, slug, new SpaceMember(ISSUER, uniqueSubject("viewer-target"), SpaceRole.VIEWER)));
+        Throwable change = catchThrowable(
+                () -> members().changeRole(VIEWER, slug, new SpaceMember(ISSUER, EDITOR.subject(), SpaceRole.VIEWER)));
+        Throwable remove =
+                catchThrowable(() -> members().removeMember(VIEWER, slug, new SpaceMemberId(ISSUER, EDITOR.subject())));
+
+        // then
+        assertThat(read.id()).isEqualTo(space.id());
+        assertThat(visible).extracting(SpaceView::slug).contains(slug);
+        assertError(write, CommonError.FORBIDDEN);
+        assertError(add, CommonError.FORBIDDEN);
+        assertError(change, CommonError.FORBIDDEN);
+        assertError(remove, CommonError.FORBIDDEN);
+    }
+
+    @Test
+    void editorManagesMembersOfOwnSpaceOnly() {
+        // given
+        SpaceService service = service();
+        Space ownSpace = seedSpace("editor-own");
+        String foreignSlug = uniqueSlug("editor-foreign");
+        Space foreignSpace =
+                service.put(ADMIN, foreignSlug, "Foreign space", null).space();
+        String ownSlug = ownSpace.slug();
+        String externalForeignSlug = foreignSpace.slug();
+        String subject = uniqueSubject("managed");
+        CurrentUser member = new CurrentUser(ISSUER, subject, false);
+
+        // when
+        members().addMember(EDITOR, ownSlug, new SpaceMember(ISSUER, subject, SpaceRole.VIEWER));
+        List<SpaceView> afterAdd = service.listVisible(member, null, 100);
+        members().changeRole(EDITOR, ownSlug, new SpaceMember(ISSUER, subject, SpaceRole.EDITOR));
+        List<SpaceView> afterChange = service.listVisible(member, null, 100);
+        Throwable foreignAdd = catchThrowable(() ->
+                members().addMember(EDITOR, externalForeignSlug, new SpaceMember(ISSUER, subject, SpaceRole.VIEWER)));
+        Throwable foreignChange = catchThrowable(() ->
+                members().changeRole(EDITOR, externalForeignSlug, new SpaceMember(ISSUER, subject, SpaceRole.EDITOR)));
+        Throwable foreignRemove = catchThrowable(
+                () -> members().removeMember(EDITOR, externalForeignSlug, new SpaceMemberId(ISSUER, subject)));
+        members().removeMember(EDITOR, ownSlug, new SpaceMemberId(ISSUER, subject));
+        List<SpaceView> afterRemove = service.listVisible(member, null, 100);
+
+        // then
+        assertThat(afterAdd).extracting(SpaceView::slug).contains(ownSlug);
+        assertThat(afterChange).extracting(SpaceView::role).contains(SpaceRole.EDITOR);
+        assertThat(afterRemove).isEmpty();
+        assertError(foreignAdd, CommonError.NOT_FOUND);
+        assertError(foreignChange, CommonError.NOT_FOUND);
+        assertError(foreignRemove, CommonError.NOT_FOUND);
+    }
+
+    @Test
+    void adminSeesEverySpaceAndMembersOnlyTheirs() {
+        // given
+        SpaceService service = service();
+        Space memberSpace = seedSpace("visible");
+        Space foreignSpace =
+                service.put(ADMIN, uniqueSlug("hidden"), "Hidden space", null).space();
+        String memberSlug = memberSpace.slug();
+        String foreignSlug = foreignSpace.slug();
+
+        // when
+        List<SpaceView> adminVisible = service.listVisible(ADMIN, null, 1000);
+        List<SpaceView> editorVisible = service.listVisible(EDITOR, null, 1000);
+        List<SpaceView> viewerVisible = service.listVisible(VIEWER, null, 1000);
+        SpaceView adminRead = service.view(ADMIN, foreignSlug);
+        Throwable editorRead = catchThrowable(() -> service.view(EDITOR, foreignSlug));
+
+        // then
+        assertThat(adminVisible).extracting(SpaceView::slug).contains(memberSlug, foreignSlug);
+        assertThat(editorVisible)
+                .extracting(SpaceView::slug)
+                .contains(memberSlug)
+                .doesNotContain(foreignSlug);
+        assertThat(viewerVisible)
+                .extracting(SpaceView::slug)
+                .contains(memberSlug)
+                .doesNotContain(foreignSlug);
+        assertThat(adminRead.id()).isEqualTo(foreignSpace.id());
+        assertError(editorRead, CommonError.NOT_FOUND);
+
+        SpaceView adminOwnView = viewOf(adminVisible, memberSlug);
+        SpaceView adminForeignView = viewOf(adminVisible, foreignSlug);
+        SpaceView editorView = viewOf(editorVisible, memberSlug);
+        SpaceView viewerView = viewOf(viewerVisible, memberSlug);
+        assertThat(adminOwnView.role()).isNull();
+        assertThat(adminForeignView.role()).isNull();
+        assertThat(editorView.role()).isEqualTo(SpaceRole.EDITOR);
+        assertThat(viewerView.role()).isEqualTo(SpaceRole.VIEWER);
+    }
+
+    @Test
+    void viewReturnsOneSpaceWithTheCallersRole() {
+        // given
+        SpaceService service = service();
+        Space space = seedSpace("view-one");
+        Space foreignSpace = service.put(ADMIN, uniqueSlug("view-hidden"), "Hidden view", null)
+                .space();
+        String slug = space.slug();
+        String foreignSlug = foreignSpace.slug();
+
+        // when
+        SpaceView adminView = service.view(ADMIN, slug);
+        SpaceView adminForeignView = service.view(ADMIN, foreignSlug);
+        SpaceView editorView = service.view(EDITOR, slug);
+        SpaceView viewerView = service.view(VIEWER, slug);
+        Throwable editorForeign = catchThrowable(() -> service.view(EDITOR, foreignSlug));
+        Throwable strangerView = catchThrowable(() -> service.view(STRANGER, slug));
+
+        // then
+        assertThat(adminView.id()).isEqualTo(space.id());
+        assertThat(adminView.role()).isNull();
+        assertThat(adminForeignView.slug()).isEqualTo(foreignSlug);
+        assertThat(adminForeignView.role()).isNull();
+        assertThat(editorView.role()).isEqualTo(SpaceRole.EDITOR);
+        assertThat(viewerView.role()).isEqualTo(SpaceRole.VIEWER);
+        assertThat(editorForeign).isInstanceOf(ApiException.class);
+        assertThat(strangerView).isInstanceOf(ApiException.class);
+        assertError(editorForeign, CommonError.NOT_FOUND);
+        assertError(strangerView, CommonError.NOT_FOUND);
+    }
+
+    @Test
+    void invalidNamesAreRejected() {
+        // given
+        SpaceService service = service();
+        String tooLongName = "x".repeat(101);
+        String longSlug = uniqueSlug("name-long");
+        String blankSlug = uniqueSlug("name-blank");
+
+        // when
+        Throwable blankName = catchThrowable(() -> service.put(ADMIN, blankSlug, "   ", null));
+        Throwable longName = catchThrowable(() -> service.put(ADMIN, longSlug, tooLongName, null));
+
+        // then
+        List<ConstraintViolation<?>> blankViolations = violationsOf(blankName);
+        List<ConstraintViolation<?>> longViolations = violationsOf(longName);
+        assertThat(blankViolations)
+                .extracting(SpaceServiceIntegrationTest::propertyName)
+                .containsOnly("name");
+        assertThat(longViolations)
+                .extracting(SpaceServiceIntegrationTest::propertyName)
+                .contains("name");
+        assertThat(constraintNames(longViolations)).contains("InvalidName");
+    }
+
+    @Test
+    void addingAMemberValidatesTheSubject() {
+        // given
+        Space space = seedSpace("subject-validation");
+        String tooLong = "x".repeat(256);
+
+        // when
+        Throwable addEmpty = catchThrowable(
+                () -> members().addMember(ADMIN, space.slug(), new SpaceMember(ISSUER, "", SpaceRole.VIEWER)));
+        Throwable addTooLong = catchThrowable(
+                () -> members().addMember(ADMIN, space.slug(), new SpaceMember(ISSUER, tooLong, SpaceRole.VIEWER)));
+        Throwable changeBlank = catchThrowable(
+                () -> members().changeRole(ADMIN, space.slug(), new SpaceMember(ISSUER, "   ", SpaceRole.EDITOR)));
+        Throwable removeTooLong =
+                catchThrowable(() -> members().removeMember(ADMIN, space.slug(), new SpaceMemberId(ISSUER, tooLong)));
+
+        // then
+        assertThat(addEmpty).isInstanceOf(ConstraintViolationException.class);
+        assertThat(addTooLong).isInstanceOf(ConstraintViolationException.class);
+        assertThat(changeBlank).isInstanceOf(ConstraintViolationException.class);
+        assertThat(removeTooLong).isInstanceOf(ConstraintViolationException.class);
+        List<ConstraintViolation<?>> addEmptyViolations = violationsOf(addEmpty);
+        assertThat(addEmptyViolations)
+                .extracting(SpaceServiceIntegrationTest::propertyName)
+                .containsOnly("subject");
+        assertThat(constraintNames(addEmptyViolations)).contains("InvalidSubject");
+    }
+
+    @Test
+    void aSubjectOf255CharactersIsAccepted() {
+        // given
+        SpaceService service = service();
+        Space space = seedSpace("subject-accepted");
+        String subject = "x".repeat(SpaceMember.SUBJECT_MAX_LENGTH);
+        CurrentUser member = new CurrentUser(ISSUER, subject, false);
+
+        // when
+        members().addMember(ADMIN, space.slug(), new SpaceMember(ISSUER, subject, SpaceRole.VIEWER));
+        List<SpaceView> visible = service.listVisible(member, null, 100);
+
+        // then
+        assertThat(visible).extracting(SpaceView::slug).contains(space.slug());
+    }
+
+    @Test
+    void aSubjectLongerThan255CharactersIsRejected() {
+        // given
+        Space space = seedSpace("subject-too-long");
+        String subject = "x".repeat(SpaceMember.SUBJECT_MAX_LENGTH + 1);
+
+        // when
+        Throwable rejected = catchThrowable(
+                () -> members().addMember(ADMIN, space.slug(), new SpaceMember(ISSUER, subject, SpaceRole.VIEWER)));
+
+        // then
+        List<ConstraintViolation<?>> violations = violationsOf(rejected);
+        assertThat(violations)
+                .extracting(SpaceServiceIntegrationTest::propertyName)
+                .containsOnly("subject");
+        assertThat(constraintNames(violations)).contains("InvalidSubject");
+        ConstraintViolation<?> subjectViolation = violations.stream()
+                .filter(violation -> "InvalidSubject".equals(constraintName(violation)))
+                .findFirst()
+                .orElseThrow();
+        Map<String, Object> attributes =
+                subjectViolation.getConstraintDescriptor().getAttributes();
+        assertThat(attributes).containsEntry("max", SpaceMember.SUBJECT_MAX_LENGTH);
+    }
+
+    @Test
+    void aBlankSubjectIsRejected() {
+        // given
+        Space space = seedSpace("subject-blank");
+
+        // when
+        Throwable rejected = catchThrowable(
+                () -> members().addMember(ADMIN, space.slug(), new SpaceMember(ISSUER, "   ", SpaceRole.VIEWER)));
+
+        // then
+        List<ConstraintViolation<?>> violations = violationsOf(rejected);
+        assertThat(violations)
+                .extracting(SpaceServiceIntegrationTest::propertyName)
+                .containsOnly("subject");
+        assertThat(constraintNames(violations)).contains("InvalidSubject");
+    }
+
+    @Test
+    void aSubjectWithAControlCharacterIsRejected() {
+        // given
+        Space space = seedSpace("subject-control");
+        String control = "user\u0000name";
+        String unpairedSurrogate = "user\uD800name";
+
+        // when
+        Throwable controlFailure = catchThrowable(
+                () -> members().addMember(ADMIN, space.slug(), new SpaceMember(ISSUER, control, SpaceRole.VIEWER)));
+        Throwable surrogateFailure = catchThrowable(() ->
+                members().addMember(ADMIN, space.slug(), new SpaceMember(ISSUER, unpairedSurrogate, SpaceRole.VIEWER)));
+
+        // then
+        List<ConstraintViolation<?>> controlViolations = violationsOf(controlFailure);
+        List<ConstraintViolation<?>> surrogateViolations = violationsOf(surrogateFailure);
+        assertThat(controlViolations)
+                .extracting(SpaceServiceIntegrationTest::propertyName)
+                .containsOnly("subject");
+        assertThat(constraintNames(controlViolations)).contains("InvalidSubject");
+        assertThat(constraintNames(surrogateViolations)).contains("InvalidSubject");
+    }
+
+    @Test
+    void equalSubjectsFromDifferentIssuersAreDifferentMembers() {
+        // given
+        SpaceService service = service();
+        String slug = uniqueSlug("two-issuers");
+        String subject = uniqueSubject("shared-subject");
+        service.put(ADMIN, slug, "Two issuers", null);
+        CurrentUser firstMember = new CurrentUser("https://issuer-one.example", subject, false);
+        CurrentUser secondMember = new CurrentUser("https://issuer-two.example", subject, false);
+        members().addMember(ADMIN, slug, new SpaceMember(firstMember.issuer(), subject, SpaceRole.VIEWER));
+        members().addMember(ADMIN, slug, new SpaceMember(secondMember.issuer(), subject, SpaceRole.VIEWER));
+
+        // when
+        members().removeMember(ADMIN, slug, new SpaceMemberId(firstMember.issuer(), subject));
+        Throwable firstView = catchThrowable(() -> service.view(firstMember, slug));
+        SpaceView secondView = service.view(secondMember, slug);
+
+        // then
+        assertError(firstView, CommonError.NOT_FOUND);
+        assertThat(secondView.slug()).isEqualTo(slug);
+        assertThat(secondView.role()).isEqualTo(SpaceRole.VIEWER);
+    }
+
+    @Test
+    void changingARoleInvalidatesTheUsersSessions() {
+        // given
+        Space space = seedSpace("role-session");
+        String subject = uniqueSubject("role-change");
+        String bystander = uniqueSubject("bystander");
+        members().addMember(ADMIN, space.slug(), new SpaceMember(ISSUER, subject, SpaceRole.VIEWER));
+        Session changedSession = createSession(subject);
+        Session bystanderSession = createSession(bystander);
+
+        // when
+        members().changeRole(ADMIN, space.slug(), new SpaceMember(ISSUER, subject, SpaceRole.EDITOR));
+
+        // then
+        assertThat(sessionExists(changedSession)).isFalse();
+        assertThat(sessionExists(bystanderSession)).isTrue();
+    }
+
+    @Test
+    void removingAMemberInvalidatesTheUsersSessions() {
+        // given
+        Space space = seedSpace("remove-session");
+        String subject = uniqueSubject("removed");
+        String bystander = uniqueSubject("kept");
+        members().addMember(ADMIN, space.slug(), new SpaceMember(ISSUER, subject, SpaceRole.VIEWER));
+        Session removedSession = createSession(subject);
+        Session bystanderSession = createSession(bystander);
+
+        // when
+        members().removeMember(ADMIN, space.slug(), new SpaceMemberId(ISSUER, subject));
+
+        // then
+        assertThat(sessionExists(removedSession)).isFalse();
+        assertThat(sessionExists(bystanderSession)).isTrue();
+    }
+
+    @Test
+    void removingAMemberEndsTheirSessions() {
+        // given
+        Space space = seedSpace("remove-ends");
+        String subject = uniqueSubject("removed-ends");
+        members().addMember(ADMIN, space.slug(), new SpaceMember(ISSUER, subject, SpaceRole.VIEWER));
+        Session session = createSession(subject);
+
+        // when
+        members().removeMember(ADMIN, space.slug(), new SpaceMemberId(ISSUER, subject));
+
+        // then
+        assertThat(sessionExists(session)).isFalse();
+    }
+
+    @Test
+    void removingAMemberKeepsTheSessionsOfTheSameSubjectFromAnotherIssuer() {
+        // given
+        Space space = seedSpace("remove-issuer");
+        String subject = uniqueSubject("shared-subject");
+        String otherIssuer = "https://other-issuer.example";
+        members().addMember(ADMIN, space.slug(), new SpaceMember(ISSUER, subject, SpaceRole.VIEWER));
+        Session removedSession = createSession(ISSUER, subject);
+        Session otherIssuerSession = createSession(otherIssuer, subject);
+
+        // when
+        members().removeMember(ADMIN, space.slug(), new SpaceMemberId(ISSUER, subject));
+
+        // then
+        assertThat(sessionExists(removedSession)).isFalse();
+        assertThat(sessionExists(otherIssuerSession)).isTrue();
+    }
+
+    @Test
+    void sessionsEndThroughAMembershipEvent() {
+        // given
+        Space space = seedSpace("membership-event");
+        String subject = uniqueSubject("membership-event");
+        members().addMember(ADMIN, space.slug(), new SpaceMember(ISSUER, subject, SpaceRole.EDITOR));
+        Session beforeRoleChange = createSession(subject);
+
+        // when the role really changes
+        members().changeRole(ADMIN, space.slug(), new SpaceMember(ISSUER, subject, SpaceRole.VIEWER));
+        Session afterRoleChange = createSession(subject);
+        members().removeMember(ADMIN, space.slug(), new SpaceMemberId(ISSUER, subject));
+
+        // then both the old and the later sessions end through the published events
+        assertThat(sessionExists(beforeRoleChange)).isFalse();
+        assertThat(sessionExists(afterRoleChange)).isFalse();
+    }
+
+    @Test
+    void addingAMemberKeepsSessions() {
+        // given
+        SpaceService service = service();
+        Space space = seedSpace("add-session");
+        String subject = uniqueSubject("added");
+        Session session = createSession(subject);
+
+        // when
+        members().addMember(ADMIN, space.slug(), new SpaceMember(ISSUER, subject, SpaceRole.VIEWER));
+        CurrentUser member = new CurrentUser(ISSUER, subject, false);
+        List<SpaceView> visible = service.listVisible(member, null, 100);
+
+        // then
+        assertThat(sessionExists(session)).isTrue();
+        assertThat(visible).extracting(SpaceView::slug).contains(space.slug());
+    }
+
+    @Test
+    void concurrentPutOfTheSameSlugCreatesOneSpace() throws Exception {
+        // given
+        SpaceService service = service();
+        String slug = uniqueSlug("concurrent");
+        String name = "Concurrent space";
+        ExecutorService executor = Executors.newFixedThreadPool(2);
+        List<PutResult> results = new ArrayList<>();
+
+        // when
+        try {
+            Callable<PutResult> put = () -> service.put(ADMIN, slug, name, null);
+            List<Future<PutResult>> futures = executor.invokeAll(List.of(put, put));
+            for (Future<PutResult> future : futures) {
+                results.add(future.get());
+            }
+        } finally {
+            executor.shutdown();
+        }
+
+        // then
+        long created = results.stream().filter(PutResult::created).count();
+        List<SpaceView> visible = service.listVisible(ADMIN, null, 1000);
+        long stored = visible.stream().filter(view -> view.slug().equals(slug)).count();
+        assertThat(created).isEqualTo(1L);
+        assertThat(stored).isEqualTo(1L);
+    }
+
+    @Test
+    void addingTheSameMemberConcurrentlyKeepsOneMembershipAndItsRole() throws Exception {
+        // given
+        Space space = seedSpace("concurrent-member");
+        String subject = uniqueSubject("concurrent-member");
+        ExecutorService executor = Executors.newFixedThreadPool(2);
+        CountDownLatch start = new CountDownLatch(1);
+
+        // when
+        try {
+            Callable<Void> addEditor = () -> {
+                start.await();
+                members().addMember(ADMIN, space.slug(), new SpaceMember(ISSUER, subject, SpaceRole.EDITOR));
+                return null;
+            };
+            Callable<Void> addViewer = () -> {
+                start.await();
+                members().addMember(ADMIN, space.slug(), new SpaceMember(ISSUER, subject, SpaceRole.VIEWER));
+                return null;
+            };
+            List<Future<Void>> futures = new ArrayList<>();
+            futures.add(executor.submit(addEditor));
+            futures.add(executor.submit(addViewer));
+            start.countDown();
+            for (Future<Void> future : futures) {
+                future.get();
+            }
+        } finally {
+            executor.shutdown();
+        }
+
+        // then
+        SpaceMemberRepository repository = bean(SpaceMemberRepository.class);
+        List<SpaceMemberEntity> memberships = repository.findByKeyIssuerAndKeySubject(ISSUER, subject);
+        assertThat(memberships).hasSize(1);
+        SpaceRole storedRole = memberships.getFirst().role();
+        SpaceRole otherRole = storedRole == SpaceRole.EDITOR ? SpaceRole.VIEWER : SpaceRole.EDITOR;
+        members().addMember(ADMIN, space.slug(), new SpaceMember(ISSUER, subject, otherRole));
+        List<SpaceMemberEntity> afterRepeatedAdd = repository.findByKeyIssuerAndKeySubject(ISSUER, subject);
+        assertThat(afterRepeatedAdd).hasSize(1);
+        SpaceRole repeatedRole = afterRepeatedAdd.getFirst().role();
+        assertThat(repeatedRole).isEqualTo(storedRole);
+    }
+
+    @Test
+    void listVisibleIsOrderedBySlugAndResumesAfterASlug() {
+        // given
+        SpaceService service = service();
+        seedSpace("list");
+        seedSpace("list");
+        seedSpace("list");
+
+        // when
+        List<SpaceView> all = service.listVisible(ADMIN, null, 1000);
+        SpaceView first = all.get(0);
+        List<SpaceView> afterFirst = service.listVisible(ADMIN, first.slug(), 1000);
+
+        // then
+        assertThat(all).extracting(SpaceView::slug).isSorted();
+        List<SpaceView> expectedTail = all.subList(1, all.size());
+        assertThat(afterFirst).isEqualTo(expectedTail);
+    }
+
+    @Test
+    void lockingAMissingSpaceIsNotFound() {
+        // given
+        SpaceService service = service();
+        UUID missingSpace = UUID.randomUUID();
+
+        // when
+        Throwable thrown = catchThrowable(() -> inTransaction(() -> service.lock(missingSpace)));
+
+        // then
+        assertError(thrown, CommonError.NOT_FOUND);
+    }
+
+    @Test
+    void lockingRequiresATransaction() {
+        // given
+        SpaceService service = service();
+        Space space = seedSpace("locking");
+
+        // when
+        Throwable thrown = catchThrowable(() -> service.lock(space.id()));
+
+        // then
+        assertThat(thrown).isInstanceOf(IllegalTransactionStateException.class);
+    }
+
+    private SpaceService service() {
+        return bean(SpaceService.class);
+    }
+
+    private SpaceMembers members() {
+        return bean(SpaceMembers.class);
+    }
+
+    private Space seedSpace(String prefix) {
+        SpaceService service = service();
+        PutResult created = service.put(ADMIN, uniqueSlug(prefix), "Space " + prefix, null);
+        Space space = created.space();
+        String slug = space.slug();
+        members().addMember(ADMIN, slug, new SpaceMember(ISSUER, EDITOR.subject(), SpaceRole.EDITOR));
+        members().addMember(ADMIN, slug, new SpaceMember(ISSUER, VIEWER.subject(), SpaceRole.VIEWER));
+        return space;
+    }
+
+    private static SpaceView viewOf(List<SpaceView> views, String slug) {
+        return views.stream()
+                .filter(view -> view.slug().equals(slug))
+                .findFirst()
+                .orElseThrow();
+    }
+
+    private static void assertError(Throwable thrown, ErrorCode expected) {
+        assertThat(thrown).isInstanceOf(ApiException.class);
+        ApiException exception = (ApiException) thrown;
+        assertThat(exception.getErrorCode()).isEqualTo(expected);
+    }
+
+    private Session createSession(String subject) {
+        return createSession(ISSUER, subject);
+    }
+
+    private Session createSession(String issuer, String subject) {
+        JdbcIndexedSessionRepository repository = bean(JdbcIndexedSessionRepository.class);
+        return createSession(repository, issuer, subject);
+    }
+
+    private static <S extends Session> S createSession(SessionRepository<S> repository, String issuer, String subject) {
+        S session = repository.createSession();
+        Authentication authentication = authentication(issuer, subject);
+        SecurityContextImpl context = new SecurityContextImpl(authentication);
+        session.setAttribute(HttpSessionSecurityContextRepository.SPRING_SECURITY_CONTEXT_KEY, context);
+        session.setAttribute(FindByIndexNameSessionRepository.PRINCIPAL_NAME_INDEX_NAME, subject);
+        repository.save(session);
+        return session;
+    }
+
+    private static Authentication authentication(String issuer, String subject) {
+        Map<String, Object> claims = Map.of("sub", subject, "iss", issuer);
+        Instant issuedAt = Instant.EPOCH;
+        Instant expiresAt = issuedAt.plusSeconds(600);
+        OidcIdToken idToken = new OidcIdToken("id-token", issuedAt, expiresAt, claims);
+        OidcUserAuthority authority = new OidcUserAuthority(idToken);
+        OidcUser user = new DefaultOidcUser(List.of(authority), idToken);
+        return UsernamePasswordAuthenticationToken.authenticated(user, "n/a", List.of(authority));
+    }
+
+    private boolean sessionExists(Session session) {
+        JdbcIndexedSessionRepository repository = bean(JdbcIndexedSessionRepository.class);
+        return repository.findById(session.getId()) != null;
+    }
+
+    private void inTransaction(Runnable action) {
+        PlatformTransactionManager manager = bean(PlatformTransactionManager.class);
+        TransactionTemplate template = new TransactionTemplate(manager);
+        template.executeWithoutResult(status -> action.run());
+    }
+
+    private static List<ConstraintViolation<?>> violationsOf(Throwable thrown) {
+        assertThat(thrown).isInstanceOf(ConstraintViolationException.class);
+        ConstraintViolationException exception = (ConstraintViolationException) thrown;
+        Set<ConstraintViolation<?>> violations = exception.getConstraintViolations();
+        return List.copyOf(violations);
+    }
+
+    private static String propertyName(ConstraintViolation<?> violation) {
+        String name = "";
+        for (Path.Node node : violation.getPropertyPath()) {
+            name = node.getName();
+        }
+        return name;
+    }
+
+    private static String constraintName(ConstraintViolation<?> violation) {
+        return violation
+                .getConstraintDescriptor()
+                .getAnnotation()
+                .annotationType()
+                .getSimpleName();
+    }
+
+    private static List<String> constraintNames(List<ConstraintViolation<?>> violations) {
+        return violations.stream()
+                .map(SpaceServiceIntegrationTest::constraintName)
+                .toList();
+    }
+
+    private static String uniqueSlug(String prefix) {
+        return prefix + "-" + UUID.randomUUID().toString().substring(0, 8);
+    }
+
+    private static String uniqueSubject(String prefix) {
+        return prefix + "-" + UUID.randomUUID();
+    }
+}

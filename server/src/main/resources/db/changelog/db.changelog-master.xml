@@ -8,5 +8,12 @@
   <include file="changes/0001-leader-lock.xml" relativeToChangelogFile="true"/>
   <include file="changes/0002-message-queue.xml" relativeToChangelogFile="true"/>
   <include file="changes/0003-spring-session.xml" relativeToChangelogFile="true"/>
+  <include file="changes/0004-spaces.xml" relativeToChangelogFile="true"/>
+  <include file="changes/0005-audit.xml" relativeToChangelogFile="true"/>
+  <include file="changes/0006-api-tokens.xml" relativeToChangelogFile="true"/>
+  <include file="changes/0007-space-settings.xml" relativeToChangelogFile="true"/>
+  <include file="changes/0008-checks.xml" relativeToChangelogFile="true"/>
+  <include file="changes/0009-space-plan.xml" relativeToChangelogFile="true"/>
+  <include file="changes/0010-check-result-index.xml" relativeToChangelogFile="true"/>
   <!-- SPRING_SESSION and SPRING_SESSION_ATTRIBUTES are created in changes/0003-spring-session.xml. -->
 </databaseChangeLog>

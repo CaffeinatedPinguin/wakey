@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        https://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+  <changeSet id="space-settings" author="wakey">
+    <!-- postgres-only: native UUID and TIMESTAMPTZ column types; another database needs its own binary and timezone-aware equivalents. -->
+    <createTable tableName="space_setting">
+      <column name="space_id" type="UUID">
+        <constraints nullable="false"/>
+      </column>
+      <column name="key" type="VARCHAR(64)">
+        <constraints nullable="false"/>
+      </column>
+      <column name="value" type="VARCHAR(255)">
+        <constraints nullable="false"/>
+      </column>
+      <column name="updated_at" type="TIMESTAMPTZ">
+        <constraints nullable="false"/>
+      </column>
+    </createTable>
+    <addPrimaryKey tableName="space_setting"
+                   columnNames="space_id, key"
+                   constraintName="pk_space_setting"/>
+    <addForeignKeyConstraint baseTableName="space_setting"
+                             baseColumnNames="space_id"
+                             constraintName="fk_space_setting_space"
+                             referencedTableName="space"
+                             referencedColumnNames="id"
+                             onDelete="CASCADE"/>
+  </changeSet>
+</databaseChangeLog>

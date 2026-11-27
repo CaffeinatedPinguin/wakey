@@ -209,6 +209,8 @@ const deferredProperties = deferredObjects.flatMap((object) =>
 
 export default defineConfig([
   globalIgnores(['dist']),
+  // The generated API files are produced by openapi-typescript, not by hand.
+  globalIgnores(['src/shared/api/generated']),
   {
     files: ['**/*.{ts,tsx}'],
     extends: [

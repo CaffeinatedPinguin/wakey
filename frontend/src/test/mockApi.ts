@@ -2,12 +2,15 @@ export interface MockRequest {
   method: string
   url: string
   headers: Record<string, string>
+  body: string
 }
 
 export interface MockReply {
   status: number
   data?: unknown
   networkError?: boolean
+  // A test can hold a response open to observe how pending requests overlap.
+  waitFor?: Promise<void>
 }
 
 export type MockHandler = (request: MockRequest) => MockReply
@@ -31,6 +34,7 @@ class MockXMLHttpRequest {
   private method = ''
   private url = ''
   private headers: Record<string, string> = {}
+  private body = ''
 
   open(method: string, url: string): void {
     this.method = method
@@ -46,11 +50,19 @@ class MockXMLHttpRequest {
     return 'content-type: application/json'
   }
 
-  send(): void {
+  // Axios aborts a request through this method when a query is cancelled, so a
+  // no-op keeps the stub usable with callers that pass an AbortSignal.
+  abort(): void {
+    return undefined
+  }
+
+  send(body?: unknown): void {
+    this.body = typeof body === 'string' ? body : ''
     const reply = handler({
       method: this.method,
       url: this.url,
       headers: { ...this.headers },
+      body: this.body,
     })
     this.readyState = 4
     if (reply.networkError === true) {
@@ -60,7 +72,14 @@ class MockXMLHttpRequest {
     this.status = reply.status
     this.responseText = reply.data === undefined ? '' : JSON.stringify(reply.data)
     this.responseURL = this.url
-    this.onloadend?.()
+    const complete = (): void => {
+      this.onloadend?.()
+    }
+    if (reply.waitFor === undefined) {
+      complete()
+      return
+    }
+    void reply.waitFor.then(complete)
   }
 }
 

@@ -4,9 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import dev.wakey.testsupport.PostgresIntegrationTest;
 import org.junit.jupiter.api.Test;
-import org.springframework.test.context.TestPropertySource;
 
-@TestPropertySource(properties = {"wakey.database.idle-in-transaction-timeout=45s", "wakey.database.lock-timeout=3s"})
 class PostgresSessionLimitsTest extends PostgresIntegrationTest {
 
     @Test

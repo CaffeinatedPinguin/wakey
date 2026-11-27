@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { apiClient } from '../shared/api/instances'
+import { ErrorCode } from '../shared/api/generated/enums'
+import { serverClient } from '../shared/api/instances'
 import { installMockApi } from '../test/mockApi'
 import { createQueryClient } from './queryClient'
 
@@ -8,14 +9,14 @@ describe('query retry policy', () => {
     let requests = 0
     installMockApi(() => {
       requests += 1
-      return { status: 401, data: { code: 'unauthorized' } }
+      return { status: 401, data: { code: ErrorCode.UNAUTHENTICATED } }
     })
     const queryClient = createQueryClient()
 
     await expect(
       queryClient.query({
         queryKey: ['retry', 'unauthorized'],
-        queryFn: () => apiClient.get('/me'),
+        queryFn: () => serverClient.get('/me'),
       }),
     ).rejects.toBeTruthy()
 
@@ -33,7 +34,7 @@ describe('query retry policy', () => {
     await expect(
       queryClient.query({
         queryKey: ['retry', 'network'],
-        queryFn: () => apiClient.get('/me'),
+        queryFn: () => serverClient.get('/me'),
         retryDelay: 0,
       }),
     ).rejects.toBeTruthy()

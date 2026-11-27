@@ -1,0 +1,111 @@
+export const resources = {
+  pl: {
+    settings: {
+      title: 'Ogólne i domyślne',
+      groups: {
+        GENERAL: 'Ogólne',
+        DEFAULTS: 'Domyślne dla nowych checków',
+      },
+      keys: {
+        timezone: 'Strefa czasowa',
+        language: 'Język',
+        check: {
+          interval: 'Interwał',
+          timeout: 'Timeout',
+          retries: 'Ponowienia',
+        },
+      },
+      languages: {
+        pl: 'Polski',
+        en: 'English',
+      },
+      columns: {
+        setting: 'Ustawienie',
+        value: 'Wartość',
+        source: 'Źródło',
+        action: 'Akcja',
+      },
+      source: {
+        instance: 'instancja',
+        plan: 'Plan',
+        space: 'Własne',
+        instanceHint: 'Domyślne instancji',
+        planHint: 'Wartość planu',
+        overrides: 'Własne · nadpisuje {{value}}',
+      },
+      restore: 'Przywróć',
+      restoreAll: 'Przywróć wszystkie',
+      restoreAllTitle: 'Przywrócić wszystkie wartości?',
+      restoreAllBody:
+        'Wszystkie wartości własne wrócą do dziedziczenia. Tej operacji nie można cofnąć.',
+      restoreAllConfirm: 'Tak, przywróć wszystkie',
+      cancel: 'Anuluj',
+      loading: 'Ładowanie ustawień…',
+      error: 'Nie udało się wczytać ustawień.',
+      retry: 'Spróbuj ponownie',
+      empty: 'Brak ustawień do wyświetlenia.',
+      fieldError: {
+        outOfPlan: 'Poza planem: maksymalnie {{bound}}.',
+        generic: 'Nieprawidłowa wartość.',
+        saveFailed: 'Nie udało się zapisać wartości. Spróbuj ponownie.',
+        required: 'Wartość nie może być pusta.',
+      },
+      mobileEditTitle: 'Edytuj: {{label}}',
+      done: 'Gotowe',
+    },
+  },
+  en: {
+    settings: {
+      title: 'General and defaults',
+      groups: {
+        GENERAL: 'General',
+        DEFAULTS: 'Defaults for new checks',
+      },
+      keys: {
+        timezone: 'Time zone',
+        language: 'Language',
+        check: {
+          interval: 'Interval',
+          timeout: 'Timeout',
+          retries: 'Retries',
+        },
+      },
+      languages: {
+        pl: 'Polski',
+        en: 'English',
+      },
+      columns: {
+        setting: 'Setting',
+        value: 'Value',
+        source: 'Source',
+        action: 'Action',
+      },
+      source: {
+        instance: 'Instance',
+        plan: 'Plan',
+        space: 'Own',
+        instanceHint: 'Instance default',
+        planHint: 'Plan value',
+        overrides: 'Own · overrides {{value}}',
+      },
+      restore: 'Restore',
+      restoreAll: 'Restore all',
+      restoreAllTitle: 'Restore all values?',
+      restoreAllBody: 'All own values return to inheritance. This cannot be undone.',
+      restoreAllConfirm: 'Yes, restore all',
+      cancel: 'Cancel',
+      loading: 'Loading settings…',
+      error: 'Could not load the settings.',
+      retry: 'Try again',
+      empty: 'No settings to show.',
+      fieldError: {
+        outOfPlan: 'Outside the plan: at most {{bound}}.',
+        generic: 'Invalid value.',
+        saveFailed: 'Could not save the value. Please try again.',
+        required: 'The value cannot be empty.',
+      },
+      mobileEditTitle: 'Edit: {{label}}',
+      done: 'Done',
+    },
+  },
+} as const
