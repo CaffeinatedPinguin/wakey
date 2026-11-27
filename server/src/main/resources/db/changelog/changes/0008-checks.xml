@@ -1,0 +1,150 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        https://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+  <changeSet id="checks" author="wakey" objectQuotingStrategy="QUOTE_ONLY_RESERVED_WORDS">
+    <!-- postgres-only: native UUID and TIMESTAMPTZ column types; another database needs binary and timezone-aware equivalents. -->
+    <createTable tableName="check">
+      <column name="id" type="UUID">
+        <constraints primaryKey="true" primaryKeyName="pk_check" nullable="false"/>
+      </column>
+      <column name="space_id" type="UUID">
+        <constraints nullable="false"/>
+      </column>
+      <column name="name" type="VARCHAR(100)">
+        <constraints nullable="false"/>
+      </column>
+      <column name="type" type="VARCHAR(16)">
+        <constraints nullable="false"/>
+      </column>
+      <column name="target" type="VARCHAR(2048)">
+        <constraints nullable="false"/>
+      </column>
+      <column name="interval_seconds" type="INT">
+        <constraints nullable="false"/>
+      </column>
+      <column name="timeout_seconds" type="INT">
+        <constraints nullable="false"/>
+      </column>
+      <column name="retries" type="INT">
+        <constraints nullable="false"/>
+      </column>
+      <column name="group_name" type="VARCHAR(100)"/>
+      <column name="description" type="VARCHAR(1000)"/>
+      <column name="runbook_url" type="VARCHAR(2048)"/>
+      <column name="paused" type="BOOLEAN">
+        <constraints nullable="false"/>
+      </column>
+      <column name="paused_reason" type="VARCHAR(16)"/>
+      <column name="last_state" type="VARCHAR(16)" defaultValue="UNKNOWN">
+        <constraints nullable="false"/>
+      </column>
+      <column name="version" type="BIGINT">
+        <constraints nullable="false"/>
+      </column>
+      <column name="created_at" type="TIMESTAMPTZ">
+        <constraints nullable="false"/>
+      </column>
+      <column name="updated_at" type="TIMESTAMPTZ">
+        <constraints nullable="false"/>
+      </column>
+    </createTable>
+
+    <addForeignKeyConstraint baseTableName="check"
+                             baseColumnNames="space_id"
+                             constraintName="fk_check_space"
+                             referencedTableName="space"
+                             referencedColumnNames="id"
+                             onDelete="CASCADE"/>
+
+    <sql>
+      ALTER TABLE "check"
+        ADD CONSTRAINT ck_check_type CHECK (type IN ('HTTP', 'TCP', 'CERTIFICATE'));
+      ALTER TABLE "check"
+        ADD CONSTRAINT ck_check_paused_reason
+          CHECK (paused_reason IN ('MANUAL', 'PLAN_LIMIT', 'ABANDONED', 'UNVERIFIED'));
+      ALTER TABLE "check"
+        ADD CONSTRAINT ck_check_last_state
+          CHECK (last_state IN ('UP', 'DEGRADED', 'DOWN', 'UNKNOWN'));
+    </sql>
+
+    <createIndex tableName="check" indexName="ix_check_space_name_id">
+      <column name="space_id"/>
+      <column name="name"/>
+      <column name="id"/>
+    </createIndex>
+
+    <createIndex tableName="check" indexName="ix_check_space_last_state">
+      <column name="space_id"/>
+      <column name="last_state"/>
+    </createIndex>
+
+    <createTable tableName="check_tag">
+      <column name="check_id" type="UUID">
+        <constraints nullable="false"/>
+      </column>
+      <column name="space_id" type="UUID">
+        <constraints nullable="false"/>
+      </column>
+      <column name="tag" type="VARCHAR(50)">
+        <constraints nullable="false"/>
+      </column>
+    </createTable>
+    <addPrimaryKey tableName="check_tag"
+                   columnNames="check_id, tag"
+                   constraintName="pk_check_tag"/>
+    <addForeignKeyConstraint baseTableName="check_tag"
+                             baseColumnNames="check_id"
+                             constraintName="fk_check_tag_check"
+                             referencedTableName="check"
+                             referencedColumnNames="id"
+                             onDelete="CASCADE"/>
+    <createIndex tableName="check_tag" indexName="ix_check_tag_space_tag">
+      <column name="space_id"/>
+      <column name="tag"/>
+    </createIndex>
+
+    <createTable tableName="check_result">
+      <column name="id" type="UUID">
+        <constraints primaryKey="true" primaryKeyName="pk_check_result" nullable="false"/>
+      </column>
+      <column name="check_id" type="UUID">
+        <constraints nullable="false"/>
+      </column>
+      <column name="location_id" type="VARCHAR(64)" defaultValue="server">
+        <constraints nullable="false"/>
+      </column>
+      <column name="checked_at" type="TIMESTAMPTZ">
+        <constraints nullable="false"/>
+      </column>
+      <column name="state" type="VARCHAR(16)">
+        <constraints nullable="false"/>
+      </column>
+      <column name="error_category" type="VARCHAR(32)"/>
+      <column name="http_status" type="INT"/>
+      <column name="duration_ms" type="INT"/>
+      <column name="protocol_version" type="VARCHAR(16)"/>
+      <column name="phases" type="TEXT"/>
+    </createTable>
+    <addForeignKeyConstraint baseTableName="check_result"
+                             baseColumnNames="check_id"
+                             constraintName="fk_check_result_check"
+                             referencedTableName="check"
+                             referencedColumnNames="id"
+                             onDelete="CASCADE"/>
+    <sql>
+      ALTER TABLE check_result
+        ADD CONSTRAINT ck_check_result_state CHECK (state IN ('UP', 'DEGRADED', 'DOWN', 'UNKNOWN'));
+      ALTER TABLE check_result
+        ADD CONSTRAINT ck_check_result_error_category
+          CHECK (error_category IN ('TARGET_DOWN', 'LOCATION_NETWORK', 'AUTH'));
+      ALTER TABLE check_result
+        ADD CONSTRAINT ck_check_result_location_network_not_down
+          CHECK (error_category IS DISTINCT FROM 'LOCATION_NETWORK' OR state IS DISTINCT FROM 'DOWN');
+      CREATE INDEX ix_check_result_check_checked ON check_result (check_id, checked_at DESC);
+    </sql>
+  </changeSet>
+</databaseChangeLog>

@@ -2,11 +2,20 @@ package dev.wakey.web;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import dev.wakey.checks.CheckError;
+import dev.wakey.checks.CheckSettingError;
+import dev.wakey.settings.SettingError;
 import dev.wakey.spaces.SpaceError;
 import dev.wakey.testsupport.ContractFile;
+import dev.wakey.tokens.TokenError;
 import java.nio.file.Files;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpStatus;
 import tools.jackson.databind.JsonNode;
@@ -41,6 +50,28 @@ class ErrorCodeWireFormatTest {
     }
 
     @Test
+    void everyWireCodeIsDefinedOnce() {
+        // given the public error-code enums; a package-private module alias is not part of the contract
+        List<ErrorCode> codes = new ArrayList<>();
+        Collections.addAll(codes, CommonError.values());
+        Collections.addAll(codes, SpaceError.values());
+        Collections.addAll(codes, CheckError.values());
+        Collections.addAll(codes, CheckSettingError.values());
+        Collections.addAll(codes, SettingError.values());
+        Collections.addAll(codes, TokenError.values());
+
+        // when
+        Map<String, Long> counts = new HashMap<>();
+        for (ErrorCode code : codes) {
+            counts.merge(code.getCode(), 1L, Long::sum);
+        }
+
+        // then
+        assertThat(counts)
+                .allSatisfy((code, count) -> assertThat(count).as(code).isEqualTo(1L));
+    }
+
+    @Test
     void theContractListsEveryErrorCode() throws Exception {
         // given
         String contract = Files.readString(ContractFile.path());
@@ -56,11 +87,23 @@ class ErrorCodeWireFormatTest {
         }
 
         // when
-        List<String> expected = new ArrayList<>();
+        Set<String> expected = new LinkedHashSet<>();
         for (CommonError error : CommonError.values()) {
             expected.add(error.getCode());
         }
         for (SpaceError error : SpaceError.values()) {
+            expected.add(error.getCode());
+        }
+        for (CheckError error : CheckError.values()) {
+            expected.add(error.getCode());
+        }
+        for (SettingError error : SettingError.values()) {
+            expected.add(error.getCode());
+        }
+        for (CheckSettingError error : CheckSettingError.values()) {
+            expected.add(error.getCode());
+        }
+        for (TokenError error : TokenError.values()) {
             expected.add(error.getCode());
         }
 

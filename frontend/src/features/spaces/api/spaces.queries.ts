@@ -5,7 +5,7 @@ import type {
   UseMutationResult,
   UseQueryResult,
 } from '@tanstack/react-query'
-import type { SpaceSummary } from '../spaceTypes'
+import type { SpaceDetail, SpaceSummary } from '../spaceTypes'
 import { createSpace, fetchSpace, fetchSpaces } from './spaces.api'
 import type { CreateSpaceInput, SpacesPage } from './spaces.api'
 
@@ -24,7 +24,7 @@ export function useSpaces(): UseInfiniteQueryResult<InfiniteData<SpacesPage>> {
   })
 }
 
-export function useSpace(slug: string | undefined): UseQueryResult<SpaceSummary> {
+export function useSpace(slug: string | undefined): UseQueryResult<SpaceDetail> {
   return useQuery({
     queryKey: spacesQueryKeys.detail(slug ?? ''),
     queryFn: ({ signal }) => {

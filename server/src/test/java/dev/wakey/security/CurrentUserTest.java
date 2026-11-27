@@ -2,6 +2,7 @@ package dev.wakey.security;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import dev.wakey.web.CurrentUser;
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;

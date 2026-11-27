@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        https://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+  <changeSet id="check-result-index" author="wakey">
+    <!-- The newest result is ordered by checked_at DESC, id DESC, so the index carries both columns. -->
+    <dropIndex tableName="check_result" indexName="ix_check_result_check_checked"/>
+    <createIndex tableName="check_result" indexName="ix_check_result_check_checked_id">
+      <column name="check_id"/>
+      <column name="checked_at" descending="true"/>
+      <column name="id" descending="true"/>
+    </createIndex>
+  </changeSet>
+</databaseChangeLog>

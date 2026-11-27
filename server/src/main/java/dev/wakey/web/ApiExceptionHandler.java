@@ -50,6 +50,9 @@ public class ApiExceptionHandler extends ResponseEntityExceptionHandler {
     ResponseEntity<ProblemDetail> apiException(ApiException exception) {
         ErrorCode error = exception.getErrorCode();
         ProblemDetail detail = ApiExceptionBodies.of(error, exception.getFieldErrors());
+        if (!exception.getParams().isEmpty()) {
+            detail.setProperty("params", exception.getParams());
+        }
         return errorResponse(error.getStatus(), detail);
     }
 

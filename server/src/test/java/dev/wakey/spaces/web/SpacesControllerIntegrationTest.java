@@ -8,15 +8,16 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 
-import dev.wakey.security.CurrentUser;
 import dev.wakey.spaces.PutResult;
 import dev.wakey.spaces.Space;
 import dev.wakey.spaces.SpaceError;
 import dev.wakey.spaces.SpaceMember;
+import dev.wakey.spaces.SpaceMembers;
 import dev.wakey.spaces.SpaceRole;
 import dev.wakey.spaces.SpaceService;
 import dev.wakey.testsupport.SecurityIntegrationTest;
 import dev.wakey.web.CommonError;
+import dev.wakey.web.CurrentUser;
 import dev.wakey.web.CursorCodec;
 import java.util.ArrayList;
 import java.util.List;
@@ -714,7 +715,7 @@ class SpacesControllerIntegrationTest extends SecurityIntegrationTest {
         SpaceService service = bean(SpaceService.class);
         CurrentUser admin = fixtureAdmin();
         PutResult created = service.put(admin, slug, name, null);
-        service.addMember(admin, slug, new SpaceMember(ISSUER, member, role));
+        bean(SpaceMembers.class).addMember(admin, slug, new SpaceMember(ISSUER, member, role));
         return created.space();
     }
 

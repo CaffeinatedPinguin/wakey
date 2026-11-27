@@ -1,7 +1,7 @@
 package dev.wakey.security.web;
 
-import dev.wakey.security.CurrentUser;
 import dev.wakey.web.ApiPaths;
+import dev.wakey.web.CurrentUser;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Schema;
 import org.springframework.http.MediaType;

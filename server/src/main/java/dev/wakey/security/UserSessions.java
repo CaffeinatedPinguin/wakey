@@ -1,5 +1,6 @@
 package dev.wakey.security;
 
+import dev.wakey.web.CurrentUser;
 import java.util.Map;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -24,11 +25,14 @@ public class UserSessions {
     public void invalidateAll(String issuer, String subject) {
         log.debug("Invalidating sessions of issuer {} and subject {}", issuer, subject);
         Map<String, ? extends Session> candidates = sessions.findByPrincipalName(subject);
+        int ended = 0;
         for (Session session : candidates.values()) {
             if (belongsTo(session, issuer, subject)) {
                 sessions.deleteById(session.getId());
+                ended++;
             }
         }
+        log.info("Ended {} sessions of issuer {} and subject {}", ended, issuer, subject);
     }
 
     private static boolean belongsTo(Session session, String issuer, String subject) {

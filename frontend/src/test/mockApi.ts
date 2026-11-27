@@ -9,6 +9,8 @@ export interface MockReply {
   status: number
   data?: unknown
   networkError?: boolean
+  // A test can hold a response open to observe how pending requests overlap.
+  waitFor?: Promise<void>
 }
 
 export type MockHandler = (request: MockRequest) => MockReply
@@ -70,7 +72,14 @@ class MockXMLHttpRequest {
     this.status = reply.status
     this.responseText = reply.data === undefined ? '' : JSON.stringify(reply.data)
     this.responseURL = this.url
-    this.onloadend?.()
+    const complete = (): void => {
+      this.onloadend?.()
+    }
+    if (reply.waitFor === undefined) {
+      complete()
+      return
+    }
+    void reply.waitFor.then(complete)
   }
 }
 

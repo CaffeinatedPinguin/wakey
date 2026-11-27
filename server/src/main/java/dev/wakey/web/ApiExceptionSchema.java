@@ -27,6 +27,7 @@ final class ApiExceptionSchema {
         schema.addProperty("status", new IntegerSchema().format("int32"));
         schema.addProperty("detail", new StringSchema());
         schema.addProperty("instance", new StringSchema().format("uri"));
+        schema.addProperty("params", new ObjectSchema().additionalProperties(true));
         schema.addProperty("code", code);
         schema.addProperty("errors", errors);
         return schema;

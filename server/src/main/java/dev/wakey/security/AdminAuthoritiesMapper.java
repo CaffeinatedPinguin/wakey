@@ -1,5 +1,6 @@
 package dev.wakey.security;
 
+import dev.wakey.web.CurrentUser;
 import java.util.Collection;
 import java.util.LinkedHashSet;
 import java.util.Set;
@@ -12,9 +13,7 @@ import org.springframework.security.oauth2.core.oidc.user.OidcUserAuthority;
 /** Adds the Admin authority when the configured claim contains the configured Admin group. */
 final class AdminAuthoritiesMapper implements GrantedAuthoritiesMapper {
 
-    private static final String ADMIN_ROLE = "ROLE_ADMIN";
-
-    private static final GrantedAuthority ADMIN_AUTHORITY = new SimpleGrantedAuthority(ADMIN_ROLE);
+    private static final GrantedAuthority ADMIN_AUTHORITY = new SimpleGrantedAuthority(CurrentUser.ADMIN_ROLE);
 
     private final String adminClaim;
 
@@ -37,7 +36,7 @@ final class AdminAuthoritiesMapper implements GrantedAuthoritiesMapper {
     static boolean isAdmin(Authentication authentication) {
         return authentication.getAuthorities().stream()
                 .map(GrantedAuthority::getAuthority)
-                .anyMatch(ADMIN_ROLE::equals);
+                .anyMatch(CurrentUser.ADMIN_ROLE::equals);
     }
 
     private boolean hasAdminGroup(Collection<? extends GrantedAuthority> authorities) {

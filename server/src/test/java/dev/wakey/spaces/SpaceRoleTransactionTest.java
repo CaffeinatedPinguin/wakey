@@ -3,9 +3,9 @@ package dev.wakey.spaces;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.catchThrowable;
 
-import dev.wakey.security.CurrentUser;
 import dev.wakey.security.UserSessions;
 import dev.wakey.testsupport.PostgresIntegrationTest;
+import dev.wakey.web.CurrentUser;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.TestConfiguration;
@@ -26,15 +26,16 @@ class SpaceRoleTransactionTest extends PostgresIntegrationTest {
     void aFailingSessionInvalidationRollsBackTheRoleChange() {
         // given
         SpaceService service = bean(SpaceService.class);
+        SpaceMembers members = bean(SpaceMembers.class);
         String slug = uniqueSlug("rollback");
         String subject = uniqueSubject("role-change");
         service.put(ADMIN, slug, "Rollback space", null);
-        service.addMember(ADMIN, slug, new SpaceMember(ISSUER, subject, SpaceRole.VIEWER));
+        members.addMember(ADMIN, slug, new SpaceMember(ISSUER, subject, SpaceRole.VIEWER));
         CurrentUser member = new CurrentUser(ISSUER, subject, false);
 
         // when
         Throwable failure = catchThrowable(
-                () -> service.changeRole(ADMIN, slug, new SpaceMember(ISSUER, subject, SpaceRole.EDITOR)));
+                () -> members.changeRole(ADMIN, slug, new SpaceMember(ISSUER, subject, SpaceRole.EDITOR)));
         SpaceView view = service.view(member, slug);
 
         // then

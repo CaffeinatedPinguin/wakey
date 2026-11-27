@@ -1,7 +1,9 @@
 import axios from 'axios'
+import type { AxiosResponse } from 'axios'
 import { z } from 'zod'
 import { ErrorCode } from './generated/enums'
 import type { ProblemDetail } from './generated/types'
+import { HttpStatus } from './httpStatus'
 
 // Codes the client itself produces; the server never sends them.
 export const ClientErrorCode = {
@@ -40,6 +42,7 @@ export const apiExceptionSchema = z.object({
   status: z.number().int().default(0),
   detail: z.string().default(''),
   code: z.string().default(ClientErrorCode.UNKNOWN),
+  params: z.record(z.string(), z.unknown()).default({}),
   errors: z.array(apiFieldErrorSchema).default([]),
 }) satisfies z.ZodType<Omit<ProblemDetail, 'code'> & { code: string }>
 
@@ -48,23 +51,27 @@ export type ApiFieldError = z.infer<typeof apiFieldErrorSchema>
 export interface ApiExceptionInit {
   status?: number | undefined
   code: ApiExceptionCode
+  params?: Readonly<Record<string, unknown>> | undefined
   errors?: ApiFieldError[] | undefined
   detail?: string | undefined
 }
 
 // The one exception application code sees for a failed API call. `code` is the
-// stable machine code the screens translate; `errors` describes invalid fields.
+// stable machine code the screens translate; `params` carries the extension
+// values (for example a plan bound); `errors` describes invalid fields.
 export class ApiException extends Error {
   readonly status: number | undefined
   readonly code: ApiExceptionCode
+  readonly params: Readonly<Record<string, unknown>>
   readonly errors: ApiFieldError[]
   readonly detail: string | undefined
 
-  constructor({ status, code, errors = [], detail }: ApiExceptionInit) {
+  constructor({ status, code, params = {}, errors = [], detail }: ApiExceptionInit) {
     super(`API request failed with code ${code}`)
     this.name = 'ApiException'
     this.status = status
     this.code = code
+    this.params = params
     this.errors = errors
     this.detail = detail
   }
@@ -81,16 +88,35 @@ function statusOf(error: unknown): number | undefined {
 }
 
 export function isUnauthorizedException(error: unknown): boolean {
-  return statusOf(error) === 401
+  return statusOf(error) === HttpStatus.UNAUTHORIZED
 }
 
 export function isNotFoundException(error: unknown): boolean {
-  return statusOf(error) === 404
+  return statusOf(error) === HttpStatus.NOT_FOUND
 }
 
 function parseApiException(body: unknown): z.infer<typeof apiExceptionSchema> | undefined {
   const result = apiExceptionSchema.safeParse(body)
   return result.success ? result.data : undefined
+}
+
+function unknownException(): ApiException {
+  return new ApiException({ code: ClientErrorCode.UNKNOWN })
+}
+
+function networkException(): ApiException {
+  return new ApiException({ code: ClientErrorCode.NETWORK })
+}
+
+function responseException(response: AxiosResponse<unknown>): ApiException {
+  const errorBody = parseApiException(response.data)
+  return new ApiException({
+    status: response.status,
+    code: errorCodeOf(errorBody?.code ?? ClientErrorCode.UNKNOWN),
+    params: errorBody?.params ?? {},
+    errors: errorBody?.errors ?? [],
+    detail: errorBody?.detail,
+  })
 }
 
 // Normalises any failure into one ApiException. A response without a valid RFC
@@ -101,16 +127,11 @@ export function toApiException(error: unknown): ApiException {
     return error
   }
   if (!axios.isAxiosError<unknown>(error)) {
-    return new ApiException({ code: ClientErrorCode.UNKNOWN })
+    return unknownException()
   }
-  if (error.response === undefined) {
-    return new ApiException({ code: ClientErrorCode.NETWORK })
+  const response = error.response
+  if (response === undefined) {
+    return networkException()
   }
-  const errorBody = parseApiException(error.response.data)
-  return new ApiException({
-    status: error.response.status,
-    code: errorCodeOf(errorBody?.code ?? ClientErrorCode.UNKNOWN),
-    errors: errorBody?.errors ?? [],
-    detail: errorBody?.detail,
-  })
+  return responseException(response)
 }

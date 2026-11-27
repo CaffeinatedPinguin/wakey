@@ -1,15 +1,15 @@
+import { Button, Stack } from '@mantine/core'
+import { Link, getRouteApi } from '@tanstack/react-router'
 import type { ReactElement } from 'react'
+import { useTranslation } from 'react-i18next'
+import { useMe } from '../../features/auth'
+import { SettingsPage } from '../../features/settings'
+import { spaceFromSearch, useSpace } from '../../features/spaces'
+import { PageFrame } from '../../shared/ui/PageFrame'
 import { EmptySectionView } from './EmptySectionView'
-import {
-  checksSection,
-  incidentsSection,
-  settingsSection,
-  statusPagesSection,
-} from './panelNavigation'
+import { incidentsSection, statusPagesSection } from './panelNavigation'
 
-export function ChecksSectionView(): ReactElement {
-  return <EmptySectionView section={checksSection} />
-}
+const panelRoute = getRouteApi('/panel')
 
 export function IncidentsSectionView(): ReactElement {
   return <EmptySectionView section={incidentsSection} />
@@ -20,5 +20,27 @@ export function StatusPagesSectionView(): ReactElement {
 }
 
 export function SettingsSectionView(): ReactElement {
-  return <EmptySectionView section={settingsSection} />
+  const { t } = useTranslation()
+  const search = panelRoute.useSearch()
+  const spaceSlug = spaceFromSearch(search)
+  // The settings page reuses the one space request of the shell, so its schema
+  // and its query key stay in one place.
+  const space = useSpace(spaceSlug)
+  const me = useMe()
+
+  return (
+    <PageFrame title={t('common.nav.settings')}>
+      <Stack gap="md">
+        <Button component={Link} to="/" variant="subtle">
+          {t('common.section.backToOverview')}
+        </Button>
+        <SettingsPage
+          spaceSlug={spaceSlug}
+          access={space.data}
+          accessLoading={space.isPending}
+          isAdmin={me.data.admin}
+        />
+      </Stack>
+    </PageFrame>
+  )
 }
