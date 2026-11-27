@@ -225,36 +225,15 @@ class ApiTokensIntegrationTest extends PostgresIntegrationTest {
     }
 
     @Test
-    void aLongRevokedTokenDisappearsFromTheList() {
+    void aRevokedTokenStaysListed() {
         // given
-        Space space = seedSpaceWithMembers("long-revoked");
+        Space space = seedSpaceWithMembers("revoked-listed");
         String slug = space.slug();
-        CreatedToken created = tokens().create(EDITOR_OWNER, slug, "old", new TokenOptions(TokenScope.READ, null));
+        CreatedToken created = tokens().create(EDITOR_OWNER, slug, "revoked", new TokenOptions(TokenScope.READ, null));
         UUID tokenId = created.token().id();
         tokens().revoke(EDITOR_OWNER, slug, tokenId);
         Instant longAgo = Instant.now(bean(Clock.class)).minus(Duration.ofDays(31));
         setRevokedAt(tokenId, longAgo);
-
-        // when
-        List<TokenSummary> listed = tokens().list(EDITOR_OWNER, slug);
-        tokens().create(EDITOR_OWNER, slug, "fresh", new TokenOptions(TokenScope.READ, null));
-        long remaining = countToken(tokenId);
-
-        // then
-        assertThat(listed).extracting(TokenSummary::id).doesNotContain(tokenId);
-        assertThat(remaining).isZero();
-    }
-
-    @Test
-    void aRecentlyRevokedTokenStaysListed() {
-        // given
-        Space space = seedSpaceWithMembers("recent-revoked");
-        String slug = space.slug();
-        CreatedToken created = tokens().create(EDITOR_OWNER, slug, "recent", new TokenOptions(TokenScope.READ, null));
-        UUID tokenId = created.token().id();
-        tokens().revoke(EDITOR_OWNER, slug, tokenId);
-        Instant tenDaysAgo = Instant.now(bean(Clock.class)).minus(Duration.ofDays(10));
-        setRevokedAt(tokenId, tenDaysAgo);
 
         // when
         List<TokenSummary> listed = tokens().list(EDITOR_OWNER, slug);
@@ -490,13 +469,6 @@ class ApiTokensIntegrationTest extends PostgresIntegrationTest {
                 .param("revokedAt", value)
                 .param("id", tokenId)
                 .update();
-    }
-
-    private long countToken(UUID tokenId) {
-        return jdbc().sql("SELECT count(*) FROM api_token WHERE id = :id")
-                .param("id", tokenId)
-                .query(Long.class)
-                .single();
     }
 
     private Instant lastUsedAt(UUID tokenId) {

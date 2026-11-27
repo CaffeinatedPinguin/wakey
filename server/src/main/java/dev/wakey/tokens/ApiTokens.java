@@ -86,11 +86,10 @@ public class ApiTokens {
         return found.flatMap(token -> authenticateStored(token, now));
     }
 
-    /** Lists the owner's tokens in a space; the result never carries a secret or a hash. */
+    /** Lists every token of the owner in a space, revoked and expired ones included. */
     public List<TokenSummary> list(TokenOwner owner, String spaceSlug) {
         var space = spaces.requireMember(spaceSlug, owner.issuer(), owner.subject());
-        Instant now = Instant.now(clock);
-        return store.list(space.id(), owner, now);
+        return store.list(space.id(), owner);
     }
 
     /** Revokes the owner's token in a space; revoking an already revoked token changes nothing. */
@@ -119,7 +118,6 @@ public class ApiTokens {
 
     private void requireTokenLimit(UUID spaceId, TokenOwner owner, Instant now) {
         spaceService.lock(spaceId);
-        store.purgeStale(spaceId, owner, now);
         int maxPerOwner = properties.maxPerOwner();
         long active = store.countActive(spaceId, owner, now);
         if (active >= maxPerOwner) {
