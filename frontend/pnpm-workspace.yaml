@@ -11,6 +11,9 @@ minimumReleaseAgeExclude:
 # advisories, and minimatch 5 (through openapi-typescript) accepts any 2.x.
 # The owner approved the js-yaml override on 2026-11-27: js-yaml 4.x below 4.3.2 has three
 # high-severity advisories, and @redocly/openapi-core (through openapi-typescript) pins 4.1.0.
+# The owner approved the minimatch override on 2026-11-27: minimatch 5.x below 5.1.8 has three
+# high-severity ReDoS advisories, and @redocly/openapi-core pins 5.1.6.
 overrides:
   'brace-expansion@>=2.0.0 <2.1.8': '2.1.8'
   'js-yaml@>=4.0.0 <4.3.2': '4.3.2'
+  'minimatch@>=5.0.0 <5.1.8': '5.1.9'
