@@ -2,6 +2,7 @@ package dev.wakey.spaces.web;
 
 import dev.wakey.spaces.SpaceError;
 import dev.wakey.web.CommonError;
+import io.swagger.v3.core.util.RefUtils;
 import io.swagger.v3.oas.models.Operation;
 import io.swagger.v3.oas.models.media.Content;
 import io.swagger.v3.oas.models.media.MediaType;
@@ -10,17 +11,16 @@ import io.swagger.v3.oas.models.responses.ApiResponse;
 import io.swagger.v3.oas.models.responses.ApiResponses;
 import org.springdoc.core.customizers.GlobalOperationCustomizer;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ProblemDetail;
 import org.springframework.web.method.HandlerMethod;
 
 /** Documents the error answers that each spaces operation really returns. */
 final class SpacesExceptionResponses implements GlobalOperationCustomizer {
 
-    private static final String ERROR_SCHEMA_REF = "#/components/schemas/ProblemDetail";
+    private static final String CREATED_MEMBER_DESCRIPTION = "The membership was created.";
 
-    private static final String SPACE_MEMBER_RESPONSE_REF = "#/components/schemas/SpaceMemberResponse";
-
-    private static final String ADD_MEMBER_DESCRIPTION =
-            "The membership exists; an existing membership keeps its role.";
+    private static final String EXISTING_MEMBER_DESCRIPTION =
+            "The membership already exists; an existing membership keeps its role.";
 
     private static final String PUT_DESCRIPTION =
             "A missing version renames the space without a version condition, but a concurrent change "
@@ -78,7 +78,8 @@ final class SpacesExceptionResponses implements GlobalOperationCustomizer {
 
     private static void documentMemberAdd(Operation operation) {
         operation.setSummary("Add a member to a space");
-        replaceWithJson(operation, HttpStatus.CREATED, ADD_MEMBER_DESCRIPTION, SPACE_MEMBER_RESPONSE_REF);
+        replaceWithJson(operation, HttpStatus.CREATED, CREATED_MEMBER_DESCRIPTION, SpaceMemberResponse.class);
+        replaceWithJson(operation, HttpStatus.OK, EXISTING_MEMBER_DESCRIPTION, SpaceMemberResponse.class);
         add(operation, HttpStatus.BAD_REQUEST, CommonError.VALIDATION_FAILED.getDetail());
         add(operation, HttpStatus.FORBIDDEN, CommonError.FORBIDDEN.getDetail());
         add(operation, HttpStatus.NOT_FOUND, CommonError.NOT_FOUND.getDetail());
@@ -86,7 +87,6 @@ final class SpacesExceptionResponses implements GlobalOperationCustomizer {
 
     private static void documentMemberChange(Operation operation) {
         operation.setSummary("Change a member's role");
-        replaceWithNoContent(operation, HttpStatus.NO_CONTENT, "The role was changed.");
         add(operation, HttpStatus.BAD_REQUEST, CommonError.VALIDATION_FAILED.getDetail());
         add(operation, HttpStatus.FORBIDDEN, CommonError.FORBIDDEN.getDetail());
         add(operation, HttpStatus.NOT_FOUND, CommonError.NOT_FOUND.getDetail());
@@ -94,23 +94,21 @@ final class SpacesExceptionResponses implements GlobalOperationCustomizer {
 
     private static void documentMemberRemove(Operation operation) {
         operation.setSummary("Remove a member from a space");
-        replaceWithNoContent(operation, HttpStatus.NO_CONTENT, "The member was removed.");
         add(operation, HttpStatus.BAD_REQUEST, CommonError.VALIDATION_FAILED.getDetail());
         add(operation, HttpStatus.FORBIDDEN, CommonError.FORBIDDEN.getDetail());
         add(operation, HttpStatus.NOT_FOUND, CommonError.NOT_FOUND.getDetail());
     }
 
-    private static void replaceWithJson(Operation operation, HttpStatus status, String description, String schemaRef) {
+    private static void replaceWithJson(
+            Operation operation, HttpStatus status, String description, Class<?> schemaType) {
+        String schemaName = schemaType.getSimpleName();
+        String schemaRef = RefUtils.constructRef(schemaName);
         Schema<?> schema = new Schema<>().$ref(schemaRef);
         MediaType mediaType = new MediaType().schema(schema);
         Content content = new Content();
         content.addMediaType(org.springframework.http.MediaType.APPLICATION_JSON_VALUE, mediaType);
         ApiResponse response = new ApiResponse().description(description).content(content);
         replace(operation, status, response);
-    }
-
-    private static void replaceWithNoContent(Operation operation, HttpStatus status, String description) {
-        replace(operation, status, new ApiResponse().description(description));
     }
 
     private static void replace(Operation operation, HttpStatus status, ApiResponse response) {
@@ -138,7 +136,8 @@ final class SpacesExceptionResponses implements GlobalOperationCustomizer {
     }
 
     private static ApiResponse errorResponse(String description) {
-        Schema<?> schema = new Schema<>().$ref(ERROR_SCHEMA_REF);
+        String errorSchemaRef = RefUtils.constructRef(ProblemDetail.class.getSimpleName());
+        Schema<?> schema = new Schema<>().$ref(errorSchemaRef);
         MediaType mediaType = new MediaType().schema(schema);
         Content content = new Content();
         content.addMediaType(org.springframework.http.MediaType.APPLICATION_PROBLEM_JSON_VALUE, mediaType);

@@ -24,7 +24,7 @@ export const commonResources = {
       },
       state: {
         up: 'Działa',
-        degraded: 'Częściowo działa',
+        degraded: 'Działa z problemami',
         down: 'Nie działa',
         unknown: 'Stan nieznany',
         maintenance: 'Prace planowe',

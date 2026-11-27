@@ -5,6 +5,7 @@ import static org.springframework.security.test.web.servlet.request.SecurityMock
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.request;
 
+import dev.wakey.spaces.SpaceMember;
 import dev.wakey.spaces.SpaceRole;
 import dev.wakey.spaces.SpaceSlug;
 import dev.wakey.testsupport.ContractFile;
@@ -314,6 +315,36 @@ class OpenApiContractTest extends SecurityIntegrationTest {
     }
 
     @Test
+    void changingARoleAndRemovingAMemberRequireIssuerAndSubjectInTheContract() throws Exception {
+        // given
+        JsonNode document = MAPPER.readTree(generatedContract());
+        JsonNode changeParameters = document.path("paths")
+                .path("/api/v1/spaces/{slug}/members/role")
+                .path("put")
+                .path("parameters");
+        JsonNode removeParameters = document.path("paths")
+                .path("/api/v1/spaces/{slug}/members")
+                .path("delete")
+                .path("parameters");
+
+        // when
+        JsonNode changeIssuer = parameterNamed(changeParameters, "issuer");
+        JsonNode changeSubject = parameterNamed(changeParameters, "subject");
+        JsonNode removeIssuer = parameterNamed(removeParameters, "issuer");
+        JsonNode removeSubject = parameterNamed(removeParameters, "subject");
+
+        // then
+        assertThat(isRequired(changeIssuer)).isTrue();
+        assertThat(isRequired(changeSubject)).isTrue();
+        assertThat(isRequired(removeIssuer)).isTrue();
+        assertThat(isRequired(removeSubject)).isTrue();
+        assertThat(maxLengthOf(changeIssuer)).isEqualTo(SpaceMember.ISSUER_MAX_LENGTH);
+        assertThat(maxLengthOf(changeSubject)).isEqualTo(SpaceMember.SUBJECT_MAX_LENGTH);
+        assertThat(maxLengthOf(removeIssuer)).isEqualTo(SpaceMember.ISSUER_MAX_LENGTH);
+        assertThat(maxLengthOf(removeSubject)).isEqualTo(SpaceMember.SUBJECT_MAX_LENGTH);
+    }
+
+    @Test
     void listSpacesProducesJsonInTheContract() throws Exception {
         // given
         JsonNode document = MAPPER.readTree(generatedContract());
@@ -499,5 +530,14 @@ class OpenApiContractTest extends SecurityIntegrationTest {
         Object document = MAPPER.readValue(body, Object.class);
         String formatted = MAPPER.writerWithDefaultPrettyPrinter().writeValueAsString(document);
         return formatted.replace("\r\n", "\n") + "\n";
+    }
+
+    private static boolean isRequired(JsonNode parameter) {
+        return parameter.path("required").asBoolean();
+    }
+
+    private static int maxLengthOf(JsonNode parameter) {
+        JsonNode schema = parameter.path("schema");
+        return schema.path("maxLength").asInt();
     }
 }

@@ -564,23 +564,29 @@
             "type" : "string"
           }
         }, {
+          "description" : "The OIDC issuer of the member",
           "in" : "query",
           "name" : "issuer",
-          "required" : false,
+          "required" : true,
           "schema" : {
+            "description" : "The OIDC issuer of the member",
+            "maxLength" : 255,
             "type" : "string"
           }
         }, {
+          "description" : "The OIDC subject of the member",
           "in" : "query",
           "name" : "subject",
-          "required" : false,
+          "required" : true,
           "schema" : {
+            "description" : "The OIDC subject of the member",
+            "maxLength" : 255,
             "type" : "string"
           }
         } ],
         "responses" : {
           "204" : {
-            "description" : "The member was removed."
+            "description" : "No Content"
           },
           "400" : {
             "content" : {
@@ -721,6 +727,16 @@
           "required" : true
         },
         "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/SpaceMemberResponse"
+                }
+              }
+            },
+            "description" : "The membership already exists; an existing membership keeps its role."
+          },
           "201" : {
             "content" : {
               "application/json" : {
@@ -729,7 +745,7 @@
                 }
               }
             },
-            "description" : "The membership exists; an existing membership keeps its role."
+            "description" : "The membership was created."
           },
           "400" : {
             "content" : {
@@ -788,17 +804,23 @@
             "type" : "string"
           }
         }, {
+          "description" : "The OIDC issuer of the member",
           "in" : "query",
           "name" : "issuer",
-          "required" : false,
+          "required" : true,
           "schema" : {
+            "description" : "The OIDC issuer of the member",
+            "maxLength" : 255,
             "type" : "string"
           }
         }, {
+          "description" : "The OIDC subject of the member",
           "in" : "query",
           "name" : "subject",
-          "required" : false,
+          "required" : true,
           "schema" : {
+            "description" : "The OIDC subject of the member",
+            "maxLength" : 255,
             "type" : "string"
           }
         } ],
@@ -814,7 +836,7 @@
         },
         "responses" : {
           "204" : {
-            "description" : "The role was changed."
+            "description" : "No Content"
           },
           "400" : {
             "content" : {

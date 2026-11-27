@@ -90,6 +90,54 @@ class SpaceMembersControllerIntegrationTest extends SecurityIntegrationTest {
     }
 
     @Test
+    void membersPagePastAMemberWithLongIssuerAndSubject() throws Exception {
+        // given
+        String admin = uniqueSubject("long-member-page");
+        String slug = uniqueSlug("long-member-page");
+        seedSpace(slug);
+        String firstIssuer = "i".repeat(SpaceMember.ISSUER_MAX_LENGTH);
+        String firstSubject = "s".repeat(SpaceMember.SUBJECT_MAX_LENGTH);
+        String secondIssuer = "z".repeat(SpaceMember.ISSUER_MAX_LENGTH);
+        String secondSubject = "t".repeat(SpaceMember.SUBJECT_MAX_LENGTH);
+        addMemberToSpace(slug, firstIssuer, firstSubject, SpaceRole.VIEWER);
+        addMemberToSpace(slug, secondIssuer, secondSubject, SpaceRole.VIEWER);
+
+        // when
+        MvcResult firstPage = page(admin, slug, 1, Optional.empty());
+        Optional<String> cursor = nextCursor(jsonOf(firstPage));
+        MvcResult secondPage = page(admin, slug, 1, cursor);
+
+        // then
+        assertThat(statusOf(firstPage)).isEqualTo(200);
+        assertThat(cursor).isPresent();
+        assertThat(statusOf(secondPage)).isEqualTo(200);
+        JsonNode secondBody = jsonOf(secondPage);
+        assertThat(subjectsOf(secondBody)).containsExactly(secondSubject);
+    }
+
+    @Test
+    void addingAnExistingMemberAnswersOk() throws Exception {
+        // given
+        String admin = uniqueSubject("existing-member");
+        String slug = uniqueSlug("existing-member");
+        String member = uniqueSubject("already-member");
+        seedSpace(slug);
+        MvcResult created = addMemberAs(admin, true, slug, memberBody(member, SpaceRole.VIEWER));
+
+        // when
+        MvcResult existing = addMemberAs(admin, true, slug, memberBody(member, SpaceRole.EDITOR));
+
+        // then
+        JsonNode body = jsonOf(existing);
+        String subject = body.path("subject").asString();
+        String role = body.path("role").asString();
+        assertThat(statusOf(created)).isEqualTo(201);
+        assertThat(statusOf(existing)).isEqualTo(200);
+        assertThat(subject).isEqualTo(member);
+        assertThat(role).isEqualTo(SpaceRole.VIEWER.name());
+    }
+
+    @Test
     void addingAMemberOverHttpGrantsAccess() throws Exception {
         // given
         String admin = uniqueSubject("member-add");
@@ -302,8 +350,12 @@ class SpaceMembersControllerIntegrationTest extends SecurityIntegrationTest {
     }
 
     private void addMemberToSpace(String slug, String subject, SpaceRole role) {
+        addMemberToSpace(slug, ISSUER, subject, role);
+    }
+
+    private void addMemberToSpace(String slug, String issuer, String subject, SpaceRole role) {
         SpaceService service = bean(SpaceService.class);
-        service.addMember(fixtureAdmin(), slug, new SpaceMember(ISSUER, subject, role));
+        service.addMember(fixtureAdmin(), slug, new SpaceMember(issuer, subject, role));
     }
 
     private Session createSession(String subject) {

@@ -212,11 +212,22 @@ describe('public shell', () => {
 })
 
 describe('status badge', () => {
+  it('the degraded state uses the label from the UI spec', () => {
+    const view = render(
+      <AppThemeProvider>
+        <StatusBadge state={StatusState.DEGRADED} />
+      </AppThemeProvider>,
+    )
+
+    expect(screen.getByText('Działa z problemami')).toBeDefined()
+    view.unmount()
+  })
+
   it('a state badge shows an icon and a text for every state', () => {
     const states = Object.values(StatusState)
     const labels: Record<StatusState, string> = {
       [StatusState.UP]: 'Działa',
-      [StatusState.DEGRADED]: 'Częściowo działa',
+      [StatusState.DEGRADED]: 'Działa z problemami',
       [StatusState.DOWN]: 'Nie działa',
       [StatusState.UNKNOWN]: 'Stan nieznany',
       [StatusState.MAINTENANCE]: 'Prace planowe',

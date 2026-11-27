@@ -4,7 +4,7 @@
 import type { components, operations } from './schema'
 
 export type ProblemDetail = components['schemas']['ProblemDetail']
-export type AddSpaceMemberResponse = operations['addSpaceMember']['responses'][201]['content']['application/json']
+export type AddSpaceMemberResponse = operations['addSpaceMember']['responses'][200]['content']['application/json']
 export type AddSpaceMemberRequest = operations['addSpaceMember']['requestBody']['content']['application/json']
 export type AddSpaceMemberPath = NonNullable<operations['addSpaceMember']['parameters']['path']>
 export type ChangeSpaceMemberRoleRequest = operations['changeSpaceMemberRole']['requestBody']['content']['application/json']

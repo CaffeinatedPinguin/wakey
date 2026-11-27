@@ -9,13 +9,13 @@ import java.util.Base64;
  */
 public final class CursorCodec {
 
-    static final int MAX_CURSOR_LENGTH = 256;
-
     private static final String FORMAT_VERSION = "v1";
 
     private static final char SEPARATOR = '\u001f';
 
     private static final int EXPECTED_PARTS = 2;
+
+    private static final int MAX_UTF8_BYTES_PER_CODE_UNIT = 3;
 
     private static final Base64.Encoder ENCODER = Base64.getUrlEncoder().withoutPadding();
 
@@ -29,8 +29,17 @@ public final class CursorCodec {
         return ENCODER.encodeToString(bytes);
     }
 
-    public static String decode(String cursor) {
-        if (cursor.length() > MAX_CURSOR_LENGTH) {
+    /**
+     * The longest cursor for a sort value of at most {@code maxSortValueLength} UTF-16 code units.
+     * One code unit takes at most three UTF-8 bytes; the version and the separator add three bytes.
+     */
+    public static int maxCursorLength(int maxSortValueLength) {
+        int payloadLength = FORMAT_VERSION.length() + 1 + maxSortValueLength * MAX_UTF8_BYTES_PER_CODE_UNIT;
+        return (payloadLength * 4 + 2) / 3;
+    }
+
+    public static String decode(String cursor, int maxCursorLength) {
+        if (cursor.length() > maxCursorLength) {
             throw new ApiException(CommonError.INVALID_CURSOR);
         }
         byte[] bytes;

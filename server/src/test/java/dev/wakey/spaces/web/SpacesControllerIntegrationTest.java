@@ -457,6 +457,45 @@ class SpacesControllerIntegrationTest extends SecurityIntegrationTest {
     }
 
     @Test
+    void aPutWithTheSameNameAndTheCurrentVersionKeepsTheVersion() throws Exception {
+        // given
+        String admin = uniqueSubject("same-name-current");
+        String slug = uniqueSlug("same-name-current");
+        MvcResult created = putSpace(admin, true, slug, nameBody("Same name"), true);
+        long createdVersion = jsonOf(created).path("version").asLong();
+
+        // when
+        MvcResult repeated = putSpace(admin, true, slug, nameAndVersionBody("Same name", createdVersion), true);
+        MvcResult renamed = putSpace(admin, true, slug, nameAndVersionBody("New name", createdVersion), true);
+
+        // then
+        long repeatedVersion = jsonOf(repeated).path("version").asLong();
+        long renamedVersion = jsonOf(renamed).path("version").asLong();
+        assertThat(statusOf(repeated)).isEqualTo(200);
+        assertThat(repeatedVersion).isEqualTo(createdVersion);
+        assertThat(statusOf(renamed)).isEqualTo(200);
+        assertThat(renamedVersion).isEqualTo(createdVersion + 1);
+    }
+
+    @Test
+    void aPutWithTheSameNameAndAStaleVersionIsAConflict() throws Exception {
+        // given
+        String admin = uniqueSubject("same-name-stale");
+        String slug = uniqueSlug("same-name-stale");
+        MvcResult created = putSpace(admin, true, slug, nameBody("Same name"), true);
+        long createdVersion = jsonOf(created).path("version").asLong();
+
+        // when
+        MvcResult stale = putSpace(admin, true, slug, nameAndVersionBody("Same name", createdVersion - 1), true);
+
+        // then
+        JsonNode body = jsonOf(stale);
+        String code = body.path("code").asString();
+        assertThat(statusOf(stale)).isEqualTo(409);
+        assertThat(code).isEqualTo(CommonError.VERSION_CONFLICT.getCode());
+    }
+
+    @Test
     void putOfANewSlugAnswersCreatedWithALocationHeader() throws Exception {
         // given
         String admin = uniqueSubject("put-create");

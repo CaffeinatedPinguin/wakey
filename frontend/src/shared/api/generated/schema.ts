@@ -550,7 +550,16 @@ export interface operations {
             };
         };
         responses: {
-            /** @description The membership exists; an existing membership keeps its role. */
+            /** @description The membership already exists; an existing membership keeps its role. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SpaceMemberResponse"];
+                };
+            };
+            /** @description The membership was created. */
             201: {
                 headers: {
                     [name: string]: unknown;
@@ -599,9 +608,11 @@ export interface operations {
     };
     removeSpaceMember: {
         parameters: {
-            query?: {
-                issuer?: string;
-                subject?: string;
+            query: {
+                /** @description The OIDC issuer of the member */
+                issuer: string;
+                /** @description The OIDC subject of the member */
+                subject: string;
             };
             header?: never;
             path: {
@@ -611,7 +622,7 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description The member was removed. */
+            /** @description No Content */
             204: {
                 headers: {
                     [name: string]: unknown;
@@ -658,9 +669,11 @@ export interface operations {
     };
     changeSpaceMemberRole: {
         parameters: {
-            query?: {
-                issuer?: string;
-                subject?: string;
+            query: {
+                /** @description The OIDC issuer of the member */
+                issuer: string;
+                /** @description The OIDC subject of the member */
+                subject: string;
             };
             header?: never;
             path: {
@@ -674,7 +687,7 @@ export interface operations {
             };
         };
         responses: {
-            /** @description The role was changed. */
+            /** @description No Content */
             204: {
                 headers: {
                     [name: string]: unknown;

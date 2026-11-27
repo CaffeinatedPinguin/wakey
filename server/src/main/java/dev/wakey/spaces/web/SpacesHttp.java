@@ -20,6 +20,18 @@ final class SpacesHttp {
 
     private static final String MEMBER_SEPARATOR = ":";
 
+    private static final int ISSUER_LENGTH_DIGITS =
+            Integer.toString(SpaceMember.ISSUER_MAX_LENGTH).length();
+
+    private static final int MAX_MEMBER_SORT_KEY_LENGTH = ISSUER_LENGTH_DIGITS
+            + MEMBER_SEPARATOR.length()
+            + SpaceMember.ISSUER_MAX_LENGTH
+            + SpaceMember.SUBJECT_MAX_LENGTH;
+
+    private static final int MAX_MEMBER_CURSOR_LENGTH = CursorCodec.maxCursorLength(MAX_MEMBER_SORT_KEY_LENGTH);
+
+    private static final int MAX_SLUG_CURSOR_LENGTH = CursorCodec.maxCursorLength(SpaceSlug.MAX_LENGTH);
+
     private SpacesHttp() {}
 
     static URI location(String slug) {
@@ -39,11 +51,11 @@ final class SpacesHttp {
         if (cursor == null) {
             return new SpaceMemberId("", "");
         }
-        return decodeMember(CursorCodec.decode(cursor));
+        return decodeMember(CursorCodec.decode(cursor, MAX_MEMBER_CURSOR_LENGTH));
     }
 
     private static String sortValue(String encoded) {
-        String sortValue = CursorCodec.decode(encoded);
+        String sortValue = CursorCodec.decode(encoded, MAX_SLUG_CURSOR_LENGTH);
         if (!SpaceSlug.isValid(sortValue)) {
             throw new ApiException(CommonError.INVALID_CURSOR);
         }

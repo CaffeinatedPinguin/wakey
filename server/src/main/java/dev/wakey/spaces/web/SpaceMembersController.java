@@ -1,7 +1,6 @@
 package dev.wakey.spaces.web;
 
 import dev.wakey.security.CurrentUser;
-import dev.wakey.spaces.SpaceMemberId;
 import dev.wakey.spaces.SpaceService;
 import dev.wakey.web.ApiProperties;
 import dev.wakey.web.CursorPage;
@@ -44,28 +43,33 @@ final class SpaceMembersController {
         return CursorPage.of(rows, pageSize, SpacesHttp::memberSortKey, SpaceMemberResponse::from);
     }
 
-    @ResponseStatus(HttpStatus.CREATED)
     @RequestMapping(method = RequestMethod.POST)
-    SpaceMemberResponse addSpaceMember(
+    ResponseEntity<SpaceMemberResponse> addSpaceMember(
             @PathVariable String slug, @Valid @RequestBody AddSpaceMemberRequest request, CurrentUser actor) {
-        var stored = spaces.addMember(actor, slug, request.toMember());
-        return SpaceMemberResponse.from(stored);
+        var result = spaces.addMember(actor, slug, request.toMember());
+        var response = SpaceMemberResponse.from(result.member());
+        if (result.created()) {
+            return ResponseEntity.status(HttpStatus.CREATED).body(response);
+        }
+        return ResponseEntity.ok(response);
     }
 
+    @ResponseStatus(HttpStatus.NO_CONTENT)
     @RequestMapping(path = "/role", method = RequestMethod.PUT)
-    ResponseEntity<Void> changeSpaceMemberRole(
+    void changeSpaceMemberRole(
             @PathVariable String slug,
-            @Valid @ParameterObject SpaceMemberId member,
+            @Valid @ParameterObject SpaceMemberQuery member,
             @Valid @RequestBody ChangeSpaceMemberRoleRequest request,
             CurrentUser actor) {
-        spaces.changeRole(actor, slug, request.toMember(member));
-        return ResponseEntity.noContent().build();
+        var memberId = member.toId();
+        var updated = request.toMember(memberId);
+        spaces.changeRole(actor, slug, updated);
     }
 
+    @ResponseStatus(HttpStatus.NO_CONTENT)
     @RequestMapping(method = RequestMethod.DELETE)
-    ResponseEntity<Void> removeSpaceMember(
-            @PathVariable String slug, @Valid @ParameterObject SpaceMemberId member, CurrentUser actor) {
-        spaces.removeMember(actor, slug, member);
-        return ResponseEntity.noContent().build();
+    void removeSpaceMember(
+            @PathVariable String slug, @Valid @ParameterObject SpaceMemberQuery member, CurrentUser actor) {
+        spaces.removeMember(actor, slug, member.toId());
     }
 }

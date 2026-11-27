@@ -29,9 +29,9 @@ public class SpaceService {
     private final UserSessions sessions;
 
     /**
-     * Creates a space or renames it by slug. A repeat without a version and with the same name
-     * changes nothing while a different name bumps the version; a stale {@code expectedVersion} is
-     * a conflict.
+     * Creates a space or renames it by slug. A repeat with the same name and the current version (or
+     * no version) changes nothing while every other write bumps the version; a stale {@code
+     * expectedVersion} is a conflict.
      */
     public PutResult put(
             CurrentUser actor, @InvalidSlug String slug, @InvalidName String name, @Nullable Long expectedVersion) {
@@ -82,8 +82,11 @@ public class SpaceService {
         return store.listForMember(actor.issuer(), actor.subject(), cursor, limit);
     }
 
-    /** Adds a member to a space the caller manages; an existing membership keeps its role. */
-    public SpaceMember addMember(CurrentUser actor, @InvalidSlug String slug, @Valid SpaceMember member) {
+    /**
+     * Adds a member to a space the caller manages and reports whether it was created; an existing
+     * membership keeps its role.
+     */
+    public AddMemberResult addMember(CurrentUser actor, @InvalidSlug String slug, @Valid SpaceMember member) {
         SpaceEntity space = requireManageableSpace(actor, slug);
         return store.addMember(space.id(), member);
     }
@@ -117,12 +120,18 @@ public class SpaceService {
     }
 
     private PutResult keepOrRename(SpaceEntity existing, String name, @Nullable Long expectedVersion) {
-        if (expectedVersion == null && existing.name().equals(name)) {
+        if (nothingChanges(existing, name, expectedVersion)) {
             return new PutResult(store.toSpace(existing), false);
         }
         long version = expectedVersion == null ? existing.version() : expectedVersion;
         SpaceEntity renamed = store.rename(existing, name, version);
         return new PutResult(store.toSpace(renamed), false);
+    }
+
+    private static boolean nothingChanges(SpaceEntity existing, String name, @Nullable Long expectedVersion) {
+        boolean sameName = existing.name().equals(name);
+        boolean currentVersion = expectedVersion == null || expectedVersion == existing.version();
+        return sameName && currentVersion;
     }
 
     private SpaceEntity requireManageableSpace(CurrentUser actor, String slug) {

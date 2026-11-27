@@ -1,5 +1,6 @@
 package dev.wakey.web;
 
+import io.swagger.v3.core.util.RefUtils;
 import io.swagger.v3.oas.models.Components;
 import io.swagger.v3.oas.models.OpenAPI;
 import io.swagger.v3.oas.models.info.Info;
@@ -9,6 +10,7 @@ import org.springdoc.core.models.GroupedOpenApi;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.ProblemDetail;
 
 /** Registers the API limits and the public OpenAPI group generated from the controllers. */
 @Configuration(proxyBeanMethods = false)
@@ -21,9 +23,9 @@ public class ApiConfiguration {
 
     private static final String VERSION = "v1";
 
-    private static final String ERROR_SCHEMA_NAME = "ProblemDetail";
+    private static final String ERROR_SCHEMA_NAME = ProblemDetail.class.getSimpleName();
 
-    private static final String ERROR_SCHEMA_REF = "#/components/schemas/" + ERROR_SCHEMA_NAME;
+    private static final String ERROR_SCHEMA_REF = RefUtils.constructRef(ERROR_SCHEMA_NAME);
 
     @Bean
     GroupedOpenApi publicApi(ApiProperties apiProperties, List<ErrorCodeSet> errorCodeSets) {

@@ -1,5 +1,6 @@
 package dev.wakey.spaces.internal;
 
+import dev.wakey.spaces.AddMemberResult;
 import dev.wakey.spaces.Space;
 import dev.wakey.spaces.SpaceMember;
 import dev.wakey.spaces.SpaceMemberId;
@@ -97,14 +98,20 @@ public class SpaceStore {
         return viewsOf(page, roles);
     }
 
-    public SpaceMember addMember(UUID spaceId, SpaceMember member) {
+    public AddMemberResult addMember(UUID spaceId, SpaceMember member) {
         SpaceMemberKey key = new SpaceMemberKey(spaceId, member.issuer(), member.subject());
         Optional<SpaceMemberEntity> existing = members.findById(key);
         if (existing.isPresent()) {
-            return toMember(existing.get());
+            SpaceMember stored = toMember(existing.get());
+            return new AddMemberResult(stored, false);
         }
-        insertMember(key, member.role());
-        return members.findById(key).map(SpaceStore::toMember).orElse(member);
+        boolean created = insertMember(key, member.role());
+        SpaceMember stored = created ? member : memberFromRepository(key, member);
+        return new AddMemberResult(stored, created);
+    }
+
+    private SpaceMember memberFromRepository(SpaceMemberKey key, SpaceMember fallback) {
+        return members.findById(key).map(SpaceStore::toMember).orElse(fallback);
     }
 
     /** Lists members ordered by issuer and subject, resuming after the given identity. */
@@ -121,11 +128,13 @@ public class SpaceStore {
         return page;
     }
 
-    private void insertMember(SpaceMemberKey key, SpaceRole role) {
+    private boolean insertMember(SpaceMemberKey key, SpaceRole role) {
         try {
             aggregates.insert(new SpaceMemberEntity(key, role));
+            return true;
         } catch (DuplicateKeyException exception) {
             log.debug("Membership {} already exists", key, exception);
+            return false;
         }
     }
 

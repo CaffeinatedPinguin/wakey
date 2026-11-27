@@ -10,6 +10,8 @@ import org.junit.jupiter.api.Test;
 
 class CursorCodecTest {
 
+    private static final int MAX_CURSOR_LENGTH = CursorCodec.maxCursorLength(100);
+
     @Test
     void cursorRoundTrips() {
         // given
@@ -17,7 +19,7 @@ class CursorCodecTest {
 
         // when
         String cursor = CursorCodec.encode(sortValue);
-        String decoded = CursorCodec.decode(cursor);
+        String decoded = CursorCodec.decode(cursor, MAX_CURSOR_LENGTH);
 
         // then
         assertThat(decoded).isEqualTo(sortValue);
@@ -26,7 +28,7 @@ class CursorCodecTest {
     @Test
     void tamperedCursorIsRejected() {
         // when
-        Throwable thrown = catchThrowable(() -> CursorCodec.decode("not-base64!"));
+        Throwable thrown = catchThrowable(() -> CursorCodec.decode("not-base64!", MAX_CURSOR_LENGTH));
 
         // then
         assertThat(thrown).isInstanceOf(ApiException.class);
@@ -39,10 +41,11 @@ class CursorCodecTest {
     @Test
     void aCursorLongerThanTheLimitIsRejected() {
         // given
-        String cursor = "a".repeat(CursorCodec.MAX_CURSOR_LENGTH + 1);
+        int maxCursorLength = CursorCodec.maxCursorLength(100);
+        String cursor = "a".repeat(maxCursorLength + 1);
 
         // when
-        Throwable thrown = catchThrowable(() -> CursorCodec.decode(cursor));
+        Throwable thrown = catchThrowable(() -> CursorCodec.decode(cursor, maxCursorLength));
 
         // then
         assertThat(thrown).isInstanceOf(ApiException.class);
@@ -60,7 +63,7 @@ class CursorCodecTest {
         Base64.Decoder decoder = Base64.getUrlDecoder();
         byte[] bytes = decoder.decode(cursor);
         String payload = new String(bytes, StandardCharsets.UTF_8);
-        String decoded = CursorCodec.decode(cursor);
+        String decoded = CursorCodec.decode(cursor, MAX_CURSOR_LENGTH);
 
         // then
         assertThat(payload).isEqualTo("v1\u001f" + sortValue);

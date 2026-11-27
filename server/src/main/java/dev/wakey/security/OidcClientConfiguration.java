@@ -22,6 +22,8 @@ class OidcClientConfiguration {
 
     private static final String OIDC_REGISTRATION_ID = "oidc";
 
+    private static final String OIDC_USER_NAME_ATTRIBUTE = "sub";
+
     @Bean
     GrantedAuthoritiesMapper adminAuthoritiesMapper(SecurityProperties properties) {
         return new AdminAuthoritiesMapper(properties.adminClaim(), properties.adminGroup());
@@ -44,6 +46,7 @@ class OidcClientConfiguration {
         ClientSettings settings = ClientSettings.builder().requireProofKey(true).build();
         return ClientRegistration.withClientRegistration(registration)
                 .clientSettings(settings)
+                .userNameAttributeName(OIDC_USER_NAME_ATTRIBUTE)
                 .build();
     }
 }

@@ -4,6 +4,7 @@ import dev.wakey.spaces.SpaceError;
 import dev.wakey.spaces.SpaceRole;
 import dev.wakey.spaces.SpaceSlug;
 import dev.wakey.web.ErrorCodeSet;
+import io.swagger.v3.core.util.RefUtils;
 import io.swagger.v3.oas.models.Components;
 import io.swagger.v3.oas.models.OpenAPI;
 import io.swagger.v3.oas.models.Operation;
@@ -27,7 +28,7 @@ class SpacesWebConfiguration {
 
     private static final String SPACE_ROLE_SCHEMA = SpaceRole.class.getSimpleName();
 
-    private static final String SPACE_ROLE_REF = "#/components/schemas/" + SPACE_ROLE_SCHEMA;
+    private static final String SPACE_ROLE_REF = RefUtils.constructRef(SPACE_ROLE_SCHEMA);
 
     private static final String ROLE_PROPERTY = "role";
 

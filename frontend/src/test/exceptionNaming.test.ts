@@ -8,6 +8,9 @@ const ALLOWED_FILES = [
   `${SOURCE_ROOT}/test/exceptionNaming.test.ts`,
 ]
 const FORBIDDEN_WORD = /problem(?!Detail)/i
+const IDENTIFIER = /[A-Za-z_$][A-Za-z0-9_$]*/g
+const COMMENTS_AND_STRINGS =
+  /\/\*[\s\S]*?\*\/|\/\/[^\n\r]*|'(?:\\.|[^'\\])*'|"(?:\\.|[^"\\])*"|`(?:\\.|[^`\\])*`/g
 
 function isSourceFile(name: string): boolean {
   return name.endsWith('.ts') || name.endsWith('.tsx')
@@ -30,8 +33,18 @@ function isAllowed(path: string): boolean {
   return path.startsWith(`${GENERATED_DIRECTORY}/`) || ALLOWED_FILES.includes(path)
 }
 
+function codeIdentifiers(source: string): string[] {
+  return source.replace(COMMENTS_AND_STRINGS, ' ').match(IDENTIFIER) ?? []
+}
+
+function fileNameOf(path: string): string {
+  const fileName = path.slice(path.lastIndexOf('/') + 1)
+  return fileName.slice(0, fileName.lastIndexOf('.'))
+}
+
 function mentionsForbiddenWord(path: string): boolean {
-  return FORBIDDEN_WORD.test(path) || FORBIDDEN_WORD.test(readFileSync(path, 'utf8'))
+  const identifiers = codeIdentifiers(readFileSync(path, 'utf8'))
+  return [fileNameOf(path), ...identifiers].some((identifier) => FORBIDDEN_WORD.test(identifier))
 }
 
 describe('the API exception naming', () => {
