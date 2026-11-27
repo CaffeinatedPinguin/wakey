@@ -843,22 +843,28 @@
       "get" : {
         "operationId" : "listSpaces",
         "parameters" : [ {
-          "description" : "The page size, at least 1; values above the instance maximum are capped.",
+          "description" : "The page size, at least 1; values above the instance maximum are capped",
+          "example" : 20,
           "in" : "query",
           "name" : "limit",
           "required" : false,
           "schema" : {
+            "description" : "The page size, at least 1; values above the instance maximum are capped",
+            "example" : 20,
             "exclusiveMinimum" : 0,
+            "format" : "int32",
             "maximum" : 100,
             "minimum" : 1,
-            "type" : "integer"
+            "type" : [ "integer", "null" ]
           }
         }, {
+          "description" : "The opaque cursor of the next page",
           "in" : "query",
           "name" : "cursor",
           "required" : false,
           "schema" : {
-            "type" : "string"
+            "description" : "The opaque cursor of the next page",
+            "type" : [ "string", "null" ]
           }
         } ],
         "responses" : {
@@ -1146,13 +1152,13 @@
             "type" : "string"
           }
         }, {
-          "description" : "The maximum number of items to return",
+          "description" : "The page size, at least 1; values above the instance maximum are capped",
           "example" : 20,
           "in" : "query",
           "name" : "limit",
           "required" : false,
           "schema" : {
-            "description" : "The maximum number of items to return",
+            "description" : "The page size, at least 1; values above the instance maximum are capped",
             "example" : 20,
             "exclusiveMinimum" : 0,
             "format" : "int32",
@@ -1188,7 +1194,7 @@
           "schema" : {
             "$ref" : "#/components/schemas/CheckState",
             "description" : "The current state, derived from the newest result",
-            "type" : [ "string", "null" ]
+            "type" : "string"
           }
         }, {
           "description" : "The protocol to measure",
@@ -1198,7 +1204,7 @@
           "schema" : {
             "$ref" : "#/components/schemas/CheckType",
             "description" : "The protocol to measure",
-            "type" : [ "string", "null" ]
+            "type" : "string"
           }
         }, {
           "description" : "A tag the check must carry",
@@ -1230,7 +1236,7 @@
           "schema" : {
             "$ref" : "#/components/schemas/PausedReason",
             "description" : "Why monitoring is paused",
-            "type" : [ "string", "null" ]
+            "type" : "string"
           }
         } ],
         "responses" : {
@@ -2012,22 +2018,28 @@
             "type" : "string"
           }
         }, {
-          "description" : "The page size, at least 1; values above the instance maximum are capped.",
+          "description" : "The page size, at least 1; values above the instance maximum are capped",
+          "example" : 20,
           "in" : "query",
           "name" : "limit",
           "required" : false,
           "schema" : {
+            "description" : "The page size, at least 1; values above the instance maximum are capped",
+            "example" : 20,
             "exclusiveMinimum" : 0,
+            "format" : "int32",
             "maximum" : 100,
             "minimum" : 1,
-            "type" : "integer"
+            "type" : [ "integer", "null" ]
           }
         }, {
+          "description" : "The opaque cursor of the next page",
           "in" : "query",
           "name" : "cursor",
           "required" : false,
           "schema" : {
-            "type" : "string"
+            "description" : "The opaque cursor of the next page",
+            "type" : [ "string", "null" ]
           }
         } ],
         "responses" : {

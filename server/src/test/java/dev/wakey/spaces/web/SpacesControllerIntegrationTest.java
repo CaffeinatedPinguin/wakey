@@ -327,7 +327,7 @@ class SpacesControllerIntegrationTest extends SecurityIntegrationTest {
         String wrongMethodCode = wrongMethodBody.path("code").asString();
         assertThat(statusOf(badLimit)).isEqualTo(400);
         assertThat(contentTypeOf(badLimit)).isEqualTo(ERROR_MEDIA_TYPE);
-        assertThat(badLimitCode).isEqualTo(CommonError.BAD_REQUEST.getCode());
+        assertThat(badLimitCode).isEqualTo(CommonError.VALIDATION_FAILED.getCode());
         assertThat(statusOf(wrongMethod)).isEqualTo(405);
         assertThat(contentTypeOf(wrongMethod)).isEqualTo(ERROR_MEDIA_TYPE);
         assertThat(wrongMethodCode).isEqualTo(CommonError.METHOD_NOT_ALLOWED.getCode());

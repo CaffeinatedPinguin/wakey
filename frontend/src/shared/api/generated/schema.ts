@@ -755,8 +755,11 @@ export interface operations {
     listSpaces: {
         parameters: {
             query?: {
-                /** @description The page size, at least 1; values above the instance maximum are capped. */
-                limit?: number;
+                /**
+                 * @description The maximum number of items to return
+                 * @example 20
+                 */
+                limit?: number | null;
                 cursor?: string;
             };
             header?: never;
@@ -995,8 +998,7 @@ export interface operations {
                  * @example 20
                  */
                 limit?: number | null;
-                /** @description The opaque cursor of the next page */
-                cursor?: string | null;
+                cursor?: string;
                 /** @description Text matched against the name and the target */
                 q?: string | null;
                 /** @description The current state, derived from the newest result */
@@ -1521,8 +1523,11 @@ export interface operations {
     listSpaceMembers: {
         parameters: {
             query?: {
-                /** @description The page size, at least 1; values above the instance maximum are capped. */
-                limit?: number;
+                /**
+                 * @description The maximum number of items to return
+                 * @example 20
+                 */
+                limit?: number | null;
                 cursor?: string;
             };
             header?: never;
