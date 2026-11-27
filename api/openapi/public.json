@@ -592,6 +592,29 @@
         "required" : [ "name" ],
         "type" : "object"
       },
+      "SessionResponse" : {
+        "properties" : {
+          "createdAt" : {
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "current" : {
+            "type" : "boolean"
+          },
+          "expiresAt" : {
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "id" : {
+            "type" : "string"
+          },
+          "lastUsedAt" : {
+            "format" : "date-time",
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
       "SetSpaceSettingRequest" : {
         "description" : "The desired value of a space setting",
         "properties" : {
@@ -855,6 +878,138 @@
         },
         "summary" : "Return the authenticated user",
         "tags" : [ "me-controller" ]
+      }
+    },
+    "/api/v1/me/sessions" : {
+      "delete" : {
+        "operationId" : "revokeMyOtherSessions",
+        "responses" : {
+          "204" : {
+            "description" : "Every other session was ended."
+          },
+          "401" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description" : "Authentication is required."
+          },
+          "403" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description" : "The caller uses an API token."
+          }
+        },
+        "security" : [ {
+          "sessionAuth" : [ ]
+        } ],
+        "summary" : "End every other session of the caller",
+        "tags" : [ "my-sessions-controller" ]
+      },
+      "get" : {
+        "operationId" : "listMySessions",
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "items" : {
+                    "$ref" : "#/components/schemas/SessionResponse"
+                  },
+                  "type" : "array"
+                }
+              }
+            },
+            "description" : "OK"
+          },
+          "401" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description" : "Authentication is required."
+          },
+          "403" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description" : "The caller uses an API token."
+          }
+        },
+        "security" : [ {
+          "sessionAuth" : [ ]
+        } ],
+        "summary" : "List the active sessions of the caller",
+        "tags" : [ "my-sessions-controller" ]
+      }
+    },
+    "/api/v1/me/sessions/{id}" : {
+      "delete" : {
+        "operationId" : "revokeMySession",
+        "parameters" : [ {
+          "description" : "The opaque session identifier",
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "204" : {
+            "description" : "The session was ended."
+          },
+          "401" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description" : "Authentication is required."
+          },
+          "403" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description" : "The caller uses an API token."
+          },
+          "404" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description" : "The session was not found."
+          }
+        },
+        "security" : [ {
+          "sessionAuth" : [ ]
+        } ],
+        "summary" : "End one of the caller's sessions",
+        "tags" : [ "my-sessions-controller" ]
       }
     },
     "/api/v1/spaces" : {

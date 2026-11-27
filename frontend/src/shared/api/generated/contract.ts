@@ -16,6 +16,7 @@ export const contract = {
   getSpace: { method: 'get', path: '/api/v1/spaces/{slug}' },
   getSpaceSettings: { method: 'get', path: '/api/v1/spaces/{slug}/settings' },
   listChecks: { method: 'get', path: '/api/v1/spaces/{slug}/checks' },
+  listMySessions: { method: 'get', path: '/api/v1/me/sessions' },
   listSpaceMembers: { method: 'get', path: '/api/v1/spaces/{slug}/members' },
   listSpaces: { method: 'get', path: '/api/v1/spaces' },
   listTokens: { method: 'get', path: '/api/v1/spaces/{slug}/tokens' },
@@ -26,6 +27,8 @@ export const contract = {
   removeSpaceMember: { method: 'delete', path: '/api/v1/spaces/{slug}/members' },
   resetSpaceSettings: { method: 'delete', path: '/api/v1/spaces/{slug}/settings' },
   resumeCheck: { method: 'post', path: '/api/v1/spaces/{slug}/checks/{id}/resume' },
+  revokeMyOtherSessions: { method: 'delete', path: '/api/v1/me/sessions' },
+  revokeMySession: { method: 'delete', path: '/api/v1/me/sessions/{id}' },
   revokeToken: { method: 'delete', path: '/api/v1/spaces/{slug}/tokens/{id}' },
   updateCheck: { method: 'put', path: '/api/v1/spaces/{slug}/checks/{id}' },
 } as const
