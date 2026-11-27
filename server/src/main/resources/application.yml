@@ -44,6 +44,10 @@ wakey:
       interval: 60
       timeout: 10
       retries: 1
+  checks:
+    scheduler:
+      # The number of due checks the scheduler runs at the same time.
+      parallelism: 4
   # postgres-only: idle_in_transaction_session_timeout and lock_timeout are PostgreSQL server settings.
   database:
     idle-in-transaction-timeout: 60s

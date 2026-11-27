@@ -10,6 +10,7 @@ import dev.wakey.checks.StateCounts;
 import dev.wakey.web.ApiException;
 import dev.wakey.web.CommonError;
 import java.time.Clock;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -51,6 +52,30 @@ public class CheckStore {
 
     public Optional<CheckResult> latest(UUID checkId) {
         return results.latest(checkId);
+    }
+
+    /**
+     * The active checks whose interval has elapsed since their newest result, or since their
+     * creation when they have no result yet. The due moment comes from the stored time, so a late
+     * cycle never shifts later intervals.
+     */
+    public List<CheckEntity> due(Instant now) {
+        List<CheckEntity> active = queries.active();
+        List<CheckEntity> due = new ArrayList<>(active.size());
+        for (CheckEntity check : active) {
+            Optional<CheckResult> latest = results.latest(check.id());
+            Instant base = latest.map(CheckResult::checkedAt).orElse(check.createdAt());
+            Instant dueAt = base.plusSeconds(check.intervalSeconds());
+            if (!dueAt.isAfter(now)) {
+                due.add(check);
+            }
+        }
+        return due;
+    }
+
+    /** The stored check when it still exists and is not paused; the scheduler publishes only then. */
+    public Optional<CheckEntity> active(UUID id) {
+        return checks.findById(id).filter(entity -> !entity.paused());
     }
 
     public List<CheckEntity> targets(UUID spaceId, @Nullable List<UUID> ids, @Nullable CheckFilter filter) {

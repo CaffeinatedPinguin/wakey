@@ -16,13 +16,18 @@ public final class TestClock extends Clock {
 
     private static final long STEP_MILLIS = 1;
 
-    private final AtomicReference<Instant> pinned = new AtomicReference<>();
+    private final AtomicReference<@Nullable Instant> pinned = new AtomicReference<>();
 
     private final AtomicReference<Instant> last = new AtomicReference<>(Instant.now());
 
     /** Pins the clock to the given instant. */
     public void pinAt(Instant instant) {
         pinned.set(instant);
+    }
+
+    /** Returns the clock to wall time, so a pinned test does not leak its instant to the next one. */
+    public void clearPin() {
+        pinned.set(null);
     }
 
     @Override
