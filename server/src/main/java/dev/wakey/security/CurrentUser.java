@@ -1,22 +1,28 @@
 package dev.wakey.security;
 
-import io.swagger.v3.oas.annotations.media.Schema;
+import java.net.URL;
+import java.util.Objects;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.oauth2.core.oidc.user.OidcUser;
 
 /**
- * The authenticated caller as the HTTP adapters see it: the OIDC subject and the application Admin
- * flag. The token context lives in {@link ApiTokenAuthentication}, not in this response model.
+ * The authenticated caller: the OIDC issuer and subject pair and whether the user is an application
+ * Admin. An {@link OidcUser} supplies both values from the token; every other authentication type
+ * (tests, future tokens) uses {@link #LOCAL_ISSUER} and {@link Authentication#getName()} as its
+ * subject.
  */
-public record CurrentUser(
-        @Schema(description = "The OIDC subject of the authenticated user", requiredMode = Schema.RequiredMode.REQUIRED)
-        String subject,
+public record CurrentUser(String issuer, String subject, boolean admin) {
 
-        @Schema(
-                description = "Whether the user is an instance administrator",
-                requiredMode = Schema.RequiredMode.REQUIRED)
-        boolean admin) {
+    public static final String LOCAL_ISSUER = "urn:wakey:local";
 
     public static CurrentUser from(Authentication authentication) {
-        return new CurrentUser(authentication.getName(), AdminAuthoritiesMapper.isAdmin(authentication));
+        boolean admin = AdminAuthoritiesMapper.isAdmin(authentication);
+        if (authentication.getPrincipal() instanceof OidcUser oidcUser) {
+            URL issuerUrl = Objects.requireNonNull(oidcUser.getIssuer());
+            String subject = Objects.requireNonNull(oidcUser.getSubject());
+            String issuer = issuerUrl.toString();
+            return new CurrentUser(issuer, subject, admin);
+        }
+        return new CurrentUser(LOCAL_ISSUER, authentication.getName(), admin);
     }
 }

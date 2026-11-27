@@ -6,3 +6,8 @@ minimumReleaseAgeExclude:
   - '@tanstack/query-core@5.108.3'
   - '@tanstack/react-query@5.108.3'
   - 'i18next@27.2.4'
+
+# The owner approved this override on 2026-11-26: brace-expansion 2.x below 2.1.8 has published
+# advisories, and minimatch 5 (through openapi-typescript) accepts any 2.x.
+overrides:
+  'brace-expansion@>=2.0.0 <2.1.8': '2.1.8'

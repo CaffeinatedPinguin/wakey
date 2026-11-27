@@ -1,27 +1,15 @@
 package dev.wakey.spaces;
 
-import java.time.Instant;
 import java.util.UUID;
 import org.jspecify.annotations.Nullable;
 
 /**
- * A space as seen by one caller. An application admin sees every space with {@code admin} set, and
- * {@code role} carries a membership role only when that admin is also a member of the space.
- * {@code memberSince} is when the caller joined, and is null without a membership. {@code planName}
- * is null when the space uses the instance default plan.
+ * A space as seen by one caller. An application admin sees every space; {@code role} carries a
+ * membership role only when that admin is also a member of the space.
  */
 public record SpaceView(
         UUID id,
         String slug,
         String name,
-        @Nullable String planName,
         long version,
-        boolean admin,
-        @Nullable SpaceRole role,
-        @Nullable Instant memberSince) {
-
-    /** Whether the caller may change the space: an application Admin or a member with the Editor role. */
-    public boolean canWrite() {
-        return admin || role == SpaceRole.EDITOR;
-    }
-}
+        @Nullable SpaceRole role) {}

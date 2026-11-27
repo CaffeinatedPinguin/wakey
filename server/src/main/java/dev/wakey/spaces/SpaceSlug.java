@@ -8,20 +8,17 @@ import java.util.regex.Pattern;
  */
 public final class SpaceSlug {
 
-    public static final String PATTERN = "^[a-z][a-z0-9-]{1,38}[a-z0-9]$";
+    public static final int MIN_LENGTH = 3;
+
+    public static final int MAX_LENGTH = 40;
+
+    public static final String PATTERN = "^[a-z][a-z0-9-]{" + (MIN_LENGTH - 2) + "," + (MAX_LENGTH - 2) + "}[a-z0-9]$";
 
     private static final Pattern COMPILED = Pattern.compile(PATTERN);
 
     private SpaceSlug() {}
 
-    public static String requireValid(String candidate) {
-        boolean valid = COMPILED.matcher(candidate).matches();
-        if (!valid) {
-            throw new InvalidSpaceException(
-                    "slug",
-                    "invalid_slug",
-                    "A space slug must have 3-40 lowercase letters, digits or hyphens, start with a letter and end with a letter or digit");
-        }
-        return candidate;
+    public static boolean isValid(String candidate) {
+        return COMPILED.matcher(candidate).matches();
     }
 }

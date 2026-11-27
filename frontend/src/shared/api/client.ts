@@ -1,8 +1,8 @@
 import axios from 'axios'
 import type { AxiosInstance } from 'axios'
-import { ApiError, toApiError } from './problem'
+import { ApiException, ClientErrorCode, toApiException } from './apiException'
 
-export { isNotFoundError, isUnauthorizedError } from './problem'
+export { isNotFoundException, isUnauthorizedException } from './apiException'
 
 const NETWORK_RETRY_LIMIT = 2
 
@@ -27,21 +27,21 @@ export function createApiClient({ baseURL }: ApiClientOptions): AxiosInstance {
 }
 
 // A cancelled request is not a failure the UI should report, so it keeps its
-// original cancellation error; everything else becomes one ApiError.
+// original cancellation error; everything else becomes one ApiException.
 function toResponseError(error: unknown): Error {
   if (axios.isCancel(error) && error instanceof Error) {
     return error
   }
-  return toApiError(error)
+  return toApiException(error)
 }
 
 export function shouldRetryRequest(failureCount: number, error: unknown): boolean {
-  return isNetworkError(error) && failureCount < NETWORK_RETRY_LIMIT
+  return isNetworkException(error) && failureCount < NETWORK_RETRY_LIMIT
 }
 
-function isNetworkError(error: unknown): boolean {
-  if (error instanceof ApiError) {
-    return error.code === 'network'
+function isNetworkException(error: unknown): boolean {
+  if (error instanceof ApiException) {
+    return error.code === ClientErrorCode.NETWORK
   }
   return axios.isAxiosError(error) && error.response === undefined
 }

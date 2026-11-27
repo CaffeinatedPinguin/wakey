@@ -1,6 +1,10 @@
 import { cleanup, fireEvent, screen, waitFor, within } from '@testing-library/react'
-import { afterEach, beforeEach, describe, expect, it } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import type { MockInstance } from 'vitest'
+import type { AppRouter } from '../../app/router'
 import type { Me } from '../../features/auth'
+import { ErrorCode } from '../../shared/api/generated/enums'
+import type { SpaceRole } from '../../shared/api/generated/enums'
 import { appConfig } from '../../shared/config'
 import { signedInUser } from '../../test/data'
 import { installMockApi } from '../../test/mockApi'
@@ -17,7 +21,7 @@ const MOBILE_WIDTH = 375
 interface SpaceFixture {
   slug: string
   name: string
-  role: 'EDITOR' | 'VIEWER' | null
+  role: SpaceRole | null
   version: number
 }
 
@@ -60,7 +64,7 @@ function spaceSlug(url: string): string | undefined {
 function handleList(): MockReply {
   api.listRequests += 1
   if (api.failFirstList && api.listRequests === 1) {
-    return { status: 500, data: { code: 'internal_error' } }
+    return { status: 500, data: { code: ErrorCode.INTERNAL_ERROR } }
   }
   const items = api.spaces.slice(0, api.pageSize)
   const nextCursor = api.spaces.length > api.pageSize ? 'next' : null
@@ -70,7 +74,7 @@ function handleList(): MockReply {
 function handleGet(slug: string): MockReply {
   const space = api.spaces.find((item) => item.slug === slug)
   if (space === undefined) {
-    return { status: 404, data: { code: 'not_found' } }
+    return { status: 404, data: { code: ErrorCode.NOT_FOUND } }
   }
   return { status: 200, data: space }
 }
@@ -84,7 +88,7 @@ function handleRequest(request: MockRequest): MockReply {
   }
   const slug = spaceSlug(request.url)
   if (slug === undefined) {
-    return { status: 404, data: { code: 'not_found' } }
+    return { status: 404, data: { code: ErrorCode.NOT_FOUND } }
   }
   return handleGet(slug)
 }
@@ -185,20 +189,47 @@ describe('space resolution', () => {
   })
 })
 
+describe('default space', () => {
+  it('the default space is put in the URL once', async () => {
+    api.spaces = [alpha, beta]
+    let navigateSpy: MockInstance<AppRouter['navigate']> | undefined
+    const { router } = renderApp('/checks', {
+      beforeRender: (created) => {
+        navigateSpy = vi.spyOn(created, 'navigate')
+      },
+    })
+
+    await waitFor(() => {
+      expect(router.state.location.search).toEqual({ space: 'alpha' })
+    })
+
+    const replaceCalls = navigateSpy?.mock.calls.filter(([options]) => options.replace === true)
+    expect(replaceCalls).toHaveLength(1)
+  })
+})
+
 describe('space shell on mobile', () => {
-  it('on mobile the more sheet contains the space switcher', async () => {
+  it('on mobile the header holds the space switcher and the more sheet does not', async () => {
     installViewport(MOBILE_WIDTH)
     api.spaces = [alpha, beta]
     renderApp('/')
 
-    fireEvent.click(await screen.findByRole('button', { name: 'Więcej' }))
-    const sheet = await screen.findByRole('dialog', { name: 'Więcej' })
-    const trigger = within(sheet).getByRole('button', { name: 'Przełącz przestrzeń' })
+    const trigger = await screen.findByRole('button', { name: 'Przełącz przestrzeń' })
+    expect(trigger.closest('header')).not.toBeNull()
     fireEvent.click(trigger)
 
     const spaceSheet = await screen.findByRole('dialog', { name: 'Przestrzeń' })
     expect(await within(spaceSheet).findByRole('button', { name: 'Alpha' })).toBeDefined()
     expect(within(spaceSheet).getByRole('button', { name: 'Beta' })).toBeDefined()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Zamknij' }))
+    await waitFor(() => {
+      expect(screen.queryByRole('dialog', { name: 'Przestrzeń' })).toBeNull()
+    })
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Więcej' }))
+    const moreSheet = await screen.findByRole('dialog', { name: 'Więcej' })
+    expect(within(moreSheet).queryByRole('button', { name: 'Przełącz przestrzeń' })).toBeNull()
   })
 })
 

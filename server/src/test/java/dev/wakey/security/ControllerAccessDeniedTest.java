@@ -5,6 +5,7 @@ import static org.springframework.security.test.web.servlet.request.SecurityMock
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 
 import dev.wakey.testsupport.SecurityIntegrationTest;
+import dev.wakey.web.CommonError;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.context.annotation.Bean;
@@ -38,7 +39,7 @@ class ControllerAccessDeniedTest extends SecurityIntegrationTest {
         String code = body.path("code").asString();
         assertThat(status).isEqualTo(403);
         assertThat(contentType).isEqualTo(MediaType.APPLICATION_PROBLEM_JSON_VALUE);
-        assertThat(code).isEqualTo("forbidden");
+        assertThat(code).isEqualTo(CommonError.FORBIDDEN.getCode());
     }
 
     @TestConfiguration

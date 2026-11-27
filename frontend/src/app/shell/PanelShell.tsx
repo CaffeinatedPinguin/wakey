@@ -1,15 +1,13 @@
 import { AppShell } from '@mantine/core'
-import { Notifications } from '@mantine/notifications'
 import { Outlet } from '@tanstack/react-router'
 import type { ReactElement } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useMe } from '../../features/auth'
-import { CreateSpaceDialog, SpaceNotFoundView } from '../../features/spaces'
+import { SpaceNotFoundView, useCurrentSpace, useDefaultSpaceRedirect } from '../../features/spaces'
 import { MOBILE_BREAKPOINT, useIsMobile } from '../../shared/ui'
 import { MobilePanelNav } from './MobilePanelNav'
 import { PanelHeader } from './PanelHeader'
 import { PanelNavbar } from './PanelNavbar'
-import { useSpaceController } from './useSpaceController'
 
 const shellLayout = {
   header: { height: 'var(--app-layout-topbar-height)' },
@@ -30,29 +28,25 @@ export function PanelShell(): ReactElement {
   const { t } = useTranslation()
   const { data: me } = useMe()
   const isMobile = useIsMobile()
-  const space = useSpaceController(me.admin)
+  const { isUnknown } = useCurrentSpace()
+  useDefaultSpaceRedirect()
+  const content = isUnknown ? <SpaceNotFoundView /> : <Outlet />
 
   return (
-    <>
-      <AppShell {...shellLayout}>
-        <AppShell.Header>
-          <PanelHeader me={me} isMobile={isMobile} switcher={space.switcher} />
-        </AppShell.Header>
-        {isMobile ? (
-          <AppShell.Footer>
-            <MobilePanelNav switcher={space.switcher} />
-          </AppShell.Footer>
-        ) : (
-          <AppShell.Navbar aria-label={t('common.nav.label')}>
-            <PanelNavbar />
-          </AppShell.Navbar>
-        )}
-        <AppShell.Main>
-          {space.isUnknown ? <SpaceNotFoundView spaces={space.spaces} /> : <Outlet />}
-        </AppShell.Main>
-        <CreateSpaceDialog {...space.dialog} />
-      </AppShell>
-      <Notifications />
-    </>
+    <AppShell {...shellLayout}>
+      <AppShell.Header>
+        <PanelHeader me={me} isMobile={isMobile} />
+      </AppShell.Header>
+      {isMobile ? (
+        <AppShell.Footer>
+          <MobilePanelNav />
+        </AppShell.Footer>
+      ) : (
+        <AppShell.Navbar aria-label={t('common.nav.label')}>
+          <PanelNavbar />
+        </AppShell.Navbar>
+      )}
+      <AppShell.Main>{content}</AppShell.Main>
+    </AppShell>
   )
 }

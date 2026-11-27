@@ -5,9 +5,10 @@ import { installMockApi } from '../../test/mockApi'
 import type { MockReply, MockRequest } from '../../test/mockApi'
 import { renderApp } from '../../test/renderApp'
 import { installViewport } from '../../test/viewport'
+import { ErrorCode } from '../../shared/api/generated/enums'
 import { appConfig } from '../../shared/config'
 import { StatusBadge } from '../../shared/ui/StatusBadge'
-import type { StatusState } from '../../shared/ui/StatusBadge'
+import { StatusState } from '../../shared/ui'
 import { AppThemeProvider } from '../App'
 import i18n from '../i18n'
 
@@ -26,7 +27,7 @@ function handleRequest(request: MockRequest): MockReply {
     logoutRequestCount += 1
     return { status: 204 }
   }
-  return { status: 404, data: { code: 'not_found' } }
+  return { status: 404, data: { code: ErrorCode.NOT_FOUND } }
 }
 
 beforeEach(() => {
@@ -211,14 +212,25 @@ describe('public shell', () => {
 })
 
 describe('status badge', () => {
+  it('the degraded state uses the label from the UI spec', () => {
+    const view = render(
+      <AppThemeProvider>
+        <StatusBadge state={StatusState.DEGRADED} />
+      </AppThemeProvider>,
+    )
+
+    expect(screen.getByText('Działa z problemami')).toBeDefined()
+    view.unmount()
+  })
+
   it('a state badge shows an icon and a text for every state', () => {
-    const states: StatusState[] = ['up', 'degraded', 'down', 'unknown', 'maintenance']
+    const states = Object.values(StatusState)
     const labels: Record<StatusState, string> = {
-      up: 'Działa',
-      degraded: 'Działa z problemami',
-      down: 'Nie działa',
-      unknown: 'Stan nieznany',
-      maintenance: 'Prace planowe',
+      [StatusState.UP]: 'Działa',
+      [StatusState.DEGRADED]: 'Działa z problemami',
+      [StatusState.DOWN]: 'Nie działa',
+      [StatusState.UNKNOWN]: 'Stan nieznany',
+      [StatusState.MAINTENANCE]: 'Prace planowe',
     }
 
     for (const state of states) {

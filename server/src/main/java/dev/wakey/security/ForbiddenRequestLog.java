@@ -1,65 +1,51 @@
 package dev.wakey.security;
 
-import dev.wakey.web.ProblemDetailsWriter;
+import dev.wakey.web.CommonError;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-import java.io.IOException;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.HttpStatus;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.web.access.AccessDeniedHandler;
 import org.springframework.security.web.csrf.InvalidCsrfTokenException;
 import org.springframework.security.web.csrf.MissingCsrfTokenException;
+import org.springframework.stereotype.Component;
+import org.springframework.web.servlet.HandlerExceptionResolver;
 
-/** Logs every 403 with a fixed reason and returns an RFC 9457 Problem Details body, including CSRF rejections. */
+/** Logs every 403 with a fixed reason and renders it through the single MVC exception advice. */
 @Slf4j
+@Component
 final class ForbiddenRequestLog implements AccessDeniedHandler {
 
-    private static final String ACCESS_DENIED = "access-denied";
+    private static final int FORBIDDEN_STATUS =
+            CommonError.FORBIDDEN.getStatus().value();
 
-    private static final String CSRF_TOKEN_MISSING = "csrf-token-missing";
+    private final HandlerExceptionResolver resolver;
 
-    private static final String CSRF_TOKEN_INVALID = "csrf-token-invalid";
-
-    private static final String INSUFFICIENT_SCOPE = "insufficient-scope";
-
-    private static final String INSUFFICIENT_SCOPE_DETAIL = "The API token does not allow this request.";
-
-    private static final String INSUFFICIENT_SCOPE_CHALLENGE = "Bearer error=\"insufficient_scope\"";
+    ForbiddenRequestLog(@Qualifier("handlerExceptionResolver") HandlerExceptionResolver resolver) {
+        this.resolver = resolver;
+    }
 
     @Override
-    public void handle(HttpServletRequest request, HttpServletResponse response, AccessDeniedException exception)
-            throws IOException {
-        logRejected(reasonFor(exception), request);
-        if (response.isCommitted()) {
-            return;
-        }
-        ProblemDetailsWriter.write(response, HttpStatus.FORBIDDEN, "forbidden", "Access is denied.");
-    }
-
-    /** Rejects a token whose scope is too small, with the RFC 6750 challenge and a closed-list reason. */
-    static void rejectInsufficientScope(HttpServletRequest request, HttpServletResponse response) throws IOException {
-        logRejected(INSUFFICIENT_SCOPE, request);
-        if (response.isCommitted()) {
-            return;
-        }
-        response.setHeader(HttpHeaders.WWW_AUTHENTICATE, INSUFFICIENT_SCOPE_CHALLENGE);
-        ProblemDetailsWriter.write(response, HttpStatus.FORBIDDEN, "insufficient_scope", INSUFFICIENT_SCOPE_DETAIL);
-    }
-
-    private static void logRejected(String reason, HttpServletRequest request) {
+    public void handle(HttpServletRequest request, HttpServletResponse response, AccessDeniedException exception) {
+        RejectReason reason = reasonFor(exception);
         String method = request.getMethod();
         String path = request.getRequestURI();
-        log.warn("request rejected: reason={} method={} path={}", reason, method, path);
+        log.warn("request rejected: reason={} method={} path={}", reason.getWireName(), method, path);
+        if (response.isCommitted()) {
+            return;
+        }
+        if (resolver.resolveException(request, response, null, exception) == null) {
+            response.setStatus(FORBIDDEN_STATUS);
+        }
     }
 
-    private static String reasonFor(AccessDeniedException exception) {
-        String reason = ACCESS_DENIED;
+    private static RejectReason reasonFor(AccessDeniedException exception) {
+        RejectReason reason = RejectReason.ACCESS_DENIED;
         if (exception instanceof MissingCsrfTokenException) {
-            reason = CSRF_TOKEN_MISSING;
+            reason = RejectReason.CSRF_TOKEN_MISSING;
         } else if (exception instanceof InvalidCsrfTokenException) {
-            reason = CSRF_TOKEN_INVALID;
+            reason = RejectReason.CSRF_TOKEN_INVALID;
         }
         return reason;
     }

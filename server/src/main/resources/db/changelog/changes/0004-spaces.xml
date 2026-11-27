@@ -32,7 +32,10 @@
       <column name="space_id" type="UUID">
         <constraints nullable="false"/>
       </column>
-      <column name="subject" type="VARCHAR(100)">
+      <column name="issuer" type="VARCHAR(255)">
+        <constraints nullable="false"/>
+      </column>
+      <column name="subject" type="VARCHAR(255)">
         <constraints nullable="false"/>
       </column>
       <column name="role" type="VARCHAR(16)">
@@ -40,7 +43,7 @@
       </column>
     </createTable>
     <addPrimaryKey tableName="space_member"
-                   columnNames="space_id, subject"
+                   columnNames="space_id, issuer, subject"
                    constraintName="pk_space_member"/>
     <addForeignKeyConstraint baseTableName="space_member"
                              baseColumnNames="space_id"
@@ -52,7 +55,8 @@
       ALTER TABLE space_member
         ADD CONSTRAINT ck_space_member_role CHECK (role IN ('EDITOR', 'VIEWER'));
     </sql>
-    <createIndex tableName="space_member" indexName="ix_space_member_subject">
+    <createIndex tableName="space_member" indexName="ix_space_member_issuer_subject">
+      <column name="issuer"/>
       <column name="subject"/>
     </createIndex>
   </changeSet>

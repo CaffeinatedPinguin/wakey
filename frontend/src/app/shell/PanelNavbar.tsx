@@ -4,6 +4,9 @@ import type { CSSProperties, ReactElement } from 'react'
 import { useTranslation } from 'react-i18next'
 import { navigationActiveOptions, navigationActiveStyle, panelNavigation } from './panelNavigation'
 
+const NAV_ICON_SIZE = 18
+const NAV_LABEL_FONT_WEIGHT = 500
+
 const navItemStyle: CSSProperties = {
   display: 'flex',
   alignItems: 'center',
@@ -28,8 +31,8 @@ export function PanelNavbar(): ReactElement {
           activeProps={{ style: navigationActiveStyle }}
           activeOptions={navigationActiveOptions(to)}
         >
-          <Icon size={18} />
-          <Text size="sm" fw={500}>
+          <Icon size={NAV_ICON_SIZE} />
+          <Text size="sm" fw={NAV_LABEL_FONT_WEIGHT}>
             {t(labelKey)}
           </Text>
         </Link>

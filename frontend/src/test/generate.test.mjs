@@ -58,6 +58,39 @@ describe('API generator', () => {
   )
 
   it(
+    'generates the enums and limits from the contract',
+    () => {
+      const outDir = temporaryDirectory()
+      expect(runGenerator(['--contract', contractPath, '--out', outDir]).status).toBe(0)
+
+      const document = JSON.parse(readFileSync(contractPath, 'utf8'))
+      const schemas = document.components.schemas
+      const errorCodeValues = schemas.ProblemDetail.properties.code.enum
+      const spaceRoleValues = schemas.SpaceRole.enum
+      const nameSchema = schemas.CreateSpaceRequest.properties.name
+      const slugSchema = schemas.CreateSpaceRequest.properties.slug
+
+      const enums = readFileSync(join(outDir, 'enums.ts'), 'utf8')
+      const limits = readFileSync(join(outDir, 'limits.ts'), 'utf8')
+
+      expect(enums).toContain('export const ErrorCode = {')
+      expect(enums).toContain('  SLUG_TAKEN:')
+      expect(enums).toContain('export const SpaceRole = {')
+      expect(enums).toContain('export type SpaceRole = (typeof SpaceRole)[keyof typeof SpaceRole]')
+      for (const value of [...errorCodeValues, ...spaceRoleValues]) {
+        expect(enums).toContain(`'${value}'`)
+      }
+      expect(limits).toContain(
+        `export const CREATE_SPACE_REQUEST_NAME_MAX_LENGTH = ${nameSchema.maxLength}`,
+      )
+      expect(limits).toContain(
+        `export const CREATE_SPACE_REQUEST_SLUG_PATTERN = '${slugSchema.pattern}'`,
+      )
+    },
+    GENERATOR_TEST_TIMEOUT_MS,
+  )
+
+  it(
     'check mode fails when the generated files drift from the contract',
     () => {
       const outDir = temporaryDirectory()
@@ -65,7 +98,7 @@ describe('API generator', () => {
       expect(runGenerator(['--contract', contractPath, '--out', outDir]).status).toBe(0)
 
       const document = JSON.parse(readFileSync(contractPath, 'utf8'))
-      document.components.schemas.CurrentUser.properties.email = { type: 'string' }
+      document.components.schemas.MeResponse.properties.email = { type: 'string' }
       const driftedContract = join(contractDir, 'public.json')
       writeFileSync(driftedContract, JSON.stringify(document), 'utf8')
 

@@ -1,6 +1,13 @@
 import { cleanup, fireEvent, screen, waitFor } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import type { Me } from '../../features/auth'
+import { ErrorCode } from '../../shared/api/generated/enums'
+import type { SpaceRole } from '../../shared/api/generated/enums'
+import {
+  CREATE_SPACE_REQUEST_NAME_MAX_LENGTH,
+  CREATE_SPACE_REQUEST_SLUG_MAX_LENGTH,
+  CREATE_SPACE_REQUEST_SLUG_MIN_LENGTH,
+} from '../../shared/api/generated/limits'
 import { appConfig } from '../../shared/config'
 import { signedInUser } from '../../test/data'
 import { installMockApi } from '../../test/mockApi'
@@ -16,17 +23,16 @@ const DESKTOP_WIDTH = 1024
 interface SpaceFixture {
   slug: string
   name: string
-  role: 'EDITOR' | 'VIEWER' | null
+  role: SpaceRole | null
   version: number
 }
 
 interface ApiState {
   me: Me
   spaces: SpaceFixture[]
-  putRequests: string[]
-  putHeaders: string[]
-  putError: MockReply | null
-  createdName: string
+  createRequests: string[]
+  createMethods: string[]
+  createError: MockReply | null
 }
 
 const alpha: SpaceFixture = { slug: 'alpha', name: 'Alpha', role: null, version: 1 }
@@ -35,10 +41,9 @@ function createApiState(): ApiState {
   return {
     me: { ...signedInUser },
     spaces: [],
-    putRequests: [],
-    putHeaders: [],
-    putError: null,
-    createdName: '',
+    createRequests: [],
+    createMethods: [],
+    createError: null,
   }
 }
 
@@ -64,25 +69,34 @@ function handleList(): MockReply {
 function handleGet(slug: string): MockReply {
   const space = api.spaces.find((item) => item.slug === slug)
   if (space === undefined) {
-    return { status: 404, data: { code: 'not_found' } }
+    return { status: 404, data: { code: ErrorCode.NOT_FOUND } }
   }
   return { status: 200, data: space }
 }
 
-function handlePut(slug: string, headers: Record<string, string>): MockReply {
-  api.putRequests.push(slug)
-  api.putHeaders.push(headers['if-none-match'] ?? '')
-  if (api.putError !== null) {
-    return api.putError
+interface CreateBody {
+  slug: string
+  name: string
+}
+
+function handleCreate(method: string, body: string): MockReply {
+  const payload = JSON.parse(body) as CreateBody
+  api.createRequests.push(payload.slug)
+  api.createMethods.push(method)
+  if (api.createError !== null) {
+    return api.createError
   }
-  if (headers['if-none-match'] === '*' && api.spaces.some((item) => item.slug === slug)) {
-    return { status: 409, data: { code: 'slug_taken' } }
+  if (api.spaces.some((item) => item.slug === payload.slug)) {
+    return {
+      status: 409,
+      data: {
+        code: ErrorCode.SLUG_TAKEN,
+        errors: [{ pointer: '/slug', code: ErrorCode.SLUG_TAKEN }],
+      },
+    }
   }
-  const name = api.createdName.length > 0 ? api.createdName : slug
-  const space: SpaceFixture = { ...alpha, slug, name }
-  if (!api.spaces.some((item) => item.slug === slug)) {
-    api.spaces.push(space)
-  }
+  const space: SpaceFixture = { slug: payload.slug, name: payload.name, role: null, version: 1 }
+  api.spaces.push(space)
   return { status: 201, data: space }
 }
 
@@ -90,21 +104,27 @@ function handleRequest(request: MockRequest): MockReply {
   if (request.url === ME_URL) {
     return { status: 200, data: api.me }
   }
+  if (request.method.toLowerCase() === 'post' && isListUrl(request.url)) {
+    return handleCreate(request.method, request.body)
+  }
   if (isListUrl(request.url)) {
     return handleList()
   }
   const slug = spaceSlug(request.url)
   if (slug === undefined) {
-    return { status: 404, data: { code: 'not_found' } }
-  }
-  if (request.method.toLowerCase() === 'put') {
-    return handlePut(slug, request.headers)
+    return { status: 404, data: { code: ErrorCode.NOT_FOUND } }
   }
   return handleGet(slug)
 }
 
 function openSwitcher(): void {
   fireEvent.click(screen.getByRole('button', { name: 'Przełącz przestrzeń' }))
+}
+
+async function openCreateDialog(name: string): Promise<void> {
+  openSwitcher()
+  fireEvent.click(await screen.findByText('Utwórz przestrzeń'))
+  fireEvent.change(await screen.findByLabelText('Nazwa'), { target: { value: name } })
 }
 
 beforeEach(() => {
@@ -122,7 +142,6 @@ afterEach(async () => {
 describe('space creation', () => {
   it('an admin creates a space and the switcher selects it', async () => {
     api.spaces = [alpha]
-    api.createdName = 'Beta'
     const { router } = renderApp('/')
     await screen.findByText('Przestrzeń: Alpha')
     openSwitcher()
@@ -132,8 +151,8 @@ describe('space creation', () => {
     await waitFor(() => {
       expect(router.state.location.search).toEqual({ space: 'beta' })
     })
-    expect(api.putRequests).toEqual(['beta'])
-    expect(api.putHeaders).toEqual(['*'])
+    expect(api.createRequests).toEqual(['beta'])
+    expect(api.createMethods.map((method) => method.toLowerCase())).toEqual(['post'])
     expect(await screen.findByText('Przestrzeń: Beta')).toBeDefined()
     await waitFor(() => {
       expect(screen.queryByRole('button', { name: 'Utwórz' })).toBeNull()
@@ -142,7 +161,7 @@ describe('space creation', () => {
 })
 
 describe('space creation preconditions', () => {
-  it('creating a space sends one PUT with If-None-Match and reports a taken slug', async () => {
+  it('creating a space sends one POST and reports a taken slug', async () => {
     api.spaces = [alpha]
     renderApp('/')
     await screen.findByText('Przestrzeń: Alpha')
@@ -151,15 +170,14 @@ describe('space creation preconditions', () => {
     fireEvent.change(await screen.findByLabelText('Nazwa'), { target: { value: 'Alpha' } })
     fireEvent.click(screen.getByRole('button', { name: 'Utwórz' }))
     expect(await screen.findByText('Ten slug jest już zajęty.')).toBeDefined()
-    expect(api.putRequests).toEqual(['alpha'])
-    expect(api.putHeaders).toEqual(['*'])
+    expect(api.createRequests).toEqual(['alpha'])
+    expect(api.createMethods.map((method) => method.toLowerCase())).toEqual(['post'])
   })
 })
 
 describe('space creation from a missing slug', () => {
   it('creating a space shown as missing replaces the not found view without a reload', async () => {
     api.spaces = [alpha]
-    api.createdName = 'Acme'
     renderApp('/checks?space=acme')
 
     expect(
@@ -199,18 +217,49 @@ describe('create space dialog errors', () => {
   })
 })
 
+describe('create space dialog reopening', () => {
+  it('reopening the create dialog starts without the previous error', async () => {
+    api.spaces = [alpha]
+    api.createError = { status: 500, data: { code: ErrorCode.INTERNAL_ERROR } }
+    renderApp('/')
+    await screen.findByText('Przestrzeń: Alpha')
+    await openCreateDialog('Beta')
+    fireEvent.click(screen.getByRole('button', { name: 'Utwórz' }))
+    expect(await screen.findByText('Błąd serwera. Spróbuj ponownie.')).toBeDefined()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Zamknij' }))
+    await waitFor(() => {
+      expect(screen.queryByRole('dialog', { name: 'Nowa przestrzeń' })).toBeNull()
+    })
+    await openCreateDialog('Beta')
+
+    expect(screen.queryByText('Błąd serwera. Spróbuj ponownie.')).toBeNull()
+  })
+})
+
+// The server copies the constraint limits into params, so the fixture does too.
+const SERVER_FIELD_ERRORS = [
+  {
+    code: ErrorCode.INVALID_NAME,
+    pointer: '/name',
+    params: { max: CREATE_SPACE_REQUEST_NAME_MAX_LENGTH },
+  },
+  {
+    code: ErrorCode.INVALID_SLUG,
+    pointer: '/slug',
+    params: {
+      min: CREATE_SPACE_REQUEST_SLUG_MIN_LENGTH,
+      max: CREATE_SPACE_REQUEST_SLUG_MAX_LENGTH,
+    },
+  },
+]
+
 describe('create space dialog server validation', () => {
   it('server validation errors are shown on the form fields', async () => {
     api.spaces = [alpha]
-    api.putError = {
+    api.createError = {
       status: 400,
-      data: {
-        code: 'validation_failed',
-        errors: [
-          { code: 'invalid_name', pointer: '/name' },
-          { code: 'invalid_slug', pointer: '/slug' },
-        ],
-      },
+      data: { code: ErrorCode.VALIDATION_FAILED, errors: SERVER_FIELD_ERRORS },
     }
     renderApp('/')
     await screen.findByText('Przestrzeń: Alpha')
@@ -220,7 +269,9 @@ describe('create space dialog server validation', () => {
     fireEvent.change(screen.getByLabelText('Slug'), { target: { value: 'inna-nazwa' } })
     fireEvent.click(screen.getByRole('button', { name: 'Utwórz' }))
 
-    expect(await screen.findByText('Nazwa jest nieprawidłowa.')).toBeDefined()
+    expect(
+      await screen.findByText('Nazwa musi mieć 1–100 znaków bez znaków sterujących.'),
+    ).toBeDefined()
     expect(
       screen.getByText(
         'Slug musi mieć 3–40 znaków: małe litery, cyfry i myślniki, zaczynać się literą i nie kończyć myślnikiem.',

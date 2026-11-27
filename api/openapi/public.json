@@ -1,247 +1,67 @@
 {
   "components" : {
     "schemas" : {
-      "CheckResponse" : {
-        "description" : "A check as seen by the caller",
+      "AddSpaceMemberRequest" : {
+        "description" : "A membership to add",
         "properties" : {
-          "createdAt" : {
-            "format" : "date-time",
+          "issuer" : {
+            "description" : "The OIDC issuer of the member",
+            "example" : "https://issuer.example.com",
+            "maxLength" : 255,
             "type" : "string"
           },
-          "description" : {
-            "description" : "The optional description",
-            "type" : "string"
-          },
-          "groupName" : {
-            "description" : "The optional group name",
-            "type" : "string"
-          },
-          "id" : {
-            "format" : "uuid",
-            "type" : "string"
-          },
-          "intervalSeconds" : {
-            "format" : "int32",
-            "type" : "integer"
-          },
-          "lastResult" : {
-            "$ref" : "#/components/schemas/CheckResultResponse",
-            "description" : "The newest result, present only when the caller reads one check"
-          },
-          "name" : {
-            "type" : "string"
-          },
-          "paused" : {
-            "type" : "boolean"
-          },
-          "pausedReason" : {
-            "description" : "Why monitoring is paused, if it is",
-            "enum" : [ "MANUAL", "PLAN_LIMIT", "ABANDONED", "UNVERIFIED" ],
-            "type" : "string"
-          },
-          "retries" : {
-            "format" : "int32",
-            "type" : "integer"
-          },
-          "runbookUrl" : {
-            "description" : "The optional runbook address",
-            "type" : "string"
-          },
-          "state" : {
-            "enum" : [ "UP", "DEGRADED", "DOWN", "UNKNOWN" ],
-            "type" : "string"
-          },
-          "tags" : {
-            "items" : {
-              "type" : "string"
-            },
-            "type" : "array"
-          },
-          "target" : {
-            "type" : "string"
-          },
-          "timeoutSeconds" : {
-            "format" : "int32",
-            "type" : "integer"
-          },
-          "type" : {
-            "enum" : [ "HTTP", "TCP", "CERTIFICATE" ],
-            "type" : "string"
-          },
-          "updatedAt" : {
-            "format" : "date-time",
-            "type" : "string"
-          },
-          "version" : {
-            "format" : "int64",
-            "type" : "integer"
-          }
-        },
-        "required" : [ "createdAt", "id", "intervalSeconds", "name", "paused", "retries", "state", "tags", "target", "timeoutSeconds", "type", "updatedAt", "version" ],
-        "type" : "object"
-      },
-      "CheckResultResponse" : {
-        "description" : "The newest measurement of a check",
-        "properties" : {
-          "checkedAt" : {
-            "description" : "When the measurement happened",
-            "format" : "date-time",
-            "type" : "string"
-          },
-          "durationMs" : {
-            "description" : "How long the measurement took in milliseconds",
-            "format" : "int32",
-            "type" : "integer"
-          },
-          "errorCategory" : {
-            "description" : "Why a failed measurement failed",
-            "enum" : [ "TARGET_DOWN", "LOCATION_NETWORK", "AUTH" ],
-            "type" : "string"
-          },
-          "httpStatus" : {
-            "description" : "The HTTP status code of an HTTP check",
-            "format" : "int32",
-            "type" : "integer"
-          },
-          "locationId" : {
-            "description" : "The location that measured the check",
-            "example" : "server",
-            "type" : "string"
-          },
-          "phases" : {
-            "description" : "The measured phases as a JSON document",
-            "type" : "string"
-          },
-          "protocolVersion" : {
-            "description" : "The negotiated protocol version",
-            "type" : "string"
-          },
-          "state" : {
-            "description" : "The state of the measurement",
-            "enum" : [ "UP", "DEGRADED", "DOWN", "UNKNOWN" ],
-            "type" : "string"
-          }
-        },
-        "required" : [ "checkedAt", "state" ],
-        "type" : "object"
-      },
-      "CreateCheckRequest" : {
-        "description" : "The desired state of a new check",
-        "properties" : {
-          "description" : {
-            "description" : "The optional description",
-            "type" : "string"
-          },
-          "groupName" : {
-            "description" : "The optional group name",
-            "type" : "string"
-          },
-          "intervalSeconds" : {
-            "description" : "Seconds between measurements",
-            "example" : 60,
-            "format" : "int32",
-            "type" : "integer"
-          },
-          "name" : {
-            "description" : "The name, 1-100 characters after trimming",
-            "example" : "API health",
-            "type" : "string"
-          },
-          "retries" : {
-            "description" : "Retries after a failed measurement",
-            "example" : 1,
-            "format" : "int32",
-            "type" : "integer"
-          },
-          "runbookUrl" : {
-            "description" : "The optional runbook address",
-            "type" : "string"
-          },
-          "tags" : {
-            "description" : "The optional tags",
-            "items" : {
-              "type" : "string"
-            },
-            "type" : "array"
-          },
-          "target" : {
-            "description" : "The target address",
-            "example" : "https://example.test/health",
-            "type" : "string"
-          },
-          "timeoutSeconds" : {
-            "description" : "Seconds before a measurement times out",
-            "example" : 10,
-            "format" : "int32",
-            "type" : "integer"
-          },
-          "type" : {
-            "description" : "The protocol to measure",
-            "enum" : [ "HTTP", "TCP", "CERTIFICATE" ],
-            "example" : "HTTP",
-            "type" : "string"
-          }
-        },
-        "required" : [ "name", "tags", "target", "type" ],
-        "type" : "object"
-      },
-      "CreateTokenRequest" : {
-        "description" : "A new API token",
-        "properties" : {
-          "expiresAt" : {
-            "description" : "When the token expires, or null for no expiry",
-            "format" : "date-time",
-            "type" : [ "string", "null" ]
-          },
-          "name" : {
-            "description" : "The token name",
-            "example" : "ci-deploy",
-            "type" : "string"
-          },
-          "scope" : {
-            "description" : "The greatest scope the token may use",
-            "enum" : [ "READ", "WRITE" ],
-            "type" : "string"
-          }
-        },
-        "required" : [ "name", "scope" ],
-        "type" : "object"
-      },
-      "CreateTokenResponse" : {
-        "description" : "A newly created API token and its secret, shown only once",
-        "properties" : {
-          "secret" : {
-            "description" : "The token secret, shown only in this response",
-            "type" : "string"
-          },
-          "token" : {
-            "$ref" : "#/components/schemas/TokenSummary",
-            "description" : "The stored token, without the secret or the hash"
-          }
-        },
-        "required" : [ "secret", "token" ],
-        "type" : "object"
-      },
-      "CurrentUser" : {
-        "properties" : {
-          "admin" : {
-            "description" : "Whether the user is an instance administrator",
-            "type" : "boolean"
+          "role" : {
+            "$ref" : "#/components/schemas/SpaceRole",
+            "description" : "The role in the space"
           },
           "subject" : {
-            "description" : "The OIDC subject of the authenticated user",
+            "description" : "The OIDC subject of the member",
+            "example" : "user-42",
+            "maxLength" : 255,
             "type" : "string"
           }
         },
-        "required" : [ "admin", "subject" ],
+        "required" : [ "issuer", "role", "subject" ],
         "type" : "object"
       },
-      "CursorPageCheckResponse" : {
+      "ChangeSpaceMemberRoleRequest" : {
+        "description" : "The new role of a member",
+        "properties" : {
+          "role" : {
+            "$ref" : "#/components/schemas/SpaceRole",
+            "description" : "The role in the space"
+          }
+        },
+        "required" : [ "role" ],
+        "type" : "object"
+      },
+      "CreateSpaceRequest" : {
+        "description" : "The desired state of a new space",
+        "properties" : {
+          "name" : {
+            "description" : "The display name, 1-100 characters after trimming",
+            "example" : "Acme",
+            "maxLength" : 100,
+            "type" : "string"
+          },
+          "slug" : {
+            "description" : "The stable space slug",
+            "example" : "acme",
+            "maxLength" : 40,
+            "minLength" : 3,
+            "pattern" : "^[a-z][a-z0-9-]{1,38}[a-z0-9]$",
+            "type" : "string"
+          }
+        },
+        "required" : [ "name", "slug" ],
+        "type" : "object"
+      },
+      "CursorPageSpaceMemberResponse" : {
         "properties" : {
           "items" : {
             "description" : "The items on this page",
             "items" : {
-              "$ref" : "#/components/schemas/CheckResponse"
+              "$ref" : "#/components/schemas/SpaceMemberResponse"
             },
             "type" : "array"
           },
@@ -270,39 +90,28 @@
         "required" : [ "items", "nextCursor" ],
         "type" : "object"
       },
-      "CursorPageTokenSummary" : {
+      "MeResponse" : {
         "properties" : {
-          "items" : {
-            "description" : "The items on this page",
-            "items" : {
-              "$ref" : "#/components/schemas/TokenSummary"
-            },
-            "type" : "array"
+          "admin" : {
+            "description" : "Whether the user is an instance administrator",
+            "type" : "boolean"
           },
-          "nextCursor" : {
-            "description" : "The cursor of the next page, or null on the last page",
-            "type" : [ "string", "null" ]
-          }
-        },
-        "required" : [ "items", "nextCursor" ],
-        "type" : "object"
-      },
-      "PauseCheckRequest" : {
-        "description" : "The reason to pause monitoring",
-        "properties" : {
-          "reason" : {
-            "description" : "The pause reason",
-            "enum" : [ "MANUAL", "PLAN_LIMIT", "ABANDONED", "UNVERIFIED" ],
-            "example" : "MANUAL",
+          "issuer" : {
+            "description" : "The OIDC issuer of the authenticated user",
+            "type" : "string"
+          },
+          "subject" : {
+            "description" : "The OIDC subject of the authenticated user",
             "type" : "string"
           }
         },
-        "required" : [ "reason" ],
+        "required" : [ "admin", "issuer", "subject" ],
         "type" : "object"
       },
       "ProblemDetail" : {
         "properties" : {
           "code" : {
+            "enum" : [ "bad_request", "validation_failed", "invalid_body", "invalid_cursor", "unauthenticated", "forbidden", "not_found", "method_not_allowed", "not_acceptable", "unsupported_media_type", "version_conflict", "internal_error", "slug_taken", "invalid_name", "invalid_slug", "invalid_subject", "invalid_issuer" ],
             "type" : "string"
           },
           "detail" : {
@@ -344,19 +153,6 @@
         },
         "type" : "object"
       },
-      "PutSpacePlanRequest" : {
-        "description" : "The plan to assign to a space",
-        "properties" : {
-          "plan" : {
-            "description" : "A configured plan name",
-            "example" : "small",
-            "minLength" : 1,
-            "type" : "string"
-          }
-        },
-        "required" : [ "plan" ],
-        "type" : "object"
-      },
       "PutSpaceRequest" : {
         "description" : "The desired state of a space",
         "properties" : {
@@ -364,25 +160,38 @@
             "description" : "The display name, 1-100 characters after trimming",
             "example" : "Acme",
             "maxLength" : 100,
-            "minLength" : 1,
             "type" : "string"
+          },
+          "version" : {
+            "description" : "The version the caller read; omit to rename without a version condition. A concurrent change of the same space can still answer 409.",
+            "example" : 1,
+            "format" : "int64",
+            "minimum" : 0,
+            "type" : "integer"
           }
         },
         "required" : [ "name" ],
         "type" : "object"
       },
-      "SetSpaceSettingRequest" : {
-        "description" : "The desired value of a space setting",
+      "SpaceMemberResponse" : {
+        "description" : "A membership of a space",
         "properties" : {
-          "value" : {
-            "description" : "The desired value",
-            "example" : "60",
-            "maxLength" : 255,
-            "minLength" : 0,
+          "issuer" : {
+            "description" : "The OIDC issuer of the member",
+            "example" : "https://issuer.example.com",
+            "type" : "string"
+          },
+          "role" : {
+            "$ref" : "#/components/schemas/SpaceRole",
+            "description" : "The role in the space"
+          },
+          "subject" : {
+            "description" : "The OIDC subject of the member",
+            "example" : "user-42",
             "type" : "string"
           }
         },
-        "required" : [ "value" ],
+        "required" : [ "issuer", "role", "subject" ],
         "type" : "object"
       },
       "SpaceResponse" : {
@@ -394,9 +203,12 @@
             "type" : "string"
           },
           "role" : {
-            "description" : "The caller's membership role, or null for an Admin who is not a member",
-            "enum" : [ "EDITOR", "VIEWER" ],
-            "type" : [ "string", "null" ]
+            "anyOf" : [ {
+              "$ref" : "#/components/schemas/SpaceRole"
+            }, {
+              "type" : "null"
+            } ],
+            "description" : "The caller's membership role, or null for an Admin who is not a member"
           },
           "slug" : {
             "description" : "The stable space slug",
@@ -414,166 +226,9 @@
         "required" : [ "name", "role", "slug", "version" ],
         "type" : "object"
       },
-      "SpaceSettingResponse" : {
-        "description" : "One effective space setting",
-        "properties" : {
-          "key" : {
-            "description" : "The stable setting key",
-            "example" : "check.interval",
-            "type" : "string"
-          },
-          "planName" : {
-            "description" : "The plan the value was resolved against",
-            "example" : "small",
-            "type" : "string"
-          },
-          "source" : {
-            "description" : "Where the effective value comes from",
-            "enum" : [ "SPACE", "PLAN", "INSTANCE", "DEFAULT" ],
-            "type" : "string"
-          },
-          "value" : {
-            "description" : "The effective value",
-            "example" : "60",
-            "type" : "string"
-          }
-        },
-        "required" : [ "key", "planName", "source", "value" ],
-        "type" : "object"
-      },
-      "StateCountsResponse" : {
-        "description" : "How many filtered checks are in each state",
-        "properties" : {
-          "degraded" : {
-            "format" : "int64",
-            "type" : "integer"
-          },
-          "down" : {
-            "format" : "int64",
-            "type" : "integer"
-          },
-          "unknown" : {
-            "format" : "int64",
-            "type" : "integer"
-          },
-          "up" : {
-            "format" : "int64",
-            "type" : "integer"
-          }
-        },
-        "required" : [ "degraded", "down", "unknown", "up" ],
-        "type" : "object"
-      },
-      "TokenSummary" : {
-        "properties" : {
-          "createdAt" : {
-            "format" : "date-time",
-            "type" : "string"
-          },
-          "expiresAt" : {
-            "format" : "date-time",
-            "type" : "string"
-          },
-          "id" : {
-            "format" : "uuid",
-            "type" : "string"
-          },
-          "lastUsedAt" : {
-            "format" : "date-time",
-            "type" : "string"
-          },
-          "name" : {
-            "type" : "string"
-          },
-          "revokedAt" : {
-            "format" : "date-time",
-            "type" : "string"
-          },
-          "scope" : {
-            "enum" : [ "READ", "WRITE" ],
-            "type" : "string"
-          }
-        },
-        "type" : "object"
-      },
-      "UpdateCheckRequest" : {
-        "description" : "The replacement values of a check",
-        "properties" : {
-          "description" : {
-            "description" : "The optional description",
-            "type" : "string"
-          },
-          "groupName" : {
-            "description" : "The optional group name",
-            "type" : "string"
-          },
-          "intervalSeconds" : {
-            "description" : "Seconds between measurements",
-            "example" : 60,
-            "format" : "int32",
-            "type" : "integer"
-          },
-          "name" : {
-            "description" : "The name, 1-100 characters after trimming",
-            "example" : "API health",
-            "type" : "string"
-          },
-          "retries" : {
-            "description" : "Retries after a failed measurement",
-            "example" : 1,
-            "format" : "int32",
-            "type" : "integer"
-          },
-          "runbookUrl" : {
-            "description" : "The optional runbook address",
-            "type" : "string"
-          },
-          "tags" : {
-            "description" : "The optional tags",
-            "items" : {
-              "type" : "string"
-            },
-            "type" : "array"
-          },
-          "target" : {
-            "description" : "The target address",
-            "example" : "https://example.test/health",
-            "type" : "string"
-          },
-          "timeoutSeconds" : {
-            "description" : "Seconds before a measurement times out",
-            "example" : 10,
-            "format" : "int32",
-            "type" : "integer"
-          },
-          "type" : {
-            "description" : "The protocol to measure",
-            "enum" : [ "HTTP", "TCP", "CERTIFICATE" ],
-            "example" : "HTTP",
-            "type" : "string"
-          },
-          "version" : {
-            "description" : "The version the caller last read",
-            "format" : "int64",
-            "type" : "integer"
-          }
-        },
-        "required" : [ "name", "tags", "target", "type" ],
-        "type" : "object"
-      }
-    },
-    "securitySchemes" : {
-      "bearerAuth" : {
-        "bearerFormat" : "wakey API token",
-        "description" : "An API token issued for one space, sent as Authorization: Bearer wk_...",
-        "scheme" : "bearer",
-        "type" : "http"
-      },
-      "sessionAuth" : {
-        "description" : "The browser session cookie; state-changing requests also send the X-XSRF-TOKEN CSRF header",
-        "in" : "cookie",
-        "name" : "SESSION",
-        "type" : "apiKey"
+      "SpaceRole" : {
+        "enum" : [ "EDITOR", "VIEWER" ],
+        "type" : "string"
       }
     }
   },
@@ -591,7 +246,7 @@
             "content" : {
               "application/json" : {
                 "schema" : {
-                  "$ref" : "#/components/schemas/CurrentUser"
+                  "$ref" : "#/components/schemas/MeResponse"
                 }
               }
             },
@@ -621,8 +276,7 @@
           "name" : "limit",
           "required" : false,
           "schema" : {
-            "default" : 20,
-            "format" : "int32",
+            "exclusiveMinimum" : 0,
             "maximum" : 100,
             "minimum" : 1,
             "type" : "integer"
@@ -654,7 +308,7 @@
                 }
               }
             },
-            "description" : "The cursor or the limit is invalid."
+            "description" : "The limit or the cursor is invalid."
           },
           "401" : {
             "content" : {
@@ -667,8 +321,82 @@
             "description" : "Authentication is required."
           }
         },
-        "summary" : "List the spaces visible to the caller",
-        "tags" : [ "spaces-controller" ]
+        "tags" : [ "spaces" ]
+      },
+      "post" : {
+        "operationId" : "createSpace",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/CreateSpaceRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "201" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/SpaceResponse"
+                }
+              }
+            },
+            "description" : "The space was created.",
+            "headers" : {
+              "Location" : {
+                "description" : "The URL of the created space.",
+                "schema" : {
+                  "type" : "string"
+                },
+                "style" : "simple"
+              }
+            }
+          },
+          "400" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description" : "The request is invalid."
+          },
+          "401" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description" : "Authentication is required."
+          },
+          "403" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description" : "Access is denied."
+          },
+          "409" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description" : "A space with that slug already exists."
+          }
+        },
+        "tags" : [ "spaces" ]
       }
     },
     "/api/v1/spaces/{slug}" : {
@@ -722,14 +450,13 @@
                 }
               }
             },
-            "description" : "The space was not found."
+            "description" : "The requested resource was not found."
           }
         },
-        "summary" : "Read one space visible to the caller",
-        "tags" : [ "spaces-controller" ]
+        "tags" : [ "spaces" ]
       },
       "put" : {
-        "description" : "A rename is last-write-wins unless an If-Match precondition is sent. Send If-None-Match: * to create the space only when the slug is free, and If-Match: \"<version>\" to rename only the version the caller read.",
+        "description" : "A missing version renames the space without a version condition, but a concurrent change of the same space can still answer 409 version_conflict.",
         "operationId" : "putSpace",
         "parameters" : [ {
           "in" : "path",
@@ -737,22 +464,6 @@
           "required" : true,
           "schema" : {
             "pattern" : "^[a-z][a-z0-9-]{1,38}[a-z0-9]$",
-            "type" : "string"
-          }
-        }, {
-          "description" : "Send * to create the space only when the slug is free.",
-          "in" : "header",
-          "name" : "If-None-Match",
-          "required" : false,
-          "schema" : {
-            "type" : "string"
-          }
-        }, {
-          "description" : "The quoted space version to rename, for example \"1\".",
-          "in" : "header",
-          "name" : "If-Match",
-          "required" : false,
-          "schema" : {
             "type" : "string"
           }
         } ],
@@ -785,7 +496,16 @@
                 }
               }
             },
-            "description" : "The space was created."
+            "description" : "The space was created.",
+            "headers" : {
+              "Location" : {
+                "description" : "The URL of the created space.",
+                "schema" : {
+                  "type" : "string"
+                },
+                "style" : "simple"
+              }
+            }
           },
           "400" : {
             "content" : {
@@ -795,7 +515,7 @@
                 }
               }
             },
-            "description" : "The request is invalid or a precondition header is malformed."
+            "description" : "The request is invalid."
           },
           "401" : {
             "content" : {
@@ -815,7 +535,7 @@
                 }
               }
             },
-            "description" : "The caller is not allowed to create or rename spaces."
+            "description" : "Access is denied."
           },
           "409" : {
             "content" : {
@@ -825,100 +545,120 @@
                 }
               }
             },
-            "description" : "The slug is taken or the If-Match version is stale."
+            "description" : "The resource changed since the supplied version."
           }
         },
         "summary" : "Create or rename a space idempotently",
-        "tags" : [ "spaces-controller" ]
+        "tags" : [ "spaces" ]
       }
     },
-    "/api/v1/spaces/{slug}/checks" : {
-      "get" : {
-        "operationId" : "listChecks",
+    "/api/v1/spaces/{slug}/members" : {
+      "delete" : {
+        "operationId" : "removeSpaceMember",
         "parameters" : [ {
           "in" : "path",
           "name" : "slug",
           "required" : true,
           "schema" : {
+            "pattern" : "^[a-z][a-z0-9-]{1,38}[a-z0-9]$",
             "type" : "string"
           }
         }, {
-          "description" : "The maximum number of items to return",
-          "example" : 20,
+          "description" : "The OIDC issuer of the member",
+          "in" : "query",
+          "name" : "issuer",
+          "required" : true,
+          "schema" : {
+            "description" : "The OIDC issuer of the member",
+            "maxLength" : 255,
+            "type" : "string"
+          }
+        }, {
+          "description" : "The OIDC subject of the member",
+          "in" : "query",
+          "name" : "subject",
+          "required" : true,
+          "schema" : {
+            "description" : "The OIDC subject of the member",
+            "maxLength" : 255,
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "204" : {
+            "description" : "No Content"
+          },
+          "400" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description" : "The request contains invalid fields."
+          },
+          "401" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description" : "Authentication is required."
+          },
+          "403" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description" : "Access is denied."
+          },
+          "404" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description" : "The requested resource was not found."
+          }
+        },
+        "summary" : "Remove a member from a space",
+        "tags" : [ "spaces" ]
+      },
+      "get" : {
+        "operationId" : "listSpaceMembers",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "slug",
+          "required" : true,
+          "schema" : {
+            "pattern" : "^[a-z][a-z0-9-]{1,38}[a-z0-9]$",
+            "type" : "string"
+          }
+        }, {
+          "description" : "The page size, at least 1; values above the instance maximum are capped.",
           "in" : "query",
           "name" : "limit",
           "required" : false,
           "schema" : {
-            "description" : "The maximum number of items to return",
-            "example" : 20,
-            "format" : "int32",
-            "type" : [ "integer", "null" ]
+            "exclusiveMinimum" : 0,
+            "maximum" : 100,
+            "minimum" : 1,
+            "type" : "integer"
           }
         }, {
-          "description" : "The opaque cursor of the next page",
           "in" : "query",
           "name" : "cursor",
           "required" : false,
           "schema" : {
-            "description" : "The opaque cursor of the next page",
-            "type" : [ "string", "null" ]
-          }
-        }, {
-          "description" : "Text matched against the name and the target",
-          "in" : "query",
-          "name" : "q",
-          "required" : false,
-          "schema" : {
-            "description" : "Text matched against the name and the target",
-            "type" : [ "string", "null" ]
-          }
-        }, {
-          "description" : "The current state, derived from the newest result",
-          "in" : "query",
-          "name" : "state",
-          "required" : false,
-          "schema" : {
-            "description" : "The current state, derived from the newest result",
-            "enum" : [ "UP", "DEGRADED", "DOWN", "UNKNOWN" ],
-            "type" : [ "string", "null" ]
-          }
-        }, {
-          "description" : "The protocol to measure",
-          "in" : "query",
-          "name" : "type",
-          "required" : false,
-          "schema" : {
-            "description" : "The protocol to measure",
-            "enum" : [ "HTTP", "TCP", "CERTIFICATE" ],
-            "type" : [ "string", "null" ]
-          }
-        }, {
-          "description" : "A tag the check must carry",
-          "in" : "query",
-          "name" : "tag",
-          "required" : false,
-          "schema" : {
-            "description" : "A tag the check must carry",
-            "type" : [ "string", "null" ]
-          }
-        }, {
-          "description" : "The group name",
-          "in" : "query",
-          "name" : "group",
-          "required" : false,
-          "schema" : {
-            "description" : "The group name",
-            "type" : [ "string", "null" ]
-          }
-        }, {
-          "description" : "Why monitoring is paused",
-          "in" : "query",
-          "name" : "pausedReason",
-          "required" : false,
-          "schema" : {
-            "description" : "Why monitoring is paused",
-            "enum" : [ "MANUAL", "PLAN_LIMIT", "ABANDONED", "UNVERIFIED" ],
-            "type" : [ "string", "null" ]
+            "type" : "string"
           }
         } ],
         "responses" : {
@@ -926,7 +666,7 @@
             "content" : {
               "application/json" : {
                 "schema" : {
-                  "$ref" : "#/components/schemas/CursorPageCheckResponse"
+                  "$ref" : "#/components/schemas/CursorPageSpaceMemberResponse"
                 }
               }
             },
@@ -940,7 +680,7 @@
                 }
               }
             },
-            "description" : "The cursor is invalid."
+            "description" : "The limit or the cursor is invalid."
           },
           "401" : {
             "content" : {
@@ -960,19 +700,19 @@
                 }
               }
             },
-            "description" : "The space was not found."
+            "description" : "The requested resource was not found."
           }
         },
-        "summary" : "List the checks of a space",
-        "tags" : [ "checks-controller" ]
+        "tags" : [ "spaces" ]
       },
       "post" : {
-        "operationId" : "createCheck",
+        "operationId" : "addSpaceMember",
         "parameters" : [ {
           "in" : "path",
           "name" : "slug",
           "required" : true,
           "schema" : {
+            "pattern" : "^[a-z][a-z0-9-]{1,38}[a-z0-9]$",
             "type" : "string"
           }
         } ],
@@ -980,22 +720,32 @@
           "content" : {
             "application/json" : {
               "schema" : {
-                "$ref" : "#/components/schemas/CreateCheckRequest"
+                "$ref" : "#/components/schemas/AddSpaceMemberRequest"
               }
             }
           },
           "required" : true
         },
         "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/SpaceMemberResponse"
+                }
+              }
+            },
+            "description" : "The membership already exists; an existing membership keeps its role."
+          },
           "201" : {
             "content" : {
               "application/json" : {
                 "schema" : {
-                  "$ref" : "#/components/schemas/CheckResponse"
+                  "$ref" : "#/components/schemas/SpaceMemberResponse"
                 }
               }
             },
-            "description" : "The check was created."
+            "description" : "The membership was created."
           },
           "400" : {
             "content" : {
@@ -1005,7 +755,7 @@
                 }
               }
             },
-            "description" : "The request is invalid."
+            "description" : "The request contains invalid fields."
           },
           "401" : {
             "content" : {
@@ -1025,7 +775,7 @@
                 }
               }
             },
-            "description" : "The role does not allow changing checks in this space."
+            "description" : "Access is denied."
           },
           "404" : {
             "content" : {
@@ -1035,242 +785,42 @@
                 }
               }
             },
-            "description" : "The space was not found."
+            "description" : "The requested resource was not found."
           }
         },
-        "summary" : "Create a check in a space",
-        "tags" : [ "checks-write-controller" ]
+        "summary" : "Add a member to a space",
+        "tags" : [ "spaces" ]
       }
     },
-    "/api/v1/spaces/{slug}/checks/counts" : {
-      "get" : {
-        "operationId" : "countChecks",
-        "parameters" : [ {
-          "in" : "path",
-          "name" : "slug",
-          "required" : true,
-          "schema" : {
-            "type" : "string"
-          }
-        }, {
-          "description" : "Text matched against the name and the target",
-          "in" : "query",
-          "name" : "q",
-          "required" : false,
-          "schema" : {
-            "description" : "Text matched against the name and the target",
-            "type" : [ "string", "null" ]
-          }
-        }, {
-          "description" : "The current state, derived from the newest result",
-          "in" : "query",
-          "name" : "state",
-          "required" : false,
-          "schema" : {
-            "description" : "The current state, derived from the newest result",
-            "enum" : [ "UP", "DEGRADED", "DOWN", "UNKNOWN" ],
-            "type" : [ "string", "null" ]
-          }
-        }, {
-          "description" : "The protocol to measure",
-          "in" : "query",
-          "name" : "type",
-          "required" : false,
-          "schema" : {
-            "description" : "The protocol to measure",
-            "enum" : [ "HTTP", "TCP", "CERTIFICATE" ],
-            "type" : [ "string", "null" ]
-          }
-        }, {
-          "description" : "A tag the check must carry",
-          "in" : "query",
-          "name" : "tag",
-          "required" : false,
-          "schema" : {
-            "description" : "A tag the check must carry",
-            "type" : [ "string", "null" ]
-          }
-        }, {
-          "description" : "The group name",
-          "in" : "query",
-          "name" : "group",
-          "required" : false,
-          "schema" : {
-            "description" : "The group name",
-            "type" : [ "string", "null" ]
-          }
-        }, {
-          "description" : "Why monitoring is paused",
-          "in" : "query",
-          "name" : "pausedReason",
-          "required" : false,
-          "schema" : {
-            "description" : "Why monitoring is paused",
-            "enum" : [ "MANUAL", "PLAN_LIMIT", "ABANDONED", "UNVERIFIED" ],
-            "type" : [ "string", "null" ]
-          }
-        } ],
-        "responses" : {
-          "200" : {
-            "content" : {
-              "application/json" : {
-                "schema" : {
-                  "$ref" : "#/components/schemas/StateCountsResponse"
-                }
-              }
-            },
-            "description" : "OK"
-          },
-          "401" : {
-            "content" : {
-              "application/problem+json" : {
-                "schema" : {
-                  "$ref" : "#/components/schemas/ProblemDetail"
-                }
-              }
-            },
-            "description" : "Authentication is required."
-          },
-          "404" : {
-            "content" : {
-              "application/problem+json" : {
-                "schema" : {
-                  "$ref" : "#/components/schemas/ProblemDetail"
-                }
-              }
-            },
-            "description" : "The space was not found."
-          }
-        },
-        "summary" : "Count the checks of a space by state",
-        "tags" : [ "checks-controller" ]
-      }
-    },
-    "/api/v1/spaces/{slug}/checks/{id}" : {
-      "delete" : {
-        "operationId" : "deleteCheck",
-        "parameters" : [ {
-          "in" : "path",
-          "name" : "slug",
-          "required" : true,
-          "schema" : {
-            "type" : "string"
-          }
-        }, {
-          "in" : "path",
-          "name" : "id",
-          "required" : true,
-          "schema" : {
-            "format" : "uuid",
-            "type" : "string"
-          }
-        } ],
-        "responses" : {
-          "204" : {
-            "description" : "The check was deleted."
-          },
-          "401" : {
-            "content" : {
-              "application/problem+json" : {
-                "schema" : {
-                  "$ref" : "#/components/schemas/ProblemDetail"
-                }
-              }
-            },
-            "description" : "Authentication is required."
-          },
-          "403" : {
-            "content" : {
-              "application/problem+json" : {
-                "schema" : {
-                  "$ref" : "#/components/schemas/ProblemDetail"
-                }
-              }
-            },
-            "description" : "The role does not allow changing checks in this space."
-          },
-          "404" : {
-            "content" : {
-              "application/problem+json" : {
-                "schema" : {
-                  "$ref" : "#/components/schemas/ProblemDetail"
-                }
-              }
-            },
-            "description" : "The space or check was not found."
-          }
-        },
-        "summary" : "Delete a check together with its results and tags",
-        "tags" : [ "checks-write-controller" ]
-      },
-      "get" : {
-        "operationId" : "getCheck",
-        "parameters" : [ {
-          "in" : "path",
-          "name" : "slug",
-          "required" : true,
-          "schema" : {
-            "type" : "string"
-          }
-        }, {
-          "in" : "path",
-          "name" : "id",
-          "required" : true,
-          "schema" : {
-            "format" : "uuid",
-            "type" : "string"
-          }
-        } ],
-        "responses" : {
-          "200" : {
-            "content" : {
-              "application/json" : {
-                "schema" : {
-                  "$ref" : "#/components/schemas/CheckResponse"
-                }
-              }
-            },
-            "description" : "OK"
-          },
-          "401" : {
-            "content" : {
-              "application/problem+json" : {
-                "schema" : {
-                  "$ref" : "#/components/schemas/ProblemDetail"
-                }
-              }
-            },
-            "description" : "Authentication is required."
-          },
-          "404" : {
-            "content" : {
-              "application/problem+json" : {
-                "schema" : {
-                  "$ref" : "#/components/schemas/ProblemDetail"
-                }
-              }
-            },
-            "description" : "The space or check was not found."
-          }
-        },
-        "summary" : "Read one check of a space with its newest result",
-        "tags" : [ "checks-controller" ]
-      },
+    "/api/v1/spaces/{slug}/members/role" : {
       "put" : {
-        "operationId" : "updateCheck",
+        "operationId" : "changeSpaceMemberRole",
         "parameters" : [ {
           "in" : "path",
           "name" : "slug",
           "required" : true,
           "schema" : {
+            "pattern" : "^[a-z][a-z0-9-]{1,38}[a-z0-9]$",
             "type" : "string"
           }
         }, {
-          "in" : "path",
-          "name" : "id",
+          "description" : "The OIDC issuer of the member",
+          "in" : "query",
+          "name" : "issuer",
           "required" : true,
           "schema" : {
-            "format" : "uuid",
+            "description" : "The OIDC issuer of the member",
+            "maxLength" : 255,
+            "type" : "string"
+          }
+        }, {
+          "description" : "The OIDC subject of the member",
+          "in" : "query",
+          "name" : "subject",
+          "required" : true,
+          "schema" : {
+            "description" : "The OIDC subject of the member",
+            "maxLength" : 255,
             "type" : "string"
           }
         } ],
@@ -1278,244 +828,7 @@
           "content" : {
             "application/json" : {
               "schema" : {
-                "$ref" : "#/components/schemas/UpdateCheckRequest"
-              }
-            }
-          },
-          "required" : true
-        },
-        "responses" : {
-          "200" : {
-            "content" : {
-              "application/json" : {
-                "schema" : {
-                  "$ref" : "#/components/schemas/CheckResponse"
-                }
-              }
-            },
-            "description" : "OK"
-          },
-          "400" : {
-            "content" : {
-              "application/problem+json" : {
-                "schema" : {
-                  "$ref" : "#/components/schemas/ProblemDetail"
-                }
-              }
-            },
-            "description" : "The request is invalid."
-          },
-          "401" : {
-            "content" : {
-              "application/problem+json" : {
-                "schema" : {
-                  "$ref" : "#/components/schemas/ProblemDetail"
-                }
-              }
-            },
-            "description" : "Authentication is required."
-          },
-          "403" : {
-            "content" : {
-              "application/problem+json" : {
-                "schema" : {
-                  "$ref" : "#/components/schemas/ProblemDetail"
-                }
-              }
-            },
-            "description" : "The role does not allow changing checks in this space."
-          },
-          "404" : {
-            "content" : {
-              "application/problem+json" : {
-                "schema" : {
-                  "$ref" : "#/components/schemas/ProblemDetail"
-                }
-              }
-            },
-            "description" : "The space or check was not found."
-          },
-          "409" : {
-            "content" : {
-              "application/problem+json" : {
-                "schema" : {
-                  "$ref" : "#/components/schemas/ProblemDetail"
-                }
-              }
-            },
-            "description" : "The check was changed by someone else."
-          }
-        },
-        "summary" : "Replace a check, rejecting a stale version",
-        "tags" : [ "checks-write-controller" ]
-      }
-    },
-    "/api/v1/spaces/{slug}/checks/{id}/pause" : {
-      "post" : {
-        "operationId" : "pauseCheck",
-        "parameters" : [ {
-          "in" : "path",
-          "name" : "slug",
-          "required" : true,
-          "schema" : {
-            "type" : "string"
-          }
-        }, {
-          "in" : "path",
-          "name" : "id",
-          "required" : true,
-          "schema" : {
-            "format" : "uuid",
-            "type" : "string"
-          }
-        } ],
-        "requestBody" : {
-          "content" : {
-            "application/json" : {
-              "schema" : {
-                "$ref" : "#/components/schemas/PauseCheckRequest"
-              }
-            }
-          },
-          "required" : true
-        },
-        "responses" : {
-          "200" : {
-            "content" : {
-              "application/json" : {
-                "schema" : {
-                  "$ref" : "#/components/schemas/CheckResponse"
-                }
-              }
-            },
-            "description" : "OK"
-          },
-          "400" : {
-            "content" : {
-              "application/problem+json" : {
-                "schema" : {
-                  "$ref" : "#/components/schemas/ProblemDetail"
-                }
-              }
-            },
-            "description" : "The request is invalid."
-          },
-          "401" : {
-            "content" : {
-              "application/problem+json" : {
-                "schema" : {
-                  "$ref" : "#/components/schemas/ProblemDetail"
-                }
-              }
-            },
-            "description" : "Authentication is required."
-          },
-          "403" : {
-            "content" : {
-              "application/problem+json" : {
-                "schema" : {
-                  "$ref" : "#/components/schemas/ProblemDetail"
-                }
-              }
-            },
-            "description" : "The role does not allow changing checks in this space."
-          },
-          "404" : {
-            "content" : {
-              "application/problem+json" : {
-                "schema" : {
-                  "$ref" : "#/components/schemas/ProblemDetail"
-                }
-              }
-            },
-            "description" : "The space or check was not found."
-          }
-        },
-        "summary" : "Pause monitoring of a check",
-        "tags" : [ "checks-write-controller" ]
-      }
-    },
-    "/api/v1/spaces/{slug}/checks/{id}/resume" : {
-      "post" : {
-        "operationId" : "resumeCheck",
-        "parameters" : [ {
-          "in" : "path",
-          "name" : "slug",
-          "required" : true,
-          "schema" : {
-            "type" : "string"
-          }
-        }, {
-          "in" : "path",
-          "name" : "id",
-          "required" : true,
-          "schema" : {
-            "format" : "uuid",
-            "type" : "string"
-          }
-        } ],
-        "responses" : {
-          "200" : {
-            "content" : {
-              "application/json" : {
-                "schema" : {
-                  "$ref" : "#/components/schemas/CheckResponse"
-                }
-              }
-            },
-            "description" : "OK"
-          },
-          "401" : {
-            "content" : {
-              "application/problem+json" : {
-                "schema" : {
-                  "$ref" : "#/components/schemas/ProblemDetail"
-                }
-              }
-            },
-            "description" : "Authentication is required."
-          },
-          "403" : {
-            "content" : {
-              "application/problem+json" : {
-                "schema" : {
-                  "$ref" : "#/components/schemas/ProblemDetail"
-                }
-              }
-            },
-            "description" : "The role does not allow changing checks in this space."
-          },
-          "404" : {
-            "content" : {
-              "application/problem+json" : {
-                "schema" : {
-                  "$ref" : "#/components/schemas/ProblemDetail"
-                }
-              }
-            },
-            "description" : "The space or check was not found."
-          }
-        },
-        "summary" : "Resume monitoring of a check",
-        "tags" : [ "checks-write-controller" ]
-      }
-    },
-    "/api/v1/spaces/{slug}/plan" : {
-      "put" : {
-        "operationId" : "putSpacePlan",
-        "parameters" : [ {
-          "in" : "path",
-          "name" : "slug",
-          "required" : true,
-          "schema" : {
-            "type" : "string"
-          }
-        } ],
-        "requestBody" : {
-          "content" : {
-            "application/json" : {
-              "schema" : {
-                "$ref" : "#/components/schemas/PutSpacePlanRequest"
+                "$ref" : "#/components/schemas/ChangeSpaceMemberRoleRequest"
               }
             }
           },
@@ -1523,7 +836,7 @@
         },
         "responses" : {
           "204" : {
-            "description" : "The plan was assigned."
+            "description" : "No Content"
           },
           "400" : {
             "content" : {
@@ -1533,7 +846,7 @@
                 }
               }
             },
-            "description" : "The plan is not configured on this instance."
+            "description" : "The request contains invalid fields."
           },
           "401" : {
             "content" : {
@@ -1553,7 +866,7 @@
                 }
               }
             },
-            "description" : "Only an administrator can assign a plan."
+            "description" : "Access is denied."
           },
           "404" : {
             "content" : {
@@ -1563,410 +876,14 @@
                 }
               }
             },
-            "description" : "The space was not found."
+            "description" : "The requested resource was not found."
           }
         },
-        "summary" : "Assign a plan to a space idempotently",
-        "tags" : [ "settings-controller" ]
-      }
-    },
-    "/api/v1/spaces/{slug}/settings" : {
-      "get" : {
-        "operationId" : "getSpaceSettings",
-        "parameters" : [ {
-          "in" : "path",
-          "name" : "slug",
-          "required" : true,
-          "schema" : {
-            "type" : "string"
-          }
-        } ],
-        "responses" : {
-          "200" : {
-            "content" : {
-              "application/json" : {
-                "schema" : {
-                  "items" : {
-                    "$ref" : "#/components/schemas/SpaceSettingResponse"
-                  },
-                  "type" : "array"
-                }
-              }
-            },
-            "description" : "OK"
-          },
-          "400" : {
-            "content" : {
-              "application/problem+json" : {
-                "schema" : {
-                  "$ref" : "#/components/schemas/ProblemDetail"
-                }
-              }
-            },
-            "description" : "The space plan or a setting is invalid."
-          },
-          "401" : {
-            "content" : {
-              "application/problem+json" : {
-                "schema" : {
-                  "$ref" : "#/components/schemas/ProblemDetail"
-                }
-              }
-            },
-            "description" : "Authentication is required."
-          },
-          "404" : {
-            "content" : {
-              "application/problem+json" : {
-                "schema" : {
-                  "$ref" : "#/components/schemas/ProblemDetail"
-                }
-              }
-            },
-            "description" : "The space was not found."
-          }
-        },
-        "summary" : "Read the effective settings of a space",
-        "tags" : [ "settings-controller" ]
-      }
-    },
-    "/api/v1/spaces/{slug}/settings/{key}" : {
-      "delete" : {
-        "operationId" : "deleteSpaceSetting",
-        "parameters" : [ {
-          "in" : "path",
-          "name" : "slug",
-          "required" : true,
-          "schema" : {
-            "type" : "string"
-          }
-        }, {
-          "in" : "path",
-          "name" : "key",
-          "required" : true,
-          "schema" : {
-            "type" : "string"
-          }
-        } ],
-        "responses" : {
-          "204" : {
-            "description" : "The override was removed."
-          },
-          "400" : {
-            "content" : {
-              "application/problem+json" : {
-                "schema" : {
-                  "$ref" : "#/components/schemas/ProblemDetail"
-                }
-              }
-            },
-            "description" : "The setting key is unknown."
-          },
-          "401" : {
-            "content" : {
-              "application/problem+json" : {
-                "schema" : {
-                  "$ref" : "#/components/schemas/ProblemDetail"
-                }
-              }
-            },
-            "description" : "Authentication is required."
-          },
-          "403" : {
-            "content" : {
-              "application/problem+json" : {
-                "schema" : {
-                  "$ref" : "#/components/schemas/ProblemDetail"
-                }
-              }
-            },
-            "description" : "The caller cannot change the settings of this space."
-          },
-          "404" : {
-            "content" : {
-              "application/problem+json" : {
-                "schema" : {
-                  "$ref" : "#/components/schemas/ProblemDetail"
-                }
-              }
-            },
-            "description" : "The space was not found."
-          }
-        },
-        "summary" : "Reset a space setting to the plan value",
-        "tags" : [ "settings-controller" ]
-      },
-      "put" : {
-        "operationId" : "putSpaceSetting",
-        "parameters" : [ {
-          "in" : "path",
-          "name" : "slug",
-          "required" : true,
-          "schema" : {
-            "type" : "string"
-          }
-        }, {
-          "in" : "path",
-          "name" : "key",
-          "required" : true,
-          "schema" : {
-            "type" : "string"
-          }
-        } ],
-        "requestBody" : {
-          "content" : {
-            "application/json" : {
-              "schema" : {
-                "$ref" : "#/components/schemas/SetSpaceSettingRequest"
-              }
-            }
-          },
-          "required" : true
-        },
-        "responses" : {
-          "204" : {
-            "description" : "The setting was stored."
-          },
-          "400" : {
-            "content" : {
-              "application/problem+json" : {
-                "schema" : {
-                  "$ref" : "#/components/schemas/ProblemDetail"
-                }
-              }
-            },
-            "description" : "The value is outside the plan or has an invalid format."
-          },
-          "401" : {
-            "content" : {
-              "application/problem+json" : {
-                "schema" : {
-                  "$ref" : "#/components/schemas/ProblemDetail"
-                }
-              }
-            },
-            "description" : "Authentication is required."
-          },
-          "403" : {
-            "content" : {
-              "application/problem+json" : {
-                "schema" : {
-                  "$ref" : "#/components/schemas/ProblemDetail"
-                }
-              }
-            },
-            "description" : "The caller cannot change the settings of this space."
-          },
-          "404" : {
-            "content" : {
-              "application/problem+json" : {
-                "schema" : {
-                  "$ref" : "#/components/schemas/ProblemDetail"
-                }
-              }
-            },
-            "description" : "The space was not found."
-          }
-        },
-        "summary" : "Set a space setting within the plan",
-        "tags" : [ "settings-controller" ]
-      }
-    },
-    "/api/v1/spaces/{slug}/tokens" : {
-      "get" : {
-        "operationId" : "listTokens",
-        "parameters" : [ {
-          "in" : "path",
-          "name" : "slug",
-          "required" : true,
-          "schema" : {
-            "type" : "string"
-          }
-        } ],
-        "responses" : {
-          "200" : {
-            "content" : {
-              "application/json" : {
-                "schema" : {
-                  "$ref" : "#/components/schemas/CursorPageTokenSummary"
-                }
-              }
-            },
-            "description" : "OK"
-          },
-          "401" : {
-            "content" : {
-              "application/problem+json" : {
-                "schema" : {
-                  "$ref" : "#/components/schemas/ProblemDetail"
-                }
-              }
-            },
-            "description" : "Authentication is required."
-          },
-          "404" : {
-            "content" : {
-              "application/problem+json" : {
-                "schema" : {
-                  "$ref" : "#/components/schemas/ProblemDetail"
-                }
-              }
-            },
-            "description" : "The space was not found."
-          }
-        },
-        "security" : [ {
-          "sessionAuth" : [ ]
-        } ],
-        "summary" : "List the caller's API tokens in a space",
-        "tags" : [ "tokens-controller" ]
-      },
-      "post" : {
-        "operationId" : "createToken",
-        "parameters" : [ {
-          "in" : "path",
-          "name" : "slug",
-          "required" : true,
-          "schema" : {
-            "type" : "string"
-          }
-        } ],
-        "requestBody" : {
-          "content" : {
-            "application/json" : {
-              "schema" : {
-                "$ref" : "#/components/schemas/CreateTokenRequest"
-              }
-            }
-          },
-          "required" : true
-        },
-        "responses" : {
-          "201" : {
-            "content" : {
-              "application/json" : {
-                "schema" : {
-                  "$ref" : "#/components/schemas/CreateTokenResponse"
-                }
-              }
-            },
-            "description" : "The token was created; the secret is returned only here."
-          },
-          "400" : {
-            "content" : {
-              "application/problem+json" : {
-                "schema" : {
-                  "$ref" : "#/components/schemas/ProblemDetail"
-                }
-              }
-            },
-            "description" : "The token request is invalid."
-          },
-          "401" : {
-            "content" : {
-              "application/problem+json" : {
-                "schema" : {
-                  "$ref" : "#/components/schemas/ProblemDetail"
-                }
-              }
-            },
-            "description" : "Authentication is required."
-          },
-          "403" : {
-            "content" : {
-              "application/problem+json" : {
-                "schema" : {
-                  "$ref" : "#/components/schemas/ProblemDetail"
-                }
-              }
-            },
-            "description" : "The caller is not allowed to create this token."
-          },
-          "404" : {
-            "content" : {
-              "application/problem+json" : {
-                "schema" : {
-                  "$ref" : "#/components/schemas/ProblemDetail"
-                }
-              }
-            },
-            "description" : "The space was not found."
-          }
-        },
-        "security" : [ {
-          "sessionAuth" : [ ]
-        } ],
-        "summary" : "Create an API token for a space",
-        "tags" : [ "tokens-controller" ]
-      }
-    },
-    "/api/v1/spaces/{slug}/tokens/{id}" : {
-      "delete" : {
-        "operationId" : "revokeToken",
-        "parameters" : [ {
-          "in" : "path",
-          "name" : "slug",
-          "required" : true,
-          "schema" : {
-            "type" : "string"
-          }
-        }, {
-          "in" : "path",
-          "name" : "id",
-          "required" : true,
-          "schema" : {
-            "format" : "uuid",
-            "type" : "string"
-          }
-        } ],
-        "responses" : {
-          "204" : {
-            "description" : "The token was revoked."
-          },
-          "401" : {
-            "content" : {
-              "application/problem+json" : {
-                "schema" : {
-                  "$ref" : "#/components/schemas/ProblemDetail"
-                }
-              }
-            },
-            "description" : "Authentication is required."
-          },
-          "403" : {
-            "content" : {
-              "application/problem+json" : {
-                "schema" : {
-                  "$ref" : "#/components/schemas/ProblemDetail"
-                }
-              }
-            },
-            "description" : "The caller is not allowed to revoke this token."
-          },
-          "404" : {
-            "content" : {
-              "application/problem+json" : {
-                "schema" : {
-                  "$ref" : "#/components/schemas/ProblemDetail"
-                }
-              }
-            },
-            "description" : "The space was not found."
-          }
-        },
-        "security" : [ {
-          "sessionAuth" : [ ]
-        } ],
-        "summary" : "Revoke one of the caller's API tokens",
-        "tags" : [ "tokens-controller" ]
+        "summary" : "Change a member's role",
+        "tags" : [ "spaces" ]
       }
     }
   },
-  "security" : [ {
-    "bearerAuth" : [ ]
-  }, {
-    "sessionAuth" : [ ]
-  } ],
   "servers" : [ {
     "description" : "Generated server url",
     "url" : "http://localhost"

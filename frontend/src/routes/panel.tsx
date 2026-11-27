@@ -2,7 +2,7 @@ import { createRoute, redirect, retainSearchParams } from '@tanstack/react-route
 import { PanelShell } from '../app/shell/PanelShell'
 import { meQueryOptions } from '../features/auth'
 import { validateSpaceSearch } from '../features/spaces'
-import { isUnauthorizedError } from '../shared/api/client'
+import { isUnauthorizedException } from '../shared/api/client'
 import { rootRoute } from './__root'
 
 export const panelRoute = createRoute({
@@ -16,7 +16,7 @@ export const panelRoute = createRoute({
     try {
       await context.queryClient.query({ ...meQueryOptions, staleTime: 'static' })
     } catch (error) {
-      if (isUnauthorizedError(error)) {
+      if (isUnauthorizedException(error)) {
         redirect({ to: '/login', throw: true })
       }
       throw error

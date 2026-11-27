@@ -33,6 +33,8 @@ class SecurityFilterChainTest extends SecurityIntegrationTest {
 
     private static final ResultMatcher UNAUTHORIZED = status().isUnauthorized();
 
+    private static final String ISSUER = "https://issuer.example.com";
+
     private static final ResultMatcher CONTENT_SECURITY_POLICY =
             header().string("Content-Security-Policy", "default-src 'none'; frame-ancestors 'none'");
 
@@ -44,7 +46,12 @@ class SecurityFilterChainTest extends SecurityIntegrationTest {
     @ParameterizedTest
     @ValueSource(strings = {"/agent/v1/checks", "/ping/token", "/public/v1/status"})
     void statelessEndpointsAreRejectedWithoutAuthentication(String path) throws Exception {
-        mockMvc().perform(get(path)).andExpect(UNAUTHORIZED);
+        // when
+        MvcResult result = mockMvc().perform(get(path)).andReturn();
+
+        // then
+        int status = result.getResponse().getStatus();
+        assertThat(status).isEqualTo(401);
     }
 
     @Test
@@ -100,7 +107,9 @@ class SecurityFilterChainTest extends SecurityIntegrationTest {
     @Test
     void meReturnsSubjectAndAdminFlag() throws Exception {
         // given
-        var login = oidcLogin().authorities(new SimpleGrantedAuthority("ROLE_ADMIN"));
+        var login = oidcLogin()
+                .idToken(token -> token.issuer(ISSUER))
+                .authorities(new SimpleGrantedAuthority("ROLE_ADMIN"));
         var request = get("/api/v1/me").with(login);
 
         // when
@@ -110,13 +119,17 @@ class SecurityFilterChainTest extends SecurityIntegrationTest {
         int status = result.getResponse().getStatus();
         String body = result.getResponse().getContentAsString();
         assertThat(status).isEqualTo(200);
-        assertThat(body).contains("\"subject\":\"user\"").contains("\"admin\":true");
+        assertThat(body)
+                .contains("\"issuer\":\"https://issuer.example.com\"")
+                .contains("\"subject\":\"user\"")
+                .contains("\"admin\":true");
     }
 
     @Test
     void meWithoutAdminRoleIsNotAdmin() throws Exception {
         // given
-        var request = get("/api/v1/me").with(oidcLogin());
+        var login = oidcLogin().idToken(token -> token.issuer(ISSUER));
+        var request = get("/api/v1/me").with(login);
 
         // when
         MvcResult result = mockMvc().perform(request).andReturn();

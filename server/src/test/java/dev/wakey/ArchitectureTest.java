@@ -18,7 +18,6 @@ import com.tngtech.archunit.lang.ConditionEvents;
 import com.tngtech.archunit.lang.SimpleConditionEvent;
 import com.tngtech.archunit.library.GeneralCodingRules;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -32,40 +31,26 @@ class ArchitectureTest {
     private static final String SHARED_ROLE = "shared";
 
     /** Every module lists the modules it may depend on; a new module or edge is a deliberate change. */
-    private static final Map<String, Set<String>> MODULE_DEPENDENCIES = moduleDependencies();
+    private static final Map<String, Set<String>> MODULE_DEPENDENCIES = Map.of(
+            "config", Set.of(),
+            "leadership", Set.of(),
+            "messaging", Set.of(),
+            "spaces", Set.of("web", "security"),
+            "web", Set.of(),
+            "security", Set.of("web"),
+            "executor", Set.of("leadership", "messaging"),
+            "alerts", Set.of("leadership", "messaging"));
 
     /** Every module belongs to a role; modules of one role may depend only on that role and shared modules. */
-    private static final Map<String, String> MODULE_ROLES = moduleRoles();
-
-    private static Map<String, Set<String>> moduleDependencies() {
-        Map<String, Set<String>> dependencies = new HashMap<>();
-        dependencies.put("api", Set.of("checks", "spaces", "settings", "web", "security", "tokens"));
-        dependencies.put("audit", Set.of());
-        dependencies.put("checks", Set.of());
-        dependencies.put("config", Set.of());
-        dependencies.put("leadership", Set.of());
-        dependencies.put("messaging", Set.of());
-        dependencies.put("ratelimit", Set.of());
-        dependencies.put("retry", Set.of());
-        dependencies.put("settings", Set.of("checks"));
-        dependencies.put("spaces", Set.of());
-        dependencies.put("tokens", Set.of("spaces"));
-        dependencies.put("web", Set.of());
-        dependencies.put("security", Set.of("web", "tokens"));
-        dependencies.put("executor", Set.of("leadership", "messaging"));
-        dependencies.put("alerts", Set.of("leadership", "messaging"));
-        return dependencies;
-    }
-
-    private static Map<String, String> moduleRoles() {
-        Map<String, String> roles = new HashMap<>();
-        for (String module : MODULE_DEPENDENCIES.keySet()) {
-            roles.put(module, SHARED_ROLE);
-        }
-        roles.put("executor", "executor");
-        roles.put("alerts", "alerts");
-        return roles;
-    }
+    private static final Map<String, String> MODULE_ROLES = Map.of(
+            "config", SHARED_ROLE,
+            "leadership", SHARED_ROLE,
+            "messaging", SHARED_ROLE,
+            "spaces", SHARED_ROLE,
+            "web", SHARED_ROLE,
+            "security", SHARED_ROLE,
+            "executor", "executor",
+            "alerts", "alerts");
 
     private static final Set<String> WALL_CLOCK_TYPES = Set.of(
             "java.time.Instant",

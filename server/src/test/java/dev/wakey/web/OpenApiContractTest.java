@@ -5,6 +5,8 @@ import static org.springframework.security.test.web.servlet.request.SecurityMock
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.request;
 
+import dev.wakey.spaces.SpaceMember;
+import dev.wakey.spaces.SpaceRole;
 import dev.wakey.spaces.SpaceSlug;
 import dev.wakey.testsupport.ContractFile;
 import dev.wakey.testsupport.SecurityIntegrationTest;
@@ -42,6 +44,10 @@ class OpenApiContractTest extends SecurityIntegrationTest {
 
     // Every entry needs a justification in ADR 0006 before it is added.
     private static final Set<String> PUBLIC_OPERATIONS = Set.of();
+
+    private static final String ERROR_SCHEMA_REF = "#/components/schemas/ProblemDetail";
+
+    private static final String SPACE_ROLE_REFERENCE = "#/components/schemas/" + SpaceRole.class.getSimpleName();
 
     private static final ObjectMapper MAPPER = JsonMapper.builder()
             .enable(SerializationFeature.ORDER_MAP_ENTRIES_BY_KEYS)
@@ -85,64 +91,88 @@ class OpenApiContractTest extends SecurityIntegrationTest {
         JsonNode schemas = document.path("components").path("schemas");
         JsonNode space = schemas.path("SpaceResponse");
         JsonNode cursorPage = schemas.path("CursorPageSpaceResponse");
+        JsonNode spaceRole = schemas.path("SpaceRole");
 
         // when
-        JsonNode roleSchema = space.path("properties").path("role").path("type");
+        JsonNode role = space.path("properties").path("role");
         JsonNode nextCursorSchema =
                 cursorPage.path("properties").path("nextCursor").path("type");
         List<String> spaceRequired = valuesOf(space.path("required"));
         List<String> cursorPageRequired = valuesOf(cursorPage.path("required"));
-        List<String> roleType = valuesOf(roleSchema);
+        List<String> roleTypes = unionTypes(role);
+        List<String> spaceRoleType = valuesOf(spaceRole.path("type"));
         List<String> nextCursorType = valuesOf(nextCursorSchema);
 
         // then
         assertThat(spaceRequired).containsExactlyInAnyOrder("slug", "name", "version", "role");
         assertThat(cursorPageRequired).containsExactlyInAnyOrder("items", "nextCursor");
-        assertThat(roleType).contains("string", "null");
+        String roleReference = referenceOf(role);
+        assertThat(roleReference).isEqualTo(SPACE_ROLE_REFERENCE);
+        assertThat(roleTypes).contains("null");
+        assertThat(spaceRoleType).contains("string");
         assertThat(nextCursorType).contains("string", "null");
     }
 
     @Test
-    void checkOperationsDocumentExactlyTheirOwnResponses() throws Exception {
+    void spaceRoleIsANamedSchemaInTheContract() throws Exception {
+        // given
+        JsonNode document = MAPPER.readTree(generatedContract());
+        JsonNode schemas = document.path("components").path("schemas");
+        JsonNode role = schemas.path("SpaceResponse").path("properties").path("role");
+        JsonNode spaceRole = schemas.path("SpaceRole");
+
         // when
-        JsonNode paths = MAPPER.readTree(generatedContract()).path("paths");
+        List<String> roleValues = valuesOf(spaceRole.path("enum"));
+        String roleReference = referenceOf(role);
 
         // then
-        assertResponses(paths, "/api/v1/spaces/{slug}/checks", "get", "200", "400", "401", "404");
-        assertResponses(paths, "/api/v1/spaces/{slug}/checks/counts", "get", "200", "401", "404");
-        assertResponses(paths, "/api/v1/spaces/{slug}/checks/{id}", "get", "200", "401", "404");
-        assertResponses(paths, "/api/v1/spaces/{slug}/checks", "post", "201", "400", "401", "403", "404");
-        assertResponses(paths, "/api/v1/spaces/{slug}/checks/{id}", "put", "200", "400", "401", "403", "404", "409");
-        assertResponses(paths, "/api/v1/spaces/{slug}/checks/{id}/pause", "post", "200", "400", "401", "403", "404");
-        assertResponses(paths, "/api/v1/spaces/{slug}/checks/{id}/resume", "post", "200", "401", "403", "404");
-        assertResponses(paths, "/api/v1/spaces/{slug}/checks/{id}", "delete", "204", "401", "403", "404");
+        assertThat(roleValues).containsExactly("EDITOR", "VIEWER");
+        assertThat(roleReference).isEqualTo(SPACE_ROLE_REFERENCE);
     }
 
-    private static void assertResponses(JsonNode paths, String path, String method, String... expected) {
-        JsonNode operation = paths.path(path).path(method);
-        JsonNode responses = operation.path("responses");
-        List<String> codes = new ArrayList<>();
-        responses.propertyNames().forEach(codes::add);
-        assertThat(operation.isMissingNode()).isFalse();
-        assertThat(codes).containsExactlyInAnyOrder(expected);
-        assertMediaTypes(responses);
+    @Test
+    void theResponseRoleIsNullableWhileTheSpaceRoleIsNot() throws Exception {
+        // given
+        JsonNode document = MAPPER.readTree(generatedContract());
+        JsonNode schemas = document.path("components").path("schemas");
+        JsonNode role = schemas.path("SpaceResponse").path("properties").path("role");
+        JsonNode spaceRole = schemas.path("SpaceRole");
+
+        // when
+        String roleReference = referenceOf(role);
+        List<String> spaceRoleType = valuesOf(spaceRole.path("type"));
+        List<String> roleTypes = unionTypes(role);
+
+        // then
+        assertThat(roleReference).isEqualTo(SPACE_ROLE_REFERENCE);
+        assertThat(spaceRoleType).containsExactly("string");
+        assertThat(roleTypes).contains("null");
     }
 
-    private static void assertMediaTypes(JsonNode responses) {
-        for (String code : List.of("200", "201")) {
-            assertMediaType(responses, code, "application/json");
-        }
-        for (String code : List.of("400", "401", "403", "404", "409")) {
-            assertMediaType(responses, code, "application/problem+json");
-        }
-    }
+    @Test
+    void aRoleInARequestIsNotNullable() throws Exception {
+        // given
+        JsonNode document = MAPPER.readTree(generatedContract());
+        JsonNode schemas = document.path("components").path("schemas");
+        JsonNode spaceRole = schemas.path("SpaceRole");
+        JsonNode addMember = schemas.path("AddSpaceMemberRequest");
+        JsonNode changeRole = schemas.path("ChangeSpaceMemberRoleRequest");
 
-    private static void assertMediaType(JsonNode responses, String code, String mediaType) {
-        JsonNode response = responses.path(code);
-        if (!response.isMissingNode()) {
-            JsonNode content = response.path("content");
-            assertThat(content.has(mediaType)).isTrue();
-        }
+        // when
+        List<String> spaceRoleType = valuesOf(spaceRole.path("type"));
+        List<String> addRequired = valuesOf(addMember.path("required"));
+        List<String> changeRequired = valuesOf(changeRole.path("required"));
+        JsonNode addRole = addMember.path("properties").path("role");
+        JsonNode changeRoleRole = changeRole.path("properties").path("role");
+
+        // then
+        assertThat(spaceRoleType).containsExactly("string");
+        assertThat(addRequired).contains("role");
+        assertThat(changeRequired).contains("role");
+        assertThat(referenceOf(addRole)).isEqualTo(SPACE_ROLE_REFERENCE);
+        assertThat(referenceOf(changeRoleRole)).isEqualTo(SPACE_ROLE_REFERENCE);
+        assertThat(unionTypes(addRole)).doesNotContain("null");
+        assertThat(unionTypes(changeRoleRole)).doesNotContain("null");
     }
 
     @Test
@@ -179,6 +209,194 @@ class OpenApiContractTest extends SecurityIntegrationTest {
         assertThat(maximum).isEqualTo(maxPageSize);
     }
 
+    @Test
+    void theContractHasOneSpacesTagAndNoPreconditionHeaders() throws Exception {
+        // given
+        JsonNode document = MAPPER.readTree(generatedContract());
+        JsonNode paths = document.path("paths");
+        Set<String> spacesTags = new LinkedHashSet<>();
+        int spacesOperations = 0;
+
+        // when
+        for (String path : paths.propertyNames()) {
+            if (!path.startsWith("/api/v1/spaces")) {
+                continue;
+            }
+            for (String method : HTTP_METHODS) {
+                JsonNode operation = paths.path(path).path(method);
+                if (!operation.isMissingNode()) {
+                    spacesOperations++;
+                    JsonNode tags = operation.path("tags");
+                    spacesTags.addAll(valuesOf(tags));
+                    assertNoPreconditionHeader(operation);
+                }
+            }
+        }
+
+        // then
+        assertThat(spacesOperations).isEqualTo(8);
+        assertThat(spacesTags).containsExactly("spaces");
+    }
+
+    @Test
+    void everyApiOperationAnswers401InTheContract() throws Exception {
+        // given
+        JsonNode document = MAPPER.readTree(generatedContract());
+        JsonNode paths = document.path("paths");
+        int checked = 0;
+
+        // when
+        for (String path : paths.propertyNames()) {
+            for (String method : HTTP_METHODS) {
+                JsonNode operation = paths.path(path).path(method);
+                if (!operation.isMissingNode()) {
+                    checked++;
+                    boolean answersUnauthorized = operation.path("responses").has("401");
+                    assertThat(answersUnauthorized).as(path + " " + method).isTrue();
+                }
+            }
+        }
+
+        // then
+        assertThat(checked).isPositive();
+    }
+
+    @Test
+    void everyOperationDocumentsItsErrorResponses() throws Exception {
+        // given
+        JsonNode document = MAPPER.readTree(generatedContract());
+        JsonNode paths = document.path("paths");
+        JsonNode listSpaces = paths.path("/api/v1/spaces").path("get");
+        JsonNode getSpace = paths.path("/api/v1/spaces/{slug}").path("get");
+        JsonNode createSpace = paths.path("/api/v1/spaces").path("post");
+        JsonNode putSpace = paths.path("/api/v1/spaces/{slug}").path("put");
+        JsonNode listMembers = paths.path("/api/v1/spaces/{slug}/members").path("get");
+        JsonNode addMember = paths.path("/api/v1/spaces/{slug}/members").path("post");
+        JsonNode changeRole = paths.path("/api/v1/spaces/{slug}/members/role").path("put");
+        JsonNode removeMember = paths.path("/api/v1/spaces/{slug}/members").path("delete");
+
+        // when
+        // then
+        assertErrorResponses(listSpaces, "GET /api/v1/spaces", "400", "401");
+        assertErrorResponses(getSpace, "GET /api/v1/spaces/{slug}", "400", "401", "404");
+        assertErrorResponses(createSpace, "POST /api/v1/spaces", "400", "401", "403", "409");
+        assertErrorResponses(putSpace, "PUT /api/v1/spaces/{slug}", "400", "401", "403", "409");
+        assertErrorResponses(listMembers, "GET /api/v1/spaces/{slug}/members", "400", "401", "404");
+        assertErrorResponses(addMember, "POST /api/v1/spaces/{slug}/members", "400", "401", "403", "404");
+        assertErrorResponses(changeRole, "PUT /api/v1/spaces/{slug}/members/role", "400", "401", "403", "404");
+        assertErrorResponses(removeMember, "DELETE /api/v1/spaces/{slug}/members", "400", "401", "403", "404");
+    }
+
+    @Test
+    void theContractHasTheMembershipOperations() throws Exception {
+        // given
+        JsonNode document = MAPPER.readTree(generatedContract());
+        JsonNode members = document.path("paths").path("/api/v1/spaces/{slug}/members");
+        JsonNode role = document.path("paths").path("/api/v1/spaces/{slug}/members/role");
+
+        // when
+        String listId = members.path("get").path("operationId").asString();
+        String addId = members.path("post").path("operationId").asString();
+        String changeId = role.path("put").path("operationId").asString();
+        String removeId = members.path("delete").path("operationId").asString();
+        JsonNode changeParameters = role.path("put").path("parameters");
+        String issuerLocation =
+                parameterNamed(changeParameters, "issuer").path("in").asString();
+        String subjectLocation =
+                parameterNamed(changeParameters, "subject").path("in").asString();
+
+        // then
+        assertThat(listId).isEqualTo("listSpaceMembers");
+        assertThat(addId).isEqualTo("addSpaceMember");
+        assertThat(changeId).isEqualTo("changeSpaceMemberRole");
+        assertThat(removeId).isEqualTo("removeSpaceMember");
+        assertThat(issuerLocation).isEqualTo("query");
+        assertThat(subjectLocation).isEqualTo("query");
+    }
+
+    @Test
+    void changingARoleAndRemovingAMemberRequireIssuerAndSubjectInTheContract() throws Exception {
+        // given
+        JsonNode document = MAPPER.readTree(generatedContract());
+        JsonNode changeParameters = document.path("paths")
+                .path("/api/v1/spaces/{slug}/members/role")
+                .path("put")
+                .path("parameters");
+        JsonNode removeParameters = document.path("paths")
+                .path("/api/v1/spaces/{slug}/members")
+                .path("delete")
+                .path("parameters");
+
+        // when
+        JsonNode changeIssuer = parameterNamed(changeParameters, "issuer");
+        JsonNode changeSubject = parameterNamed(changeParameters, "subject");
+        JsonNode removeIssuer = parameterNamed(removeParameters, "issuer");
+        JsonNode removeSubject = parameterNamed(removeParameters, "subject");
+
+        // then
+        assertThat(isRequired(changeIssuer)).isTrue();
+        assertThat(isRequired(changeSubject)).isTrue();
+        assertThat(isRequired(removeIssuer)).isTrue();
+        assertThat(isRequired(removeSubject)).isTrue();
+        assertThat(maxLengthOf(changeIssuer)).isEqualTo(SpaceMember.ISSUER_MAX_LENGTH);
+        assertThat(maxLengthOf(changeSubject)).isEqualTo(SpaceMember.SUBJECT_MAX_LENGTH);
+        assertThat(maxLengthOf(removeIssuer)).isEqualTo(SpaceMember.ISSUER_MAX_LENGTH);
+        assertThat(maxLengthOf(removeSubject)).isEqualTo(SpaceMember.SUBJECT_MAX_LENGTH);
+    }
+
+    @Test
+    void listSpacesProducesJsonInTheContract() throws Exception {
+        // given
+        JsonNode document = MAPPER.readTree(generatedContract());
+        JsonNode operation = document.path("paths").path("/api/v1/spaces").path("get");
+
+        // when
+        JsonNode content = operation.path("responses").path("200").path("content");
+
+        // then
+        assertThat(content.has(MediaType.APPLICATION_JSON_VALUE)).isTrue();
+        assertThat(content.has(MediaType.ALL_VALUE)).isFalse();
+    }
+
+    @Test
+    void thePutDescriptionMentionsAConcurrentConflict() throws Exception {
+        // given
+        JsonNode document = MAPPER.readTree(generatedContract());
+        JsonNode operation =
+                document.path("paths").path("/api/v1/spaces/{slug}").path("put");
+        JsonNode version = document.path("components")
+                .path("schemas")
+                .path("PutSpaceRequest")
+                .path("properties")
+                .path("version");
+
+        // when
+        String operationDescription = operation.path("description").asString();
+        String versionDescription = version.path("description").asString();
+
+        // then
+        assertThat(operationDescription).contains("version", "concurrent", "version_conflict");
+        assertThat(versionDescription).contains("version", "concurrent", "409");
+    }
+
+    private static void assertErrorResponses(JsonNode operation, String label, String... statuses) {
+        for (String status : statuses) {
+            JsonNode response = operation.path("responses").path(status);
+            JsonNode mediaType = response.path("content").path(MediaType.APPLICATION_PROBLEM_JSON_VALUE);
+            String reference = mediaType.path("schema").path("$ref").asString();
+            assertThat(response.isMissingNode()).as(label + " " + status).isFalse();
+            assertThat(reference).as(label + " " + status).isEqualTo(ERROR_SCHEMA_REF);
+        }
+    }
+
+    private static void assertNoPreconditionHeader(JsonNode operation) {
+        for (JsonNode parameter : operation.path("parameters")) {
+            String name = parameter.path("name").asString();
+            assertThat(name).isNotEqualTo("If-None-Match");
+            assertThat(name).isNotEqualTo("If-Match");
+        }
+    }
+
     private static JsonNode parameterNamed(JsonNode parameters, String name) {
         for (JsonNode parameter : parameters) {
             String parameterName = parameter.path("name").asString();
@@ -201,43 +419,26 @@ class OpenApiContractTest extends SecurityIntegrationTest {
         return values;
     }
 
-    @Test
-    void tokenOperationsRequireTheSessionSchemeInTheContract() throws Exception {
-        // given
-        JsonNode document = MAPPER.readTree(generatedContract());
-        JsonNode schemes = document.path("components").path("securitySchemes");
-        JsonNode paths = document.path("paths");
-        String tokensPath = "/api/v1/spaces/{slug}/tokens";
-        JsonNode collection = paths.path(tokensPath);
-        JsonNode token = paths.path(tokensPath + "/{id}");
-        JsonNode me = paths.path("/api/v1/me");
-
-        // when
-        List<String> createSecurity = securityNames(document, collection.path("post"));
-        List<String> listSecurity = securityNames(document, collection.path("get"));
-        List<String> revokeSecurity = securityNames(document, token.path("delete"));
-        List<String> meSecurity = securityNames(document, me.path("get"));
-
-        // then
-        String sessionDescription =
-                schemes.path("sessionAuth").path("description").asString();
-        assertThat(schemes.has("bearerAuth")).isTrue();
-        assertThat(schemes.has("sessionAuth")).isTrue();
-        assertThat(sessionDescription).contains("CSRF");
-        assertThat(createSecurity).containsExactly("sessionAuth");
-        assertThat(listSecurity).containsExactly("sessionAuth");
-        assertThat(revokeSecurity).containsExactly("sessionAuth");
-        assertThat(meSecurity).containsExactlyInAnyOrder("bearerAuth", "sessionAuth");
+    private static List<String> unionTypes(JsonNode schema) {
+        JsonNode type = schema.path("type");
+        List<String> types = new ArrayList<>(valuesOf(type));
+        for (JsonNode alternative : schema.path("anyOf")) {
+            JsonNode alternativeType = alternative.path("type");
+            types.addAll(valuesOf(alternativeType));
+        }
+        return types;
     }
 
-    private static List<String> securityNames(JsonNode document, JsonNode operation) {
-        JsonNode security = operation.path("security");
-        JsonNode effective = security.isMissingNode() ? document.path("security") : security;
-        List<String> names = new ArrayList<>();
-        for (JsonNode requirement : effective) {
-            requirement.propertyNames().forEach(names::add);
+    private static String referenceOf(JsonNode schema) {
+        if (schema.has("$ref")) {
+            return schema.path("$ref").asString();
         }
-        return names;
+        for (JsonNode alternative : schema.path("anyOf")) {
+            if (alternative.has("$ref")) {
+                return alternative.path("$ref").asString();
+            }
+        }
+        return "";
     }
 
     @Test
@@ -314,7 +515,7 @@ class OpenApiContractTest extends SecurityIntegrationTest {
         String code = body.path("code").asString();
         assertThat(status).isEqualTo(401);
         assertThat(contentType).isEqualTo(MediaType.APPLICATION_PROBLEM_JSON_VALUE);
-        assertThat(code).isEqualTo("unauthenticated");
+        assertThat(code).isEqualTo(CommonError.UNAUTHENTICATED.getCode());
     }
 
     private static boolean isSafe(HttpMethod method) {
@@ -329,5 +530,14 @@ class OpenApiContractTest extends SecurityIntegrationTest {
         Object document = MAPPER.readValue(body, Object.class);
         String formatted = MAPPER.writerWithDefaultPrettyPrinter().writeValueAsString(document);
         return formatted.replace("\r\n", "\n") + "\n";
+    }
+
+    private static boolean isRequired(JsonNode parameter) {
+        return parameter.path("required").asBoolean();
+    }
+
+    private static int maxLengthOf(JsonNode parameter) {
+        JsonNode schema = parameter.path("schema");
+        return schema.path("maxLength").asInt();
     }
 }

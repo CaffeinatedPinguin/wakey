@@ -2,19 +2,18 @@ import { Box, Button, Menu, Skeleton, Stack, Text, UnstyledButton } from '@manti
 import { IconCheck, IconPlus, IconRefresh } from '@tabler/icons-react'
 import type { ReactElement } from 'react'
 import { useTranslation } from 'react-i18next'
-import type { SpaceSummary, SpacesStatus } from '../spaceTypes'
+import { SpacesStatus } from '../spaceTypes'
+import type { SpaceListActions, SpaceListState, SpaceSummary } from '../spaceTypes'
 import { avatarStyle, sheetRowStyle, touchStyle } from './switcherStyles'
 
-interface ListProps {
-  spaces: readonly SpaceSummary[]
-  currentSlug: string
-  status: SpacesStatus
-  canCreate: boolean
-  hasMore?: boolean
-  onLoadMore?: (() => void) | undefined
-  onSelect: (slug: string) => void
-  onCreate: () => void
-  onRetry: () => void
+const SMALL_ICON_SIZE = 16
+const LARGE_ICON_SIZE = 18
+const LABEL_FONT_WEIGHT = 500
+
+export interface SpaceListContentProps {
+  list: SpaceListState
+  actions: SpaceListActions
+  close: () => void
 }
 
 export function LoadingContent(): ReactElement {
@@ -37,7 +36,7 @@ export function ErrorContent({ onRetry }: { onRetry: () => void }): ReactElement
       <Text size="sm">{t('spaces.switcher.error')}</Text>
       <Button
         variant="light"
-        leftSection={<IconRefresh size={16} />}
+        leftSection={<IconRefresh size={SMALL_ICON_SIZE} />}
         onClick={onRetry}
         style={touchStyle}
       >
@@ -64,7 +63,7 @@ export function EmptyContent({
       {canCreate ? (
         <Button
           variant="light"
-          leftSection={<IconPlus size={16} />}
+          leftSection={<IconPlus size={SMALL_ICON_SIZE} />}
           onClick={onCreate}
           style={touchStyle}
         >
@@ -102,7 +101,7 @@ function DesktopListItem({
     <Menu.Item
       aria-label={space.name}
       aria-current={isCurrent ? 'true' : undefined}
-      leftSection={isCurrent ? <IconCheck size={16} /> : undefined}
+      leftSection={isCurrent ? <IconCheck size={SMALL_ICON_SIZE} /> : undefined}
       onClick={() => {
         onSelect(space.slug)
         close()
@@ -134,7 +133,7 @@ function DesktopFooter({
       {canCreate ? (
         <>
           <Menu.Divider />
-          <Menu.Item leftSection={<IconPlus size={16} />} onClick={onCreate}>
+          <Menu.Item leftSection={<IconPlus size={SMALL_ICON_SIZE} />} onClick={onCreate}>
             {t('spaces.switcher.create')}
           </Menu.Item>
         </>
@@ -143,19 +142,15 @@ function DesktopFooter({
   )
 }
 
-export function DesktopContent({
-  currentSlug,
-  close,
-  ...list
-}: ListProps & { close: () => void }): ReactElement {
-  if (list.status === 'loading') {
+export function DesktopContent({ list, actions, close }: SpaceListContentProps): ReactElement {
+  if (list.status === SpacesStatus.LOADING) {
     return <LoadingContent />
   }
-  if (list.status === 'error') {
-    return <ErrorContent onRetry={list.onRetry} />
+  if (list.status === SpacesStatus.ERROR) {
+    return <ErrorContent onRetry={actions.onRetry} />
   }
-  if (list.status === 'empty') {
-    return <EmptyContent canCreate={list.canCreate} onCreate={list.onCreate} />
+  if (list.status === SpacesStatus.EMPTY) {
+    return <EmptyContent canCreate={list.canCreate} onCreate={actions.onCreate} />
   }
 
   return (
@@ -164,16 +159,16 @@ export function DesktopContent({
         <DesktopListItem
           key={space.slug}
           space={space}
-          currentSlug={currentSlug}
-          onSelect={list.onSelect}
+          currentSlug={list.currentSlug}
+          onSelect={actions.onSelect}
           close={close}
         />
       ))}
       <DesktopFooter
         hasMore={list.hasMore === true}
-        onLoadMore={list.onLoadMore}
+        onLoadMore={actions.onLoadMore}
         canCreate={list.canCreate}
-        onCreate={list.onCreate}
+        onCreate={actions.onCreate}
       />
     </>
   )
@@ -205,10 +200,12 @@ function SheetRow({
       <Box component="span" style={avatarStyle} aria-hidden>
         {space.name.slice(0, 1).toUpperCase()}
       </Box>
-      <Text size="sm" fw={500}>
+      <Text size="sm" fw={LABEL_FONT_WEIGHT}>
         {space.name}
       </Text>
-      {isCurrent ? <IconCheck size={18} style={{ marginInlineStart: 'auto' }} /> : null}
+      {isCurrent ? (
+        <IconCheck size={LARGE_ICON_SIZE} style={{ marginInlineStart: 'auto' }} />
+      ) : null}
     </UnstyledButton>
   )
 }
@@ -230,8 +227,8 @@ function MobileCreateRow({
         close()
       }}
     >
-      <IconPlus size={18} />
-      <Text size="sm" fw={500}>
+      <IconPlus size={LARGE_ICON_SIZE} />
+      <Text size="sm" fw={LABEL_FONT_WEIGHT}>
         {t('spaces.switcher.create')}
       </Text>
     </UnstyledButton>
@@ -261,19 +258,15 @@ function MobileFooter({
   )
 }
 
-export function MobileContent({
-  currentSlug,
-  close,
-  ...list
-}: ListProps & { close: () => void }): ReactElement {
-  if (list.status === 'loading') {
+export function MobileContent({ list, actions, close }: SpaceListContentProps): ReactElement {
+  if (list.status === SpacesStatus.LOADING) {
     return <LoadingContent />
   }
-  if (list.status === 'error') {
-    return <ErrorContent onRetry={list.onRetry} />
+  if (list.status === SpacesStatus.ERROR) {
+    return <ErrorContent onRetry={actions.onRetry} />
   }
-  if (list.status === 'empty') {
-    return <EmptyContent canCreate={list.canCreate} onCreate={list.onCreate} />
+  if (list.status === SpacesStatus.EMPTY) {
+    return <EmptyContent canCreate={list.canCreate} onCreate={actions.onCreate} />
   }
 
   return (
@@ -282,16 +275,16 @@ export function MobileContent({
         <SheetRow
           key={space.slug}
           space={space}
-          currentSlug={currentSlug}
-          onSelect={list.onSelect}
+          currentSlug={list.currentSlug}
+          onSelect={actions.onSelect}
           close={close}
         />
       ))}
       <MobileFooter
         hasMore={list.hasMore === true}
-        onLoadMore={list.onLoadMore}
+        onLoadMore={actions.onLoadMore}
         canCreate={list.canCreate}
-        onCreate={list.onCreate}
+        onCreate={actions.onCreate}
         close={close}
       />
     </Stack>

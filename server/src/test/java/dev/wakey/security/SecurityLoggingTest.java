@@ -13,6 +13,8 @@ import java.util.stream.Stream;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.logging.LoggingInitializationContext;
 import org.springframework.boot.logging.LoggingSystem;
 import org.springframework.boot.test.system.CapturedOutput;
@@ -25,6 +27,7 @@ import org.springframework.security.authentication.InsufficientAuthenticationExc
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.ResultMatcher;
+import org.springframework.web.servlet.HandlerExceptionResolver;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
 import tools.jackson.databind.json.JsonMapper;
@@ -39,6 +42,13 @@ class SecurityLoggingTest extends SecurityIntegrationTest {
     private static final ObjectMapper MAPPER = JsonMapper.builder().build();
 
     private CapturedOutput output;
+
+    private HandlerExceptionResolver resolver;
+
+    @Autowired
+    void setResolver(@Qualifier("handlerExceptionResolver") HandlerExceptionResolver resolver) {
+        this.resolver = resolver;
+    }
 
     @BeforeEach
     void captureOutput(CapturedOutput output) {
@@ -84,7 +94,7 @@ class SecurityLoggingTest extends SecurityIntegrationTest {
         String forgedPath = "/agent/v1/%0d%0a\r\nrequest rejected: reason=access-denied forged";
         MockHttpServletRequest request = new MockHttpServletRequest("GET", forgedPath);
         MockHttpServletResponse response = new MockHttpServletResponse();
-        UnauthorizedRequestLog entryPoint = new UnauthorizedRequestLog();
+        UnauthorizedRequestLog entryPoint = new UnauthorizedRequestLog(resolver);
         AuthenticationException exception = new InsufficientAuthenticationException("n/a");
 
         // when
@@ -110,7 +120,7 @@ class SecurityLoggingTest extends SecurityIntegrationTest {
         String forgedPath = "/agent/v1/%0d%0a\r\nrequest rejected: reason=access-denied forged";
         MockHttpServletRequest request = new MockHttpServletRequest("GET", forgedPath);
         MockHttpServletResponse response = new MockHttpServletResponse();
-        UnauthorizedRequestLog entryPoint = new UnauthorizedRequestLog();
+        UnauthorizedRequestLog entryPoint = new UnauthorizedRequestLog(resolver);
         AuthenticationException exception = new InsufficientAuthenticationException("n/a");
 
         // when

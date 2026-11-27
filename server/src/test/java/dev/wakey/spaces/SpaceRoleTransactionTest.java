@@ -2,19 +2,25 @@ package dev.wakey.spaces;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.catchThrowable;
-import static org.mockito.Mockito.doThrow;
 
+import dev.wakey.security.CurrentUser;
+import dev.wakey.security.UserSessions;
 import dev.wakey.testsupport.PostgresIntegrationTest;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
-import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import org.springframework.boot.test.context.TestConfiguration;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Import;
+import org.springframework.context.annotation.Primary;
+import org.springframework.session.FindByIndexNameSessionRepository;
+import org.springframework.session.Session;
 
+@Import(SpaceRoleTransactionTest.FailingSessionsConfiguration.class)
 class SpaceRoleTransactionTest extends PostgresIntegrationTest {
 
-    private static final SpacePrincipal ADMIN = new SpacePrincipal("transaction-admin", true);
+    private static final String ISSUER = "https://issuer.example.com";
 
-    @MockitoBean
-    private UserSessions sessions;
+    private static final CurrentUser ADMIN = new CurrentUser(ISSUER, "transaction-admin", true);
 
     @Test
     void aFailingSessionInvalidationRollsBackTheRoleChange() {
@@ -22,15 +28,13 @@ class SpaceRoleTransactionTest extends PostgresIntegrationTest {
         SpaceService service = bean(SpaceService.class);
         String slug = uniqueSlug("rollback");
         String subject = uniqueSubject("role-change");
-        service.put(ADMIN, slug, "Rollback space");
-        service.addMember(ADMIN, slug, subject, SpaceRole.VIEWER);
-        SpacePrincipal member = new SpacePrincipal(subject, false);
-        doThrow(new IllegalStateException("session store unavailable"))
-                .when(sessions)
-                .invalidateAll(subject);
+        service.put(ADMIN, slug, "Rollback space", null);
+        service.addMember(ADMIN, slug, new SpaceMember(ISSUER, subject, SpaceRole.VIEWER));
+        CurrentUser member = new CurrentUser(ISSUER, subject, false);
 
         // when
-        Throwable failure = catchThrowable(() -> service.changeRole(ADMIN, slug, subject, SpaceRole.EDITOR));
+        Throwable failure = catchThrowable(
+                () -> service.changeRole(ADMIN, slug, new SpaceMember(ISSUER, subject, SpaceRole.EDITOR)));
         SpaceView view = service.view(member, slug);
 
         // then
@@ -44,5 +48,27 @@ class SpaceRoleTransactionTest extends PostgresIntegrationTest {
 
     private static String uniqueSubject(String prefix) {
         return prefix + "-" + UUID.randomUUID();
+    }
+
+    @TestConfiguration(proxyBeanMethods = false)
+    static class FailingSessionsConfiguration {
+
+        @Bean
+        @Primary
+        UserSessions failingUserSessions(FindByIndexNameSessionRepository<? extends Session> sessions) {
+            return new FailingUserSessions(sessions);
+        }
+    }
+
+    private static final class FailingUserSessions extends UserSessions {
+
+        private FailingUserSessions(FindByIndexNameSessionRepository<? extends Session> sessions) {
+            super(sessions);
+        }
+
+        @Override
+        public void invalidateAll(String issuer, String subject) {
+            throw new IllegalStateException("session store unavailable");
+        }
     }
 }

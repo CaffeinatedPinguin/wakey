@@ -4,16 +4,18 @@ import { Link } from '@tanstack/react-router'
 import type { CSSProperties, ReactElement } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useLogout } from '../../features/auth'
-import { SpaceSwitcher } from '../../features/spaces'
-import type { SpaceSwitcherDataProps } from '../../features/spaces'
 import { ColorSchemeToggle } from '../../shared/ui/ColorSchemeToggle'
 import { LanguageSwitch } from '../../shared/ui/LanguageSwitch'
 import { moreNavigation, navigationActiveOptions, navigationActiveStyle } from './panelNavigation'
 
+const LINK_ICON_SIZE = 18
+const LABEL_FONT_WEIGHT = 500
+const PREFERENCE_LABEL_SPACING = 4
+const ACTION_ICON_SIZE = 16
+
 interface PanelMoreDrawerProps {
   opened: boolean
   onClose: () => void
-  switcher: SpaceSwitcherDataProps
 }
 
 interface MoreSheetLinksProps {
@@ -57,8 +59,8 @@ export function MoreSheetLinks({ onClose }: MoreSheetLinksProps): ReactElement {
           activeOptions={navigationActiveOptions(to)}
           onClick={onClose}
         >
-          <Icon size={18} />
-          <Text size="sm" fw={500}>
+          <Icon size={LINK_ICON_SIZE} />
+          <Text size="sm" fw={LABEL_FONT_WEIGHT}>
             {t(labelKey)}
           </Text>
         </Link>
@@ -73,13 +75,13 @@ function MoreSheetPreferences(): ReactElement {
   return (
     <>
       <Box>
-        <Text size="sm" fw={500} mb={4}>
+        <Text size="sm" fw={LABEL_FONT_WEIGHT} mb={PREFERENCE_LABEL_SPACING}>
           {t('common.language')}
         </Text>
         <LanguageSwitch />
       </Box>
       <Box>
-        <Text size="sm" fw={500} mb={4}>
+        <Text size="sm" fw={LABEL_FONT_WEIGHT} mb={PREFERENCE_LABEL_SPACING}>
           {t('common.theme')}
         </Text>
         <ColorSchemeToggle />
@@ -88,7 +90,7 @@ function MoreSheetPreferences(): ReactElement {
   )
 }
 
-export function PanelMoreDrawer({ opened, onClose, switcher }: PanelMoreDrawerProps): ReactElement {
+export function PanelMoreDrawer({ opened, onClose }: PanelMoreDrawerProps): ReactElement {
   const { t } = useTranslation()
   const logout = useLogout()
 
@@ -102,17 +104,11 @@ export function PanelMoreDrawer({ opened, onClose, switcher }: PanelMoreDrawerPr
       styles={sheetStyles}
     >
       <Stack gap="md">
-        <Box>
-          <Text size="sm" fw={500} mb={4}>
-            {t('spaces.switcher.sheetTitle')}
-          </Text>
-          <SpaceSwitcher {...switcher} layout="sheet" />
-        </Box>
         <MoreSheetLinks onClose={onClose} />
         <MoreSheetPreferences />
         <Button
           variant="light"
-          leftSection={<IconLogout size={16} />}
+          leftSection={<IconLogout size={ACTION_ICON_SIZE} />}
           loading={logout.isPending}
           onClick={() => {
             logout.mutate()
