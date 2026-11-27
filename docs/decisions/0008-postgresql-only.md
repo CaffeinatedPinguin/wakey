@@ -53,6 +53,7 @@ ma opisaną ścieżkę.
 | `INSERT ... ON CONFLICT ... DO NOTHING` dla przestrzeni i członkostw | `server/src/main/java/dev/wakey/spaces/internal/JdbcSpaceService.java` | Zastąpić `ON CONFLICT ... DO NOTHING` odpowiednikiem nowej bazy (np. `MERGE`) i usunąć znacznik. |
 | `INSERT ... ON CONFLICT ... DO UPDATE` dla nadpisań ustawień przestrzeni | `server/src/main/java/dev/wakey/settings/internal/JdbcSpaceSettings.java` | Zastąpić `ON CONFLICT ... DO UPDATE` odpowiednikiem nowej bazy (np. `MERGE`) i usunąć znacznik. |
 | Natywny typ `TIMESTAMPTZ` w kolumnie początku członkostwa w przestrzeni | `server/src/main/resources/db/changelog/changes/0011-member-since.xml` | Zmienić kolumnę na znacznik czasu z offsetem nowej bazy i usunąć znacznik. |
+| Natywne typy `UUID` i `TIMESTAMPTZ` w tabeli przedziałów stanu checków | `server/src/main/resources/db/changelog/changes/0011-check-state-interval.xml` | Zmienić kolumny na typ binarny i znacznik czasu z offsetem nowej bazy i usunąć znacznik. |
 
 ## Migracja na inną bazę
 

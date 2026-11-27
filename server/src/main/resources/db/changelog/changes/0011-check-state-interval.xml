@@ -6,6 +6,7 @@
         https://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
 
   <changeSet id="check-state-interval" author="wakey">
+    <!-- postgres-only: native UUID and TIMESTAMPTZ column types; another database needs binary and timezone-aware equivalents. -->
     <!-- An open interval has a null ended_at; one interval is always open after the first result. -->
     <createTable tableName="check_state_interval">
       <column name="id" type="UUID">
