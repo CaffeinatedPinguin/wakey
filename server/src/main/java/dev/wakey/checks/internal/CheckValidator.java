@@ -5,6 +5,7 @@ import dev.wakey.checks.CheckError;
 import dev.wakey.checks.CheckFieldLimits;
 import dev.wakey.checks.CheckLimits;
 import dev.wakey.checks.CheckType;
+import dev.wakey.checks.EgressPolicy;
 import dev.wakey.checks.HttpUrlRule;
 import dev.wakey.spaces.SpaceError;
 import dev.wakey.web.ApiException;
@@ -12,6 +13,7 @@ import dev.wakey.web.ApiFieldError;
 import dev.wakey.web.CommonError;
 import dev.wakey.web.DisplayText;
 import dev.wakey.web.ErrorCode;
+import java.net.InetAddress;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.LinkedHashMap;
@@ -35,11 +37,13 @@ public final class CheckValidator {
     private static final TextRule DESCRIPTION_RULE =
             new TextRule("description", CheckError.INVALID_DESCRIPTION, CheckFieldLimits.MAX_DESCRIPTION_LENGTH, true);
 
+    private static final int IPV4_PARTS = 4;
+
     private CheckValidator() {}
 
-    public static CheckDraft validate(CheckDraft draft) {
+    public static CheckDraft validate(CheckDraft draft, EgressPolicy egressPolicy) {
         String name = requireName(draft.name());
-        String target = requireTarget(draft.target(), draft.type());
+        String target = requireTarget(draft.target(), draft.type(), egressPolicy);
         int intervalSeconds = draft.intervalSeconds();
         int timeoutSeconds = draft.timeoutSeconds();
         int retries = draft.retries();
@@ -69,13 +73,78 @@ public final class CheckValidator {
         return normalized;
     }
 
-    private static String requireTarget(String target, CheckType type) {
+    private static String requireTarget(String target, CheckType type, EgressPolicy egressPolicy) {
         String normalized = DisplayText.normalize(target);
         boolean withinLimits = DisplayText.isValid(normalized, CheckFieldLimits.MAX_TARGET_LENGTH, false);
         if (!withinLimits || !targetMatchesType(normalized, type)) {
             throw invalid(CheckError.INVALID_TARGET, "target");
         }
+        requireAllowedLiteralTarget(normalized, type, egressPolicy);
         return normalized;
+    }
+
+    private static void requireAllowedLiteralTarget(String target, CheckType type, EgressPolicy egressPolicy) {
+        @Nullable String host = hostOf(target, type);
+        if (host == null) {
+            return;
+        }
+        @Nullable InetAddress address = literalAddress(host);
+        if (address != null && !egressPolicy.allows(address)) {
+            throw invalid(CheckError.INVALID_TARGET, "target");
+        }
+    }
+
+    private static @Nullable String hostOf(String target, CheckType type) {
+        URI uri = type == CheckType.HTTP ? httpUri(target) : targetAuthority(target);
+        @Nullable String host = uri.getHost();
+        if (host == null) {
+            return null;
+        }
+        return stripBrackets(host);
+    }
+
+    private static URI httpUri(String value) {
+        try {
+            return new URI(value);
+        } catch (URISyntaxException exception) {
+            throw invalid(CheckError.INVALID_TARGET, "target", exception);
+        }
+    }
+
+    private static String stripBrackets(String host) {
+        boolean bracketed = host.startsWith("[") && host.endsWith("]");
+        return bracketed ? host.substring(1, host.length() - 1) : host;
+    }
+
+    private static @Nullable InetAddress literalAddress(String host) {
+        boolean literal = isIpv4Literal(host) || host.indexOf(':') >= 0;
+        return literal ? parseLiteral(host) : null;
+    }
+
+    private static InetAddress parseLiteral(String host) {
+        try {
+            return InetAddress.ofLiteral(host);
+        } catch (IllegalArgumentException exception) {
+            throw invalid(CheckError.INVALID_TARGET, "target", exception);
+        }
+    }
+
+    private static boolean isIpv4Literal(String host) {
+        String[] parts = host.split("\\.", -1);
+        boolean shaped = parts.length == IPV4_PARTS;
+        for (int index = 0; shaped && index < parts.length; index++) {
+            shaped = isDecimalOctet(parts[index]);
+        }
+        return shaped;
+    }
+
+    private static boolean isDecimalOctet(String part) {
+        boolean shaped = !part.isEmpty() && part.length() <= 3;
+        for (int index = 0; shaped && index < part.length(); index++) {
+            char character = part.charAt(index);
+            shaped = character >= '0' && character <= '9';
+        }
+        return shaped;
     }
 
     private static boolean targetMatchesType(String target, CheckType type) {

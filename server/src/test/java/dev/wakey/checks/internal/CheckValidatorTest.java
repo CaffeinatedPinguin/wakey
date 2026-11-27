@@ -7,6 +7,8 @@ import dev.wakey.checks.CheckDraft;
 import dev.wakey.checks.CheckError;
 import dev.wakey.checks.CheckFieldLimits;
 import dev.wakey.checks.CheckType;
+import dev.wakey.checks.EgressPolicy;
+import dev.wakey.checks.EgressProperties;
 import dev.wakey.spaces.SpaceError;
 import dev.wakey.web.ApiException;
 import dev.wakey.web.ApiFieldError;
@@ -18,6 +20,8 @@ import org.junit.jupiter.api.Test;
 
 class CheckValidatorTest {
 
+    private static final EgressPolicy EGRESS_POLICY = new EgressPolicy(new EgressProperties(false));
+
     @Test
     void httpTargetMustBeAnHttpOrHttpsUrl() {
         // given
@@ -26,9 +30,9 @@ class CheckValidatorTest {
         CheckDraft httpTarget = draft(CheckType.HTTP, "https://example.test/health", null);
 
         // when
-        Throwable fileRejected = catchThrowable(() -> CheckValidator.validate(fileTarget));
-        Throwable gopherRejected = catchThrowable(() -> CheckValidator.validate(gopherTarget));
-        CheckDraft accepted = CheckValidator.validate(httpTarget);
+        Throwable fileRejected = catchThrowable(() -> validate(fileTarget));
+        Throwable gopherRejected = catchThrowable(() -> validate(gopherTarget));
+        CheckDraft accepted = validate(httpTarget);
 
         // then
         assertInvalid(fileRejected, "/target", CheckError.INVALID_TARGET);
@@ -46,11 +50,11 @@ class CheckValidatorTest {
         CheckDraft valid = draft(CheckType.TCP, "db.example.test:5432", null);
 
         // when
-        Throwable urlRejected = catchThrowable(() -> CheckValidator.validate(url));
-        Throwable noPortRejected = catchThrowable(() -> CheckValidator.validate(noPort));
-        Throwable zeroPortRejected = catchThrowable(() -> CheckValidator.validate(zeroPort));
-        Throwable highPortRejected = catchThrowable(() -> CheckValidator.validate(highPort));
-        CheckDraft accepted = CheckValidator.validate(valid);
+        Throwable urlRejected = catchThrowable(() -> validate(url));
+        Throwable noPortRejected = catchThrowable(() -> validate(noPort));
+        Throwable zeroPortRejected = catchThrowable(() -> validate(zeroPort));
+        Throwable highPortRejected = catchThrowable(() -> validate(highPort));
+        CheckDraft accepted = validate(valid);
 
         // then
         assertInvalid(urlRejected, "/target", CheckError.INVALID_TARGET);
@@ -63,37 +67,37 @@ class CheckValidatorTest {
     @Test
     void anIpv6TargetWithAPortIsAccepted() {
         // given
-        CheckDraft check = draft("ipv6", CheckType.TCP, "[2001:db8::1]:443");
+        CheckDraft check = draft("ipv6", CheckType.TCP, "[2606:4700:4700::1111]:443");
 
         // when
-        CheckDraft accepted = CheckValidator.validate(check);
+        CheckDraft accepted = validate(check);
 
         // then
-        assertThat(accepted.target()).isEqualTo("[2001:db8::1]:443");
+        assertThat(accepted.target()).isEqualTo("[2606:4700:4700::1111]:443");
     }
 
     @Test
-    void anIpv6LoopbackWithAPortIsAValidTcpTarget() {
+    void anIpv6LoopbackWithAPortIsRejectedAsATarget() {
         // given
         CheckDraft check = draft("ipv6 loopback", CheckType.TCP, "[::1]:443");
 
         // when
-        CheckDraft accepted = CheckValidator.validate(check);
+        Throwable rejected = catchThrowable(() -> validate(check));
 
         // then
-        assertThat(accepted.target()).isEqualTo("[::1]:443");
+        assertInvalid(rejected, "/target", CheckError.INVALID_TARGET);
     }
 
     @Test
     void anIpv6CertificateTargetWithoutAPortIsAccepted() {
         // given
-        CheckDraft check = draft("ipv6 certificate", CheckType.CERTIFICATE, "[::1]");
+        CheckDraft check = draft("ipv6 certificate", CheckType.CERTIFICATE, "[2606:4700:4700::1111]");
 
         // when
-        CheckDraft accepted = CheckValidator.validate(check);
+        CheckDraft accepted = validate(check);
 
         // then
-        assertThat(accepted.target()).isEqualTo("[::1]");
+        assertThat(accepted.target()).isEqualTo("[2606:4700:4700::1111]");
     }
 
     @Test
@@ -103,8 +107,8 @@ class CheckValidatorTest {
         CheckDraft path = draft("path", CheckType.TCP, "db.example.test:5432/health");
 
         // when
-        Throwable credentialsRejected = catchThrowable(() -> CheckValidator.validate(credentials));
-        Throwable pathRejected = catchThrowable(() -> CheckValidator.validate(path));
+        Throwable credentialsRejected = catchThrowable(() -> validate(credentials));
+        Throwable pathRejected = catchThrowable(() -> validate(path));
 
         // then
         assertInvalid(credentialsRejected, "/target", CheckError.INVALID_TARGET);
@@ -117,7 +121,7 @@ class CheckValidatorTest {
         CheckDraft check = draft("user info", CheckType.TCP, "user@host:1");
 
         // when
-        Throwable rejected = catchThrowable(() -> CheckValidator.validate(check));
+        Throwable rejected = catchThrowable(() -> validate(check));
 
         // then
         assertInvalid(rejected, "/target", CheckError.INVALID_TARGET);
@@ -129,7 +133,7 @@ class CheckValidatorTest {
         CheckDraft check = draft("path", CheckType.TCP, "host:1/path");
 
         // when
-        Throwable rejected = catchThrowable(() -> CheckValidator.validate(check));
+        Throwable rejected = catchThrowable(() -> validate(check));
 
         // then
         assertInvalid(rejected, "/target", CheckError.INVALID_TARGET);
@@ -142,8 +146,8 @@ class CheckValidatorTest {
         CheckDraft format = draft("bad\u200Fname", CheckType.HTTP, "https://format.test");
 
         // when
-        Throwable controlRejected = catchThrowable(() -> CheckValidator.validate(control));
-        Throwable formatRejected = catchThrowable(() -> CheckValidator.validate(format));
+        Throwable controlRejected = catchThrowable(() -> validate(control));
+        Throwable formatRejected = catchThrowable(() -> validate(format));
 
         // then
         assertInvalid(controlRejected, "/name", SpaceError.INVALID_NAME);
@@ -160,8 +164,8 @@ class CheckValidatorTest {
         CheckDraft rejectedDraft = draft(overLimit, CheckType.HTTP, "https://over-limit.test");
 
         // when
-        CheckDraft accepted = CheckValidator.validate(acceptedDraft);
-        Throwable rejected = catchThrowable(() -> CheckValidator.validate(rejectedDraft));
+        CheckDraft accepted = validate(acceptedDraft);
+        Throwable rejected = catchThrowable(() -> validate(rejectedDraft));
 
         // then
         assertThat(accepted.name()).isEqualTo(atLimit);
@@ -174,7 +178,7 @@ class CheckValidatorTest {
         CheckDraft check = draft("  Cafe\u0301  ", CheckType.HTTP, "https://nfc.test");
 
         // when
-        CheckDraft accepted = CheckValidator.validate(check);
+        CheckDraft accepted = validate(check);
 
         // then
         assertThat(accepted.name()).isEqualTo("Caf\u00E9");
@@ -188,7 +192,7 @@ class CheckValidatorTest {
                 new CheckDraft("tagged", CheckType.HTTP, "https://tagged.test", 60, 10, 1, null, null, null, tags);
 
         // when
-        CheckDraft accepted = CheckValidator.validate(draft);
+        CheckDraft accepted = validate(draft);
 
         // then
         assertThat(accepted.tags()).containsExactly("Hello World");
@@ -201,12 +205,40 @@ class CheckValidatorTest {
         CheckDraft validRunbook = draft(CheckType.HTTP, "https://example.test", "https://runbook.example.test/x");
 
         // when
-        Throwable rejected = catchThrowable(() -> CheckValidator.validate(scriptRunbook));
-        CheckDraft accepted = CheckValidator.validate(validRunbook);
+        Throwable rejected = catchThrowable(() -> validate(scriptRunbook));
+        CheckDraft accepted = validate(validRunbook);
 
         // then
         assertInvalid(rejected, "/runbookUrl", CheckError.INVALID_RUNBOOK_URL);
         assertThat(accepted.runbookUrl()).isEqualTo("https://runbook.example.test/x");
+    }
+
+    @Test
+    void aCheckTargetingABlockedIpIsRejectedOnSave() {
+        // given
+        CheckDraft loopback = draft(CheckType.HTTP, "http://127.0.0.1/health", null);
+        CheckDraft metadata = draft(CheckType.TCP, "169.254.169.254:80", null);
+        CheckDraft ipv6Loopback = draft(CheckType.CERTIFICATE, "[::1]", null);
+        CheckDraft ipv6Metadata = draft(CheckType.TCP, "[fd00:ec2::254]:443", null);
+        CheckDraft hostname = draft(CheckType.HTTP, "https://internal.example.test/health", null);
+
+        // when
+        Throwable loopbackRejected = catchThrowable(() -> validate(loopback));
+        Throwable metadataRejected = catchThrowable(() -> validate(metadata));
+        Throwable ipv6LoopbackRejected = catchThrowable(() -> validate(ipv6Loopback));
+        Throwable ipv6MetadataRejected = catchThrowable(() -> validate(ipv6Metadata));
+        CheckDraft hostnameAccepted = validate(hostname);
+
+        // then
+        assertInvalid(loopbackRejected, "/target", CheckError.INVALID_TARGET);
+        assertInvalid(metadataRejected, "/target", CheckError.INVALID_TARGET);
+        assertInvalid(ipv6LoopbackRejected, "/target", CheckError.INVALID_TARGET);
+        assertInvalid(ipv6MetadataRejected, "/target", CheckError.INVALID_TARGET);
+        assertThat(hostnameAccepted.target()).isEqualTo("https://internal.example.test/health");
+    }
+
+    private static CheckDraft validate(CheckDraft draft) {
+        return CheckValidator.validate(draft, EGRESS_POLICY);
     }
 
     private static void assertInvalid(Throwable throwable, String pointer, ErrorCode code) {

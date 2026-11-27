@@ -12,6 +12,7 @@ import dev.wakey.checks.CheckFilter;
 import dev.wakey.checks.CheckPlan;
 import dev.wakey.checks.CheckService;
 import dev.wakey.checks.CheckType;
+import dev.wakey.checks.EgressPolicy;
 import dev.wakey.spaces.SpaceService;
 import dev.wakey.testsupport.PostgresIntegrationTest;
 import dev.wakey.testsupport.QueryCountingConfiguration;
@@ -151,7 +152,12 @@ class CheckQueryCountTest extends PostgresIntegrationTest {
         CheckQueries queries = new CheckQueries(tags, aggregates);
         CheckStore store =
                 new CheckStore(bean(CheckRepository.class), queries, bean(CheckResultStore.class), bean(Clock.class));
-        return new CheckService(store, bean(CheckAuditLog.class), bean(SpaceService.class), bean(CheckPlan.class));
+        return new CheckService(
+                store,
+                bean(CheckAuditLog.class),
+                bean(SpaceService.class),
+                bean(CheckPlan.class),
+                bean(EgressPolicy.class));
     }
 
     private UUID seedSpaceWithTaggedChecks(int count) {

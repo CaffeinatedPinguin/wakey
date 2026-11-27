@@ -56,6 +56,10 @@ wakey:
     admin-group: ""
     frontend-url: /
     session-max-age: 12h
+  egress:
+    # A self-hosted instance that monitors LAN targets may allow private and CGNAT ranges.
+    # Loopback, unspecified, cloud metadata and multicast stay blocked in every configuration.
+    allow-private-networks: false
 
 logging:
   pattern:
