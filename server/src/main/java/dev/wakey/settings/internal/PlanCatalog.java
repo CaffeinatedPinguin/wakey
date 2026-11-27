@@ -16,7 +16,7 @@ public final class PlanCatalog {
 
     private static final String BUILT_IN_PLAN = "default";
 
-    private static final PlanProperties UNRESTRICTED = new PlanProperties(true, null, null, null, null);
+    private static final PlanProperties UNRESTRICTED = new PlanProperties(true, null, null, null, null, null);
 
     private final Map<String, PlanProperties> plans;
 
@@ -33,6 +33,13 @@ public final class PlanCatalog {
         if (defaultPlans != 1L) {
             throw new IllegalStateException(
                     "Exactly one plan must set wakey.plans.<name>.default=true, but " + defaultPlans + " do");
+        }
+        for (Map.Entry<String, PlanProperties> entry : plans.entrySet()) {
+            Integer apiRequests = entry.getValue().apiRequestsPerMinute();
+            if (apiRequests != null && apiRequests < 1) {
+                throw new IllegalStateException("Plan '" + entry.getKey()
+                        + "' must set wakey.plans.<name>.api-requests-per-minute to at least 1");
+            }
         }
         return new PlanCatalog(plans);
     }

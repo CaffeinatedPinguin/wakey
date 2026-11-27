@@ -57,11 +57,11 @@ class SpaceSettingsIntegrationTest extends PostgresIntegrationTest {
 
     private static final CheckDefaultsProperties CHECK_DEFAULTS = new CheckDefaultsProperties(60, 10, 1);
 
-    private static final PlanProperties SMALL = new PlanProperties(true, 30, 20, 3, 10);
+    private static final PlanProperties SMALL = new PlanProperties(true, 30, 20, 3, 10, null);
 
-    private static final PlanProperties LARGE = new PlanProperties(false, 5, 120, 10, 100);
+    private static final PlanProperties LARGE = new PlanProperties(false, 5, 120, 10, 100, null);
 
-    private static final PlanProperties LARGE_DEFAULT = new PlanProperties(true, 5, 120, 10, 100);
+    private static final PlanProperties LARGE_DEFAULT = new PlanProperties(true, 5, 120, 10, 100, null);
 
     @Test
     void defaultsComeFromTheCatalog() {
@@ -111,7 +111,7 @@ class SpaceSettingsIntegrationTest extends PostgresIntegrationTest {
     @Test
     void anInstanceDefaultIsReportedAsInstance() {
         // given
-        PlanProperties plan = new PlanProperties(true, null, null, null, null);
+        PlanProperties plan = new PlanProperties(true, null, null, null, null, null);
         SpaceSettings settings = settings(Map.of("default", plan), DEFAULTS, CHECK_DEFAULTS);
         UUID spaceId = createSpace();
 
@@ -127,7 +127,7 @@ class SpaceSettingsIntegrationTest extends PostgresIntegrationTest {
     @Test
     void thePlanBoundClampsTheInstanceDefault() {
         // given
-        PlanProperties plan = new PlanProperties(true, 90, 5, 0, 10);
+        PlanProperties plan = new PlanProperties(true, 90, 5, 0, 10, null);
         SpaceSettings settings = settings(Map.of("default", plan), DEFAULTS, CHECK_DEFAULTS);
         UUID spaceId = createSpace();
 
@@ -147,7 +147,7 @@ class SpaceSettingsIntegrationTest extends PostgresIntegrationTest {
         // given
         InstanceDefaultsProperties defaults = defaults(null, null);
         CheckDefaultsProperties checkDefaults = checkDefaults(45, 25, 5);
-        PlanProperties plan = new PlanProperties(true, 30, 20, 3, 10);
+        PlanProperties plan = new PlanProperties(true, 30, 20, 3, 10, null);
         SpaceSettings settings = settings(Map.of("default", plan), defaults, checkDefaults);
         UUID spaceId = createSpace();
 
@@ -201,7 +201,7 @@ class SpaceSettingsIntegrationTest extends PostgresIntegrationTest {
     @Test
     void effectiveValueReportsItsSource() {
         // given
-        PlanProperties plan = new PlanProperties(true, 30, 20, null, 10);
+        PlanProperties plan = new PlanProperties(true, 30, 20, null, 10, null);
         InstanceDefaultsProperties defaults = defaults("Europe/Warsaw", Language.PL);
         SpaceSettings settings = settings(Map.of("default", plan), defaults, CHECK_DEFAULTS);
         UUID spaceId = createSpace();
@@ -225,7 +225,7 @@ class SpaceSettingsIntegrationTest extends PostgresIntegrationTest {
     @Test
     void aPlanBoundIsNeverTheDefaultValue() {
         // given
-        PlanProperties plan = new PlanProperties(true, 10, 30, 5, 10);
+        PlanProperties plan = new PlanProperties(true, 10, 30, 5, 10, null);
         SpaceSettings settings = settings(Map.of("default", plan), DEFAULTS, CHECK_DEFAULTS);
         UUID spaceId = createSpace();
 

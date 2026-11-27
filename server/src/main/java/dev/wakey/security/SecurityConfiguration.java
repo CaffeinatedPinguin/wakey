@@ -27,6 +27,8 @@ class SecurityConfiguration {
 
     private final ApiTokens apiTokens;
 
+    private final RateLimitFilters rateLimitFilters;
+
     @Bean
     @Order(1)
     SecurityFilterChain statelessSecurityFilterChain(HttpSecurity http) throws Exception {
@@ -71,8 +73,10 @@ class SecurityConfiguration {
                 .headers(SecurityHeaders::applyTo);
         SessionMaxAgeFilter maxAgeFilter = new SessionMaxAgeFilter(clock, properties.sessionMaxAge());
         http.addFilterBefore(maxAgeFilter, SecurityContextHolderFilter.class);
+        http.addFilterBefore(rateLimitFilters.loginFilter(), SecurityContextHolderFilter.class);
         var tokenFilter = ApiTokenSecurity.authenticationFilter(apiTokens, unauthorized);
         http.addFilterBefore(tokenFilter, CsrfFilter.class);
+        http.addFilterAfter(rateLimitFilters.apiTokenFilter(), CsrfFilter.class);
         if (registrations.getIfAvailable() != null) {
             configureLogin(http, properties.frontendUrl());
         }

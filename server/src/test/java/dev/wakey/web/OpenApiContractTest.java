@@ -127,14 +127,16 @@ class OpenApiContractTest extends SecurityIntegrationTest {
         JsonNode paths = MAPPER.readTree(generatedContract()).path("paths");
 
         // then
-        assertResponses(paths, "/api/v1/spaces/{slug}/checks", "get", "200", "400", "401", "404");
-        assertResponses(paths, "/api/v1/spaces/{slug}/checks/counts", "get", "200", "401", "404");
-        assertResponses(paths, "/api/v1/spaces/{slug}/checks/{id}", "get", "200", "401", "404");
-        assertResponses(paths, "/api/v1/spaces/{slug}/checks", "post", "201", "400", "401", "403", "404");
-        assertResponses(paths, "/api/v1/spaces/{slug}/checks/{id}", "put", "200", "400", "401", "403", "404", "409");
-        assertResponses(paths, "/api/v1/spaces/{slug}/checks/{id}/pause", "post", "200", "400", "401", "403", "404");
-        assertResponses(paths, "/api/v1/spaces/{slug}/checks/{id}/resume", "post", "200", "401", "403", "404");
-        assertResponses(paths, "/api/v1/spaces/{slug}/checks/{id}", "delete", "204", "401", "403", "404");
+        assertResponses(paths, "/api/v1/spaces/{slug}/checks", "get", "200", "400", "401", "404", "429");
+        assertResponses(paths, "/api/v1/spaces/{slug}/checks/counts", "get", "200", "401", "404", "429");
+        assertResponses(paths, "/api/v1/spaces/{slug}/checks/{id}", "get", "200", "401", "404", "429");
+        assertResponses(paths, "/api/v1/spaces/{slug}/checks", "post", "201", "400", "401", "403", "404", "429");
+        assertResponses(
+                paths, "/api/v1/spaces/{slug}/checks/{id}", "put", "200", "400", "401", "403", "404", "409", "429");
+        assertResponses(
+                paths, "/api/v1/spaces/{slug}/checks/{id}/pause", "post", "200", "400", "401", "403", "404", "429");
+        assertResponses(paths, "/api/v1/spaces/{slug}/checks/{id}/resume", "post", "200", "401", "403", "404", "429");
+        assertResponses(paths, "/api/v1/spaces/{slug}/checks/{id}", "delete", "204", "401", "403", "404", "429");
     }
 
     @Test
@@ -142,21 +144,24 @@ class OpenApiContractTest extends SecurityIntegrationTest {
         // given
         JsonNode paths = MAPPER.readTree(generatedContract()).path("paths");
         Map<String, String[]> expected = Map.ofEntries(
-                Map.entry("get /api/v1/spaces/{slug}/checks", new String[] {"200", "400", "401", "404"}),
-                Map.entry("post /api/v1/spaces/{slug}/checks", new String[] {"201", "400", "401", "403", "404"}),
+                Map.entry("get /api/v1/spaces/{slug}/checks", new String[] {"200", "400", "401", "404", "429"}),
+                Map.entry("post /api/v1/spaces/{slug}/checks", new String[] {"201", "400", "401", "403", "404", "429"}),
                 Map.entry(
                         "post /api/v1/spaces/{slug}/checks/bulk",
-                        new String[] {"200", "400", "401", "403", "404", "409"}),
-                Map.entry("get /api/v1/spaces/{slug}/checks/counts", new String[] {"200", "401", "404"}),
-                Map.entry("get /api/v1/spaces/{slug}/checks/{id}", new String[] {"200", "401", "404"}),
+                        new String[] {"200", "400", "401", "403", "404", "409", "429"}),
+                Map.entry("get /api/v1/spaces/{slug}/checks/counts", new String[] {"200", "401", "404", "429"}),
+                Map.entry("get /api/v1/spaces/{slug}/checks/{id}", new String[] {"200", "401", "404", "429"}),
                 Map.entry(
                         "put /api/v1/spaces/{slug}/checks/{id}",
-                        new String[] {"200", "400", "401", "403", "404", "409"}),
+                        new String[] {"200", "400", "401", "403", "404", "409", "429"}),
                 Map.entry(
                         "post /api/v1/spaces/{slug}/checks/{id}/pause",
-                        new String[] {"200", "400", "401", "403", "404"}),
-                Map.entry("post /api/v1/spaces/{slug}/checks/{id}/resume", new String[] {"200", "401", "403", "404"}),
-                Map.entry("delete /api/v1/spaces/{slug}/checks/{id}", new String[] {"204", "401", "403", "404"}));
+                        new String[] {"200", "400", "401", "403", "404", "429"}),
+                Map.entry(
+                        "post /api/v1/spaces/{slug}/checks/{id}/resume",
+                        new String[] {"200", "401", "403", "404", "429"}),
+                Map.entry(
+                        "delete /api/v1/spaces/{slug}/checks/{id}", new String[] {"204", "401", "403", "404", "429"}));
         int checked = 0;
 
         // when
@@ -314,7 +319,7 @@ class OpenApiContractTest extends SecurityIntegrationTest {
         for (String code : List.of("200", "201")) {
             assertMediaType(responses, code, "application/json");
         }
-        for (String code : List.of("400", "401", "403", "404", "409")) {
+        for (String code : List.of("400", "401", "403", "404", "409", "429")) {
             assertMediaType(responses, code, "application/problem+json");
         }
     }

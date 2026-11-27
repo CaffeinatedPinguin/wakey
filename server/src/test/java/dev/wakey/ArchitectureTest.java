@@ -53,11 +53,12 @@ class ArchitectureTest {
             dependencyEntry("config"),
             dependencyEntry("leadership"),
             dependencyEntry("messaging"),
+            dependencyEntry("ratelimit"),
             dependencyEntry("settings", "audit", "spaces", "web"),
             dependencyEntry("spaces", "web"),
             dependencyEntry("tokens", "spaces", "web"),
             dependencyEntry("web"),
-            dependencyEntry("security", "web", "tokens", "spaces"),
+            dependencyEntry("security", "web", "tokens", "spaces", "ratelimit", "settings"),
             dependencyEntry("executor", "leadership", "messaging"),
             dependencyEntry("alerts", "leadership", "messaging"));
 
@@ -68,6 +69,7 @@ class ArchitectureTest {
             Map.entry("config", SHARED_ROLE),
             Map.entry("leadership", SHARED_ROLE),
             Map.entry("messaging", SHARED_ROLE),
+            Map.entry("ratelimit", SHARED_ROLE),
             Map.entry("settings", SHARED_ROLE),
             Map.entry("spaces", SHARED_ROLE),
             Map.entry("tokens", SHARED_ROLE),
