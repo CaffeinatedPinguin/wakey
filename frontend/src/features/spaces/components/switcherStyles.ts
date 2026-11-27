@@ -3,18 +3,6 @@ import type { SpaceSummary } from '../spaceTypes'
 
 const AVATAR_FONT_WEIGHT = 600
 
-export const touchStyle: CSSProperties = { minHeight: 'var(--app-size-control-touch)' }
-
-export const sheetStyles = {
-  content: {
-    flex: '0 0 auto',
-    width: '100%',
-    height: 'auto',
-    maxHeight: '80dvh',
-    borderRadius: 'var(--app-radius-overlay) var(--app-radius-overlay) 0 0',
-  },
-}
-
 export const sheetRowStyle: CSSProperties = {
   display: 'flex',
   alignItems: 'center',

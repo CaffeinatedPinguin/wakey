@@ -1,4 +1,4 @@
-import type { CheckDetailsData } from '../features/checks/details'
+import type { CheckDetailsData } from '../features/checks/details/checkDetailsTypes'
 
 export const NOW = new Date('2026-11-25T12:00:00Z')
 

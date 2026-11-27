@@ -10,9 +10,6 @@ export type SelectionMode = (typeof SelectionMode)[keyof typeof SelectionMode]
 
 export const FacetKey = {
   STATE: 'state',
-  TYPE: 'type',
-  TAG: 'tag',
-  GROUP: 'group',
 } as const
 export type FacetKey = (typeof FacetKey)[keyof typeof FacetKey]
 
@@ -34,13 +31,12 @@ export interface FacetOption<Value extends string = string> {
   count: number
 }
 
-// Every facet carries options whose value type follows its key, so a choice
-// stays a contract value instead of a plain string.
-export type FilterFacet =
-  | { key: typeof FacetKey.STATE; options: FacetOption<CheckState>[] }
-  | { key: typeof FacetKey.TYPE; options: FacetOption<CheckType>[] }
-  | { key: typeof FacetKey.TAG; options: FacetOption[] }
-  | { key: typeof FacetKey.GROUP; options: FacetOption[] }
+// The state facet carries contract values, so a choice stays typed instead of a
+// plain string.
+export interface FilterFacet {
+  key: typeof FacetKey.STATE
+  options: FacetOption<CheckState>[]
+}
 
 export interface ListFilters {
   q: string

@@ -1,5 +1,6 @@
 import { contract } from '../../../shared/api/generated/contract'
 import { serverClient } from '../../../shared/api/instances'
+import { operationPath } from '../../../shared/api/operationPath'
 import { PausedReason } from '../../../shared/api/generated/enums'
 import type { CheckState, CheckType } from '../../../shared/api/generated/enums'
 import type { BulkChecksRequest, ListChecksQuery } from '../../../shared/api/generated/types'
@@ -11,8 +12,6 @@ import {
 } from './checks.schemas'
 import type { BulkChecksResult, CheckPage, CheckRecord, StateCounts } from './checks.schemas'
 
-const SLUG_PLACEHOLDER = '{slug}'
-const ID_PLACEHOLDER = '{id}'
 const CHECK_PAGE_LIMIT = 50
 
 export interface CheckApiFilters {
@@ -22,14 +21,6 @@ export interface CheckApiFilters {
   tag?: string
   group?: string
   pausedReason?: PausedReason
-}
-
-function operationPath(template: string, slug: string, id?: string): string {
-  const withSlug = template.replace(SLUG_PLACEHOLDER, encodeURIComponent(slug))
-  if (id === undefined) {
-    return withSlug
-  }
-  return withSlug.replace(ID_PLACEHOLDER, encodeURIComponent(id))
 }
 
 function filterParams(filters: CheckApiFilters): ListChecksQuery {
@@ -57,10 +48,13 @@ export async function fetchChecks(
   cursor: string | undefined,
   signal?: AbortSignal,
 ): Promise<CheckPage> {
-  const response = await serverClient.get<unknown>(operationPath(contract.listChecks.path, slug), {
-    params: listParams(cursor, filters),
-    ...(signal === undefined ? {} : { signal }),
-  })
+  const response = await serverClient.get<unknown>(
+    operationPath(contract.listChecks.path, { slug }),
+    {
+      params: listParams(cursor, filters),
+      ...(signal === undefined ? {} : { signal }),
+    },
+  )
   return checksPageSchema.parse(response.data)
 }
 
@@ -69,10 +63,13 @@ export async function fetchCheckCounts(
   filters: CheckApiFilters,
   signal: AbortSignal,
 ): Promise<StateCounts> {
-  const response = await serverClient.get<unknown>(operationPath(contract.countChecks.path, slug), {
-    params: filterParams(filters),
-    signal,
-  })
+  const response = await serverClient.get<unknown>(
+    operationPath(contract.countChecks.path, { slug }),
+    {
+      params: filterParams(filters),
+      signal,
+    },
+  )
   return stateCountsSchema.parse(response.data)
 }
 
@@ -82,7 +79,7 @@ export async function fetchCheck(
   signal: AbortSignal,
 ): Promise<CheckRecord> {
   const response = await serverClient.get<unknown>(
-    operationPath(contract.getCheck.path, slug, id),
+    operationPath(contract.getCheck.path, { slug, id }),
     { signal },
   )
   return checkSchema.parse(response.data)
@@ -90,7 +87,7 @@ export async function fetchCheck(
 
 export async function pauseCheck(slug: string, id: string): Promise<CheckRecord> {
   const response = await serverClient.post<unknown>(
-    operationPath(contract.pauseCheck.path, slug, id),
+    operationPath(contract.pauseCheck.path, { slug, id }),
     { reason: PausedReason.MANUAL },
   )
   return checkSchema.parse(response.data)
@@ -98,13 +95,13 @@ export async function pauseCheck(slug: string, id: string): Promise<CheckRecord>
 
 export async function resumeCheck(slug: string, id: string): Promise<CheckRecord> {
   const response = await serverClient.post<unknown>(
-    operationPath(contract.resumeCheck.path, slug, id),
+    operationPath(contract.resumeCheck.path, { slug, id }),
   )
   return checkSchema.parse(response.data)
 }
 
 export async function deleteCheck(slug: string, id: string): Promise<void> {
-  await serverClient.delete(operationPath(contract.deleteCheck.path, slug, id))
+  await serverClient.delete(operationPath(contract.deleteCheck.path, { slug, id }))
 }
 
 export async function bulkChecks(
@@ -112,7 +109,7 @@ export async function bulkChecks(
   request: BulkChecksRequest,
 ): Promise<BulkChecksResult> {
   const response = await serverClient.post<unknown>(
-    operationPath(contract.bulkChecks.path, slug),
+    operationPath(contract.bulkChecks.path, { slug }),
     request,
   )
   return bulkChecksResponseSchema.parse(response.data)

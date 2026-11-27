@@ -286,14 +286,3 @@ export function createBrandTokens(input: BrandInput = DEFAULT_BRAND): BrandResul
   const dark = schemeTokens(ColorScheme.DARK, accent, darkPrimary, adjustments)
   return { light, dark, adjustments, warnings: [...statusConflicts(accent), ...warnings] }
 }
-
-/** Quick check for an appearance form: does the colour need adjustments? */
-export function describeBrand(accent: string): {
-  ok: boolean
-  result: BrandResult
-  contrastOnWhite: number
-} {
-  const result = createBrandTokens({ accent })
-  const ok = result.adjustments.length === 0 && result.warnings.length === 0
-  return { ok, result, contrastOnWhite: contrastRatio(accent, '#FFFFFF') }
-}

@@ -4,7 +4,7 @@ import { Link } from '@tanstack/react-router'
 import type { ReactElement, ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { PageFrame } from '../../../shared/ui'
-import { touchStyle } from './listStyles'
+import { touchStyle } from '../../../shared/theme/mantine/styles'
 
 const loadingRows = Array.from({ length: 10 }, (_, index) => index)
 

@@ -28,13 +28,3 @@ export const mobileRowTextStyle: CSSProperties = {
   minWidth: 0,
   flex: 1,
 }
-
-export const sheetStyles = {
-  content: {
-    flex: '0 0 auto',
-    width: '100%',
-    height: 'auto',
-    maxHeight: '80dvh',
-    borderRadius: 'var(--app-radius-overlay) var(--app-radius-overlay) 0 0',
-  },
-}

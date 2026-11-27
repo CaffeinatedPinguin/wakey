@@ -1,8 +1,8 @@
 import type { UseFormReturnType } from '@mantine/form'
 import type { ChangeEvent } from 'react'
+import type { CreateSpaceRequest } from '../../../shared/api/generated/types'
 import type { useCreateSpace } from '../api/spaces.queries'
 import { slugFromName } from '../slug'
-import type { SpaceFormValues } from '../spaceTypes'
 
 type CreateSpaceMutation = ReturnType<typeof useCreateSpace>
 
@@ -12,7 +12,7 @@ export interface SpaceFormHandlers {
 }
 
 export function createHandlers(
-  form: UseFormReturnType<SpaceFormValues>,
+  form: UseFormReturnType<CreateSpaceRequest>,
   slugEdited: boolean,
   setSlugEdited: (edited: boolean) => void,
 ): SpaceFormHandlers {
@@ -42,7 +42,7 @@ export function createSubmit(
   close: () => void,
   onCreated: (slug: string) => void,
   onError: (error: unknown) => void,
-): (values: SpaceFormValues) => void {
+): (values: CreateSpaceRequest) => void {
   return (values) => {
     if (create.isPending) {
       return

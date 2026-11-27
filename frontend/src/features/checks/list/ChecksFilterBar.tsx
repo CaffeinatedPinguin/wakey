@@ -4,9 +4,8 @@ import { IconFilter } from '@tabler/icons-react'
 import type { ReactElement } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useIsMobile } from '../../../shared/ui'
+import { sheetStyles, touchStyle } from '../../../shared/theme/mantine/styles'
 import { isFacetChosen, withFacetChoice } from './filterUtils'
-import { sheetStyles, touchStyle } from './listStyles'
-import { FacetKey } from './types'
 import type { FacetOption, FilterFacet, ListFilters } from './types'
 
 interface FilterControlsProps {
@@ -75,49 +74,6 @@ function FacetOptions<Value extends string>(props: FacetOptionsProps<Value>): Re
   )
 }
 
-// Each contract facet keeps its own value type, so the chosen option stays a
-// contract value instead of a plain string.
-function FacetRows({ facet, filters, onFiltersChange }: FacetGroupProps): ReactElement {
-  switch (facet.key) {
-    case FacetKey.STATE:
-      return (
-        <FacetOptions
-          facet={facet}
-          options={facet.options}
-          filters={filters}
-          onFiltersChange={onFiltersChange}
-        />
-      )
-    case FacetKey.TYPE:
-      return (
-        <FacetOptions
-          facet={facet}
-          options={facet.options}
-          filters={filters}
-          onFiltersChange={onFiltersChange}
-        />
-      )
-    case FacetKey.TAG:
-      return (
-        <FacetOptions
-          facet={facet}
-          options={facet.options}
-          filters={filters}
-          onFiltersChange={onFiltersChange}
-        />
-      )
-    case FacetKey.GROUP:
-      return (
-        <FacetOptions
-          facet={facet}
-          options={facet.options}
-          filters={filters}
-          onFiltersChange={onFiltersChange}
-        />
-      )
-  }
-}
-
 function FacetGroup({ facet, filters, onFiltersChange }: FacetGroupProps): ReactElement {
   const { t } = useTranslation()
 
@@ -126,7 +82,12 @@ function FacetGroup({ facet, filters, onFiltersChange }: FacetGroupProps): React
       <Text size="xs" fw={600} tt="uppercase" c="dimmed">
         {t(`checks.list.facets.${facet.key}`)}
       </Text>
-      <FacetRows facet={facet} filters={filters} onFiltersChange={onFiltersChange} />
+      <FacetOptions
+        facet={facet}
+        options={facet.options}
+        filters={filters}
+        onFiltersChange={onFiltersChange}
+      />
     </Stack>
   )
 }

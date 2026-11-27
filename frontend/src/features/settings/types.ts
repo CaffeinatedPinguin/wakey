@@ -26,7 +26,6 @@ export interface SettingRowData {
   unit?: string
   min?: number
   max?: number
-  readOnlyOnMobile?: boolean
 }
 
 export interface SettingsGroup {

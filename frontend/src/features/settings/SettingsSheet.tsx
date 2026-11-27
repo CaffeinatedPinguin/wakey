@@ -4,7 +4,7 @@ import type { ReactElement } from 'react'
 import { useTranslation } from 'react-i18next'
 import { SettingSource } from '../../shared/api/generated/enums'
 import { SettingField } from './SettingField'
-import { sheetStyles } from './styles'
+import { sheetStyles } from '../../shared/theme/mantine/styles'
 import type { SettingFieldError, SettingRowData } from './types'
 
 interface SettingsSheetProps {

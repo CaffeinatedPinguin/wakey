@@ -15,10 +15,9 @@ import { createCssVariablesResolver } from './cssVariables'
 import { buildMantineTheme } from './theme'
 import type { AppThemeLabels } from './types'
 import { createControlVars, createVariantColorResolver } from './variant'
-import type { BrandAdjustment, BrandInput } from '../tokens/brand'
+import type { BrandInput } from '../tokens/brand'
 import { composeTokens } from '../tokens/compose'
 import type { ThemeExtension } from '../tokens/extension'
-import type { ColorScheme, TokenMap } from '../tokens/types'
 
 export interface AppThemeOptions {
   readonly brand?: BrandInput
@@ -30,12 +29,6 @@ export interface AppThemeOptions {
 export interface AppTheme {
   readonly theme: MantineThemeOverride
   readonly cssVariablesResolver: CSSVariablesResolver
-  /** Variables for a scheme, e.g. for Chart.js or tests. */
-  readonly getCssVariables: (scheme: ColorScheme) => TokenMap
-  /** Brand corrections forced by contrast (an empty list means the colour was accepted). */
-  readonly brandAdjustments: readonly BrandAdjustment[]
-  /** Names of semantic colours handled by `color="…"`. */
-  readonly semanticColorNames: readonly string[]
 }
 
 export function createAppTheme(options: AppThemeOptions): AppTheme {
@@ -48,22 +41,5 @@ export function createAppTheme(options: AppThemeOptions): AppTheme {
   const bridge = createBridge(semantic, tokens)
   const theme = buildMantineTheme({ tokens, semantic, labels, variantColorResolver, controlVars })
   const cssVariablesResolver = createCssVariablesResolver(tokens, bridge)
-  const getCssVariables = (scheme: ColorScheme): TokenMap => ({
-    ...tokens.shared,
-    ...tokens[scheme],
-    ...bridge,
-  })
-  return {
-    theme,
-    cssVariablesResolver,
-    getCssVariables,
-    brandAdjustments: tokens.brandAdjustments,
-    semanticColorNames: Object.keys(semantic),
-  }
+  return { theme, cssVariablesResolver }
 }
-
-/** Reads a token at runtime (e.g. for Chart.js). */
-export const readToken = (
-  name: `--${string}`,
-  element: Element = document.documentElement,
-): string => getComputedStyle(element).getPropertyValue(name).trim()

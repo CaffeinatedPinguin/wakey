@@ -10,9 +10,9 @@ import {
   CREATE_SPACE_REQUEST_SLUG_MAX_LENGTH,
   CREATE_SPACE_REQUEST_SLUG_MIN_LENGTH,
 } from '../../../shared/api/generated/limits'
+import type { CreateSpaceRequest } from '../../../shared/api/generated/types'
 import { useCreateSpace } from '../api/spaces.queries'
 import { isValidSlug } from '../slug'
-import type { SpaceFormValues } from '../spaceTypes'
 import { createClose, createHandlers, createSubmit } from './createSpaceFormActions'
 
 export interface UseCreateSpaceFormOptions {
@@ -21,16 +21,16 @@ export interface UseCreateSpaceFormOptions {
 }
 
 export interface CreateSpaceForm {
-  form: UseFormReturnType<SpaceFormValues>
+  form: UseFormReturnType<CreateSpaceRequest>
   formError: string | null
   isPending: boolean
   close: () => void
-  submit: (values: SpaceFormValues) => void
+  submit: (values: CreateSpaceRequest) => void
   onNameChange: (event: ChangeEvent<HTMLInputElement>) => void
   onSlugChange: (event: ChangeEvent<HTMLInputElement>) => void
 }
 
-function validateSpace(values: SpaceFormValues, t: TFunction): Record<string, string> {
+function validateSpace(values: CreateSpaceRequest, t: TFunction): Record<string, string> {
   const errors: Record<string, string> = {}
   const name = values.name.trim()
   const nameLength = Array.from(name).length
@@ -57,7 +57,7 @@ export function useCreateSpaceForm({
   const create = useCreateSpace()
   const [slugEdited, setSlugEdited] = useState(false)
   const [formError, setFormError] = useState<string | null>(null)
-  const form = useForm<SpaceFormValues>({
+  const form = useForm<CreateSpaceRequest>({
     initialValues: { name: '', slug: '' },
     validate: (values) => validateSpace(values, t),
   })
@@ -74,7 +74,7 @@ export function useCreateSpaceForm({
     setFormError(applyApiException(form, error, t))
   }
   const submitValues = createSubmit(create, close, onCreated, onError)
-  const submit = (values: SpaceFormValues): void => {
+  const submit = (values: CreateSpaceRequest): void => {
     setFormError(null)
     submitValues(values)
   }

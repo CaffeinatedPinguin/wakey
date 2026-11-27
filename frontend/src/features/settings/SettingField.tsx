@@ -1,7 +1,7 @@
 import { NumberInput, Select, Text, TextInput } from '@mantine/core'
 import type { TFunction } from 'i18next'
 import type { KeyboardEvent, ReactElement } from 'react'
-import { useEffect, useRef, useState } from 'react'
+import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { ErrorCode } from '../../shared/api/generated/enums'
 import { SettingFieldClientErrorCode, SettingKind } from './types'
@@ -22,9 +22,12 @@ interface DraftControl {
   commit: (next: string) => void
 }
 
+// A draft is the text the user typed; a null value is an empty commit, which
+// keeps the saved value visible and shows the required error.
 interface DraftState {
   base: string
-  value: string
+  value: string | null
+  edited: boolean
 }
 
 function errorText(error: SettingFieldError | undefined, t: TFunction): string | undefined {
@@ -59,38 +62,32 @@ function draftMessage({ missing, changed, error, t }: DraftMessageInput): string
   return errorText(error, t)
 }
 
-interface DraftSetters {
-  setDraft: (value: DraftState | null) => void
-  setMissing: (value: boolean) => void
-  setChanged: (value: boolean) => void
-}
-
 interface DraftCommit {
   next: string
   row: SettingRowData
-  lastSent: { current: string | null }
-  setters: DraftSetters
+  error: SettingFieldError | undefined
+  draft: DraftState | null
+  setDraft: (draft: DraftState | null) => void
   onChange: Commit
 }
 
-function commitDraft({ next, row, lastSent, setters, onChange }: DraftCommit): void {
-  setters.setMissing(false)
-  setters.setChanged(false)
+// A draft that is already committed is not sent again on the next blur; a
+// failed save clears that guard so the user can retry the same value.
+function commitDraft({ next, row, error, draft, setDraft, onChange }: DraftCommit): void {
   if (next.trim() === '') {
-    setters.setDraft(null)
-    setters.setMissing(true)
-    return
-  }
-  if (next === lastSent.current) {
-    setters.setDraft({ base: row.value, value: next })
+    setDraft({ base: row.value, value: null, edited: false })
     return
   }
   if (next === row.value) {
-    setters.setDraft(null)
+    setDraft(null)
     return
   }
-  lastSent.current = next
-  setters.setDraft({ base: row.value, value: next })
+  const alreadyCommitted =
+    draft !== null && draft.base === row.value && draft.value === next && !draft.edited
+  setDraft({ base: row.value, value: next, edited: false })
+  if (alreadyCommitted && error?.code !== SettingFieldClientErrorCode.SAVE_FAILED) {
+    return
+  }
   onChange(row.key, next)
 }
 
@@ -101,25 +98,16 @@ function useDraft(
 ): DraftControl {
   const { t } = useTranslation()
   const [draft, setDraft] = useState<DraftState | null>(null)
-  const [missing, setMissing] = useState(false)
-  const [changed, setChanged] = useState(false)
-  const lastSent = useRef<string | null>(null)
+  const missing = draft !== null && draft.value === null
+  const changed = draft?.edited === true
   const message = draftMessage({ missing, changed, error, t })
-  const value = draft !== null && draft.base === row.value ? draft.value : row.value
-  const setters: DraftSetters = { setDraft, setMissing, setChanged }
-  useEffect(() => {
-    if (error?.code === SettingFieldClientErrorCode.SAVE_FAILED) {
-      lastSent.current = null
-    }
-  }, [error])
+  const value =
+    draft !== null && draft.base === row.value && draft.value !== null ? draft.value : row.value
   const change = (next: string): void => {
-    setDraft({ base: row.value, value: next })
-    setMissing(false)
-    setChanged(true)
-    lastSent.current = null
+    setDraft({ base: row.value, value: next, edited: true })
   }
   const commit = (next: string): void => {
-    commitDraft({ next, row, lastSent, setters, onChange })
+    commitDraft({ next, row, error, draft, setDraft, onChange })
   }
   return { value, error: message, change, commit }
 }

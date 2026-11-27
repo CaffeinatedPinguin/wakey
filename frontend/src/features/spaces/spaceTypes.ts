@@ -11,11 +11,6 @@ export interface SpaceDetail extends SpaceSummary {
   role: SpaceRole | null
 }
 
-export interface SpaceFormValues {
-  name: string
-  slug: string
-}
-
 export const SpacesStatus = {
   LOADING: 'loading',
   READY: 'ready',
