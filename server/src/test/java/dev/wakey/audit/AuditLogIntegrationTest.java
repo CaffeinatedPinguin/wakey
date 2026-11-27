@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.catchThrowable;
 
 import dev.wakey.testsupport.PostgresIntegrationTest;
 import java.lang.reflect.Method;
+import java.lang.reflect.Modifier;
 import java.time.Instant;
 import java.util.Arrays;
 import java.util.List;
@@ -143,11 +144,12 @@ class AuditLogIntegrationTest extends PostgresIntegrationTest {
     void entriesCannotBeChangedThroughThePort() {
         // when
         Set<String> methodNames = Arrays.stream(AuditLog.class.getDeclaredMethods())
+                .filter(method -> Modifier.isPublic(method.getModifiers()))
                 .map(Method::getName)
                 .collect(Collectors.toSet());
 
         // then
-        assertThat(methodNames).containsExactlyInAnyOrder("record", "history");
+        assertThat(methodNames).containsExactlyInAnyOrder("record", "recordSecurityEvent", "history");
     }
 
     @Test

@@ -57,7 +57,7 @@ class ArchitectureTest {
             dependencyEntry("spaces", "audit", "web"),
             dependencyEntry("tokens", "audit", "spaces", "web"),
             dependencyEntry("web"),
-            dependencyEntry("security", "web", "tokens", "spaces"),
+            dependencyEntry("security", "audit", "web", "tokens", "spaces"),
             dependencyEntry("executor", "leadership", "messaging"),
             dependencyEntry("alerts", "leadership", "messaging"));
 

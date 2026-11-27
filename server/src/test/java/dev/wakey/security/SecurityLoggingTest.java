@@ -1,11 +1,13 @@
 package dev.wakey.security;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.mock;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.oidcLogin;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import dev.wakey.audit.AuditLog;
 import dev.wakey.testsupport.SecurityIntegrationTest;
 import java.util.List;
 import java.util.Map;
@@ -94,7 +96,7 @@ class SecurityLoggingTest extends SecurityIntegrationTest {
         String forgedPath = "/agent/v1/%0d%0a\r\nrequest rejected: reason=access-denied forged";
         MockHttpServletRequest request = new MockHttpServletRequest("GET", forgedPath);
         MockHttpServletResponse response = new MockHttpServletResponse();
-        UnauthorizedRequestLog entryPoint = new UnauthorizedRequestLog(resolver);
+        UnauthorizedRequestLog entryPoint = new UnauthorizedRequestLog(resolver, mock(AuditLog.class));
         AuthenticationException exception = new InsufficientAuthenticationException("n/a");
 
         // when
@@ -120,7 +122,7 @@ class SecurityLoggingTest extends SecurityIntegrationTest {
         String forgedPath = "/agent/v1/%0d%0a\r\nrequest rejected: reason=access-denied forged";
         MockHttpServletRequest request = new MockHttpServletRequest("GET", forgedPath);
         MockHttpServletResponse response = new MockHttpServletResponse();
-        UnauthorizedRequestLog entryPoint = new UnauthorizedRequestLog(resolver);
+        UnauthorizedRequestLog entryPoint = new UnauthorizedRequestLog(resolver, mock(AuditLog.class));
         AuthenticationException exception = new InsufficientAuthenticationException("n/a");
 
         // when

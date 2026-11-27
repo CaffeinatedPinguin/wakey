@@ -42,9 +42,7 @@ public class AuditLog {
                 change.actor(),
                 change.spaceId(),
                 details);
-        UUID id = UUID.randomUUID();
-        store.append(entry, id, clock.instant());
-        log.debug("Recorded audit event {} for {} {}", entry.action(), entry.objectType(), entry.objectId());
+        append(entry);
     }
 
     /**
@@ -55,6 +53,21 @@ public class AuditLog {
      */
     @Transactional(propagation = Propagation.MANDATORY)
     public void record(AuditEntry entry) {
+        append(entry);
+    }
+
+    /**
+     * Appends one event in its own transaction. Use it for events that are not part of a business
+     * write, such as a login or a rejected request.
+     *
+     * @param entry the event to append
+     */
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void recordSecurityEvent(AuditEntry entry) {
+        append(entry);
+    }
+
+    private void append(AuditEntry entry) {
         UUID id = UUID.randomUUID();
         store.append(entry, id, clock.instant());
         log.debug("Recorded audit event {} for {} {}", entry.action(), entry.objectType(), entry.objectId());

@@ -1,5 +1,11 @@
 package dev.wakey.security;
 
+import dev.wakey.audit.ActorKind;
+import dev.wakey.audit.AuditActor;
+import dev.wakey.audit.AuditEntry;
+import dev.wakey.audit.AuditLog;
+import dev.wakey.audit.AuditOutcome;
+import dev.wakey.audit.AuditSource;
 import dev.wakey.tokens.TokenError;
 import dev.wakey.web.ApiException;
 import dev.wakey.web.CommonError;
@@ -9,6 +15,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.http.HttpHeaders;
 import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.authentication.AnonymousAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.web.access.AccessDeniedHandler;
@@ -17,7 +24,7 @@ import org.springframework.security.web.csrf.MissingCsrfTokenException;
 import org.springframework.stereotype.Component;
 import org.springframework.web.servlet.HandlerExceptionResolver;
 
-/** Logs every 403 with a fixed reason and renders it through the single MVC exception advice. */
+/** Logs and audits every 403 with a fixed reason and renders it through the single MVC exception advice. */
 @Slf4j
 @Component
 final class ForbiddenRequestLog implements AccessDeniedHandler {
@@ -29,10 +36,15 @@ final class ForbiddenRequestLog implements AccessDeniedHandler {
 
     private static final String INSUFFICIENT_SCOPE_CHALLENGE = "Bearer error=\"insufficient_scope\"";
 
+    private static final String REQUEST_OBJECT_TYPE = "request";
+
     private final HandlerExceptionResolver resolver;
 
-    ForbiddenRequestLog(@Qualifier("handlerExceptionResolver") HandlerExceptionResolver resolver) {
+    private final AuditLog auditLog;
+
+    ForbiddenRequestLog(@Qualifier("handlerExceptionResolver") HandlerExceptionResolver resolver, AuditLog auditLog) {
         this.resolver = resolver;
+        this.auditLog = auditLog;
     }
 
     @Override
@@ -70,10 +82,29 @@ final class ForbiddenRequestLog implements AccessDeniedHandler {
         return authentication instanceof ApiTokenAuthentication token && token.deniesWrite(request.getMethod());
     }
 
-    private static void logRejected(String reason, HttpServletRequest request) {
+    private void logRejected(String reason, HttpServletRequest request) {
         String method = request.getMethod();
         String path = request.getRequestURI();
         log.warn("request rejected: reason={} method={} path={}", reason, method, path);
+        AuditEntry entry = new AuditEntry(
+                "access.denied",
+                REQUEST_OBJECT_TYPE,
+                reason,
+                AuditOutcome.DENIED,
+                AuditSource.API,
+                actor(),
+                null,
+                "{}");
+        auditLog.recordSecurityEvent(entry);
+    }
+
+    private static AuditActor actor() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication == null || authentication instanceof AnonymousAuthenticationToken) {
+            return new AuditActor(null, ActorKind.SYSTEM);
+        }
+        boolean token = authentication instanceof ApiTokenAuthentication;
+        return AuditActor.of(authentication.getName(), token);
     }
 
     private static RejectReason reasonFor(AccessDeniedException exception) {
