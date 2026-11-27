@@ -1,7 +1,6 @@
 package dev.wakey.tokens.web;
 
 import dev.wakey.tokens.CreatedToken;
-import dev.wakey.tokens.TokenSummary;
 import io.swagger.v3.oas.annotations.media.Schema;
 
 /** The one response that carries the token secret; every later response carries only the summary. */
@@ -18,7 +17,8 @@ public record CreateTokenResponse(
         TokenSummary token) {
 
     static CreateTokenResponse from(CreatedToken created) {
-        return new CreateTokenResponse(created.secret(), created.token());
+        TokenSummary token = TokenSummary.from(created.token());
+        return new CreateTokenResponse(created.secret(), token);
     }
 
     @Override

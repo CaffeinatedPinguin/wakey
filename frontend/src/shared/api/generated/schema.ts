@@ -700,6 +700,7 @@ export interface components {
         };
         /** @enum {string} */
         TokenScope: "READ" | "WRITE";
+        /** @description A token as shown to its owner */
         TokenSummary: {
             /** Format: date-time */
             createdAt?: string;
@@ -1795,7 +1796,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description The plan is not configured on this instance. */
+            /** @description The requested plan is not configured on this instance. */
             400: {
                 headers: {
                     [name: string]: unknown;

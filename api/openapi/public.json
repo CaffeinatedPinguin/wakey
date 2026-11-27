@@ -758,6 +758,7 @@
         "type" : "string"
       },
       "TokenSummary" : {
+        "description" : "A token as shown to its owner",
         "properties" : {
           "createdAt" : {
             "format" : "date-time",
@@ -836,7 +837,7 @@
           }
         },
         "summary" : "Return the authenticated user",
-        "tags" : [ "me-controller" ]
+        "tags" : [ "me" ]
       }
     },
     "/api/v1/spaces" : {
@@ -2298,7 +2299,7 @@
                 }
               }
             },
-            "description" : "The plan is not configured on this instance."
+            "description" : "The requested plan is not configured on this instance."
           },
           "401" : {
             "content" : {
@@ -2332,7 +2333,7 @@
           }
         },
         "summary" : "Assign a plan to a space idempotently",
-        "tags" : [ "settings-controller" ]
+        "tags" : [ "settings" ]
       }
     },
     "/api/v1/spaces/{slug}/settings" : {
@@ -2383,7 +2384,7 @@
           }
         },
         "summary" : "Reset every space setting to the plan values",
-        "tags" : [ "settings-controller" ]
+        "tags" : [ "settings" ]
       },
       "get" : {
         "operationId" : "getSpaceSettings",
@@ -2439,7 +2440,7 @@
           }
         },
         "summary" : "Read the effective settings of a space",
-        "tags" : [ "settings-controller" ]
+        "tags" : [ "settings" ]
       }
     },
     "/api/v1/spaces/{slug}/settings/{key}" : {
@@ -2508,7 +2509,7 @@
           }
         },
         "summary" : "Reset a space setting to the plan value",
-        "tags" : [ "settings-controller" ]
+        "tags" : [ "settings" ]
       },
       "put" : {
         "operationId" : "putSpaceSetting",
@@ -2585,7 +2586,7 @@
           }
         },
         "summary" : "Set a space setting within the plan",
-        "tags" : [ "settings-controller" ]
+        "tags" : [ "settings" ]
       }
     },
     "/api/v1/spaces/{slug}/tokens" : {
@@ -2636,7 +2637,7 @@
           "sessionAuth" : [ ]
         } ],
         "summary" : "List the caller's API tokens in a space",
-        "tags" : [ "tokens-controller" ]
+        "tags" : [ "tokens" ]
       },
       "post" : {
         "operationId" : "createToken",
@@ -2715,7 +2716,7 @@
           "sessionAuth" : [ ]
         } ],
         "summary" : "Create an API token for a space",
-        "tags" : [ "tokens-controller" ]
+        "tags" : [ "tokens" ]
       }
     },
     "/api/v1/spaces/{slug}/tokens/{id}" : {
@@ -2777,7 +2778,7 @@
           "sessionAuth" : [ ]
         } ],
         "summary" : "Revoke one of the caller's API tokens",
-        "tags" : [ "tokens-controller" ]
+        "tags" : [ "tokens" ]
       }
     }
   },

@@ -5,7 +5,6 @@ import dev.wakey.tokens.ApiTokens;
 import dev.wakey.tokens.CreatedToken;
 import dev.wakey.tokens.TokenOptions;
 import dev.wakey.tokens.TokenOwner;
-import dev.wakey.tokens.TokenSummary;
 import dev.wakey.web.CursorPage;
 import java.util.List;
 import java.util.UUID;
@@ -27,7 +26,9 @@ final class TokensResources {
     }
 
     CursorPage<TokenSummary> list(SessionUser session, String slug) {
-        List<TokenSummary> summaries = tokens.list(owner(session), slug);
+        var tokensInSpace = tokens.list(owner(session), slug);
+        List<TokenSummary> summaries =
+                tokensInSpace.stream().map(TokenSummary::from).toList();
         return new CursorPage<>(summaries, null);
     }
 

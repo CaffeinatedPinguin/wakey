@@ -2,12 +2,8 @@ package dev.wakey.tokens.web;
 
 import io.swagger.v3.oas.models.Components;
 import io.swagger.v3.oas.models.OpenAPI;
-import io.swagger.v3.oas.models.Operation;
-import io.swagger.v3.oas.models.PathItem;
-import io.swagger.v3.oas.models.Paths;
 import io.swagger.v3.oas.models.security.SecurityRequirement;
 import io.swagger.v3.oas.models.security.SecurityScheme;
-import java.util.List;
 import java.util.Objects;
 import org.springdoc.core.customizers.GlobalOpenApiCustomizer;
 import org.springframework.context.annotation.Bean;
@@ -37,20 +33,6 @@ class TokenOpenApiConfiguration {
         openApi.setComponents(components);
         openApi.addSecurityItem(new SecurityRequirement().addList(BEARER_AUTH));
         openApi.addSecurityItem(new SecurityRequirement().addList(SESSION_AUTH));
-        requireSessionForTokenManagement(openApi);
-    }
-
-    private static void requireSessionForTokenManagement(OpenAPI openApi) {
-        Paths paths = Objects.requireNonNull(openApi.getPaths());
-        PathItem collection = Objects.requireNonNull(paths.get(TokenPaths.COLLECTION));
-        PathItem token = Objects.requireNonNull(paths.get(TokenPaths.ITEM));
-        Operation list = Objects.requireNonNull(collection.getGet());
-        Operation create = Objects.requireNonNull(collection.getPost());
-        Operation revoke = Objects.requireNonNull(token.getDelete());
-        List<SecurityRequirement> sessionOnly = List.of(new SecurityRequirement().addList(SESSION_AUTH));
-        list.setSecurity(sessionOnly);
-        create.setSecurity(sessionOnly);
-        revoke.setSecurity(sessionOnly);
     }
 
     private static SecurityScheme bearerScheme() {

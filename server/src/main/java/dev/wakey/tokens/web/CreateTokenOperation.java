@@ -5,6 +5,7 @@ import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import java.lang.annotation.Documented;
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
@@ -36,27 +37,14 @@ import org.springframework.web.bind.annotation.RequestMethod;
                             mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE,
                             schema = @Schema(implementation = ProblemDetail.class))),
     @ApiResponse(
-            responseCode = "401",
-            description = "Authentication is required.",
-            content =
-                    @Content(
-                            mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE,
-                            schema = @Schema(implementation = ProblemDetail.class))),
-    @ApiResponse(
             responseCode = "403",
             description = "The caller is not allowed to create this token.",
             content =
                     @Content(
                             mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE,
-                            schema = @Schema(implementation = ProblemDetail.class))),
-    @ApiResponse(
-            responseCode = "404",
-            description = "The space was not found.",
-            content =
-                    @Content(
-                            mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE,
                             schema = @Schema(implementation = ProblemDetail.class)))
 })
+@SecurityRequirement(name = TokenOpenApiConfiguration.SESSION_AUTH)
 @RequestMapping(
         path = TokenPaths.COLLECTION,
         method = RequestMethod.POST,
