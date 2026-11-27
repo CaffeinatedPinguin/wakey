@@ -2,9 +2,9 @@ import { cleanup, fireEvent, screen, within } from '@testing-library/react'
 import { afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest'
 import i18n from '../../../app/i18n'
 import { coreTokens } from '../../../shared/theme'
+import { renderChecksList } from '../../../test/checks'
 import { installChecksTranslations } from '../../../test/checksListI18n'
 import { installViewport } from '../../../test/viewport'
-import { renderChecksList } from './testSupport'
 
 const DESKTOP_WIDTH = 1024
 const MOBILE_WIDTH = 375
@@ -50,6 +50,6 @@ describe('checks list interactions', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Akcje checka API płatności' }))
     fireEvent.click(await screen.findByRole('menuitem', { name: 'Pauza' }))
 
-    expect(result.viewProps.onRowAction).toHaveBeenCalledWith('c1', 'pause')
+    expect(result.viewProps.onRowAction).toHaveBeenCalledWith('c1', 'PAUSE')
   })
 })

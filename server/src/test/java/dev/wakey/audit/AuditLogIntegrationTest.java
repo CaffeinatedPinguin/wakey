@@ -5,27 +5,19 @@ import static org.assertj.core.api.Assertions.catchThrowable;
 
 import dev.wakey.testsupport.PostgresIntegrationTest;
 import java.lang.reflect.Method;
-import java.time.Clock;
 import java.time.Instant;
-import java.time.ZoneId;
-import java.time.ZoneOffset;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
-import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
 import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.Test;
-import org.springframework.boot.test.context.TestConfiguration;
-import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Import;
-import org.springframework.context.annotation.Primary;
+import org.springframework.dao.DataAccessException;
 import org.springframework.transaction.IllegalTransactionStateException;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.TransactionTemplate;
 
-@Import(AuditLogIntegrationTest.SteppingClockConfiguration.class)
 class AuditLogIntegrationTest extends PostgresIntegrationTest {
 
     private static final String OBJECT_TYPE = "space";
@@ -72,6 +64,19 @@ class AuditLogIntegrationTest extends PostgresIntegrationTest {
         // then
         assertThat(rejection).isInstanceOf(IllegalTransactionStateException.class);
         assertThat(history).isEmpty();
+    }
+
+    @Test
+    void recordingWithoutATransactionFails() {
+        // given
+        String objectId = uniqueObjectId();
+        AuditEntry entry = entry(objectId, "{}");
+
+        // when
+        Throwable rejection = catchThrowable(() -> auditLog().record(entry));
+
+        // then
+        assertThat(rejection).isInstanceOf(IllegalTransactionStateException.class);
     }
 
     @Test
@@ -137,8 +142,9 @@ class AuditLogIntegrationTest extends PostgresIntegrationTest {
     @Test
     void entriesCannotBeChangedThroughThePort() {
         // when
-        Set<String> methodNames =
-                Arrays.stream(AuditLog.class.getMethods()).map(Method::getName).collect(Collectors.toSet());
+        Set<String> methodNames = Arrays.stream(AuditLog.class.getDeclaredMethods())
+                .map(Method::getName)
+                .collect(Collectors.toSet());
 
         // then
         assertThat(methodNames).containsExactlyInAnyOrder("record", "history");
@@ -190,6 +196,58 @@ class AuditLogIntegrationTest extends PostgresIntegrationTest {
         assertThat(withoutSpace).extracting(AuditRecord::details).containsExactly("{\"space\":\"none\"}");
     }
 
+    @Test
+    void historyIsScopedToTheGivenSpace() {
+        // given
+        UUID ownSpace = UUID.randomUUID();
+        UUID foreignSpace = UUID.randomUUID();
+        String objectId = uniqueObjectId();
+        record(entryFor(ownSpace, objectId, "{\"space\":\"own\"}"));
+        record(entryFor(foreignSpace, objectId, "{\"space\":\"foreign\"}"));
+
+        // when
+        List<AuditRecord> own = auditLog().history(ownSpace, OBJECT_TYPE, objectId, page(null, 10));
+
+        // then
+        assertThat(own).extracting(AuditRecord::details).containsExactly("{\"space\":\"own\"}");
+    }
+
+    @Test
+    void detailsLongerThanTheLimitAreRejected() {
+        // given
+        String details = "x".repeat(AuditEntry.MAX_DETAILS_LENGTH + 1);
+
+        // when
+        Throwable rejection = catchThrowable(() -> entry(uniqueObjectId(), details));
+
+        // then
+        assertThat(rejection).isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Test
+    void anAuditEventCannotBeUpdatedOrDeleted() {
+        // given
+        String objectId = uniqueObjectId();
+        record(entry(objectId, "{}"));
+        List<AuditRecord> recorded = auditLog().history(SPACE_ID, OBJECT_TYPE, objectId, page(null, 10));
+        UUID id = recorded.getFirst().id();
+
+        // when
+        Throwable update = catchThrowable(() -> jdbc().sql("UPDATE audit_event SET action = :action WHERE id = :id")
+                .param("action", "changed")
+                .param("id", id)
+                .update());
+        Throwable delete = catchThrowable(() -> jdbc().sql("DELETE FROM audit_event WHERE id = :id")
+                .param("id", id)
+                .update());
+
+        // then
+        assertThat(update).isInstanceOf(DataAccessException.class);
+        assertThat(delete).isInstanceOf(DataAccessException.class);
+        List<AuditRecord> history = auditLog().history(SPACE_ID, OBJECT_TYPE, objectId, page(null, 10));
+        assertThat(history).hasSize(1);
+    }
+
     private AuditLog auditLog() {
         return bean(AuditLog.class);
     }
@@ -226,38 +284,5 @@ class AuditLogIntegrationTest extends PostgresIntegrationTest {
 
     private static String uniqueObjectId() {
         return UUID.randomUUID().toString();
-    }
-
-    @TestConfiguration(proxyBeanMethods = false)
-    static class SteppingClockConfiguration {
-
-        @Bean
-        @Primary
-        Clock steppingClock() {
-            return new SteppingClock();
-        }
-    }
-
-    private static final class SteppingClock extends Clock {
-
-        private final AtomicReference<Instant> current = new AtomicReference<>(Instant.parse("2026-01-01T00:00:00Z"));
-
-        @Override
-        public ZoneId getZone() {
-            return ZoneOffset.UTC;
-        }
-
-        @Override
-        public Clock withZone(ZoneId zone) {
-            if (!ZoneOffset.UTC.equals(zone)) {
-                throw new UnsupportedOperationException("Only UTC is supported: " + zone);
-            }
-            return this;
-        }
-
-        @Override
-        public Instant instant() {
-            return current.getAndUpdate(previous -> previous.plusSeconds(1));
-        }
     }
 }

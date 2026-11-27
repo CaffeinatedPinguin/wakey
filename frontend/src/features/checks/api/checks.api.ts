@@ -1,21 +1,19 @@
 import { contract } from '../../../shared/api/generated/contract'
 import { serverClient } from '../../../shared/api/instances'
-import type { ListChecksQuery } from '../../../shared/api/generated/types'
-import { checkSchema, checksPageSchema, stateCountsSchema } from './checks.schemas'
-import type {
-  CheckPage,
-  CheckRecord,
-  CheckState,
-  CheckType,
-  PausedReason,
-  StateCounts,
+import { PausedReason } from '../../../shared/api/generated/enums'
+import type { CheckState, CheckType } from '../../../shared/api/generated/enums'
+import type { BulkChecksRequest, ListChecksQuery } from '../../../shared/api/generated/types'
+import {
+  bulkChecksResponseSchema,
+  checkSchema,
+  checksPageSchema,
+  stateCountsSchema,
 } from './checks.schemas'
+import type { BulkChecksResult, CheckPage, CheckRecord, StateCounts } from './checks.schemas'
 
 const SLUG_PLACEHOLDER = '{slug}'
 const ID_PLACEHOLDER = '{id}'
 const CHECK_PAGE_LIMIT = 50
-const MAX_BULK_PAGES = 100
-const MANUAL_PAUSE = 'MANUAL'
 
 export interface CheckApiFilters {
   q?: string
@@ -24,11 +22,6 @@ export interface CheckApiFilters {
   tag?: string
   group?: string
   pausedReason?: PausedReason
-}
-
-export interface CollectedCheckIds {
-  ids: string[]
-  complete: boolean
 }
 
 function operationPath(template: string, slug: string, id?: string): string {
@@ -98,7 +91,7 @@ export async function fetchCheck(
 export async function pauseCheck(slug: string, id: string): Promise<CheckRecord> {
   const response = await serverClient.post<unknown>(
     operationPath(contract.pauseCheck.path, slug, id),
-    { reason: MANUAL_PAUSE },
+    { reason: PausedReason.MANUAL },
   )
   return checkSchema.parse(response.data)
 }
@@ -114,23 +107,13 @@ export async function deleteCheck(slug: string, id: string): Promise<void> {
   await serverClient.delete(operationPath(contract.deleteCheck.path, slug, id))
 }
 
-export async function collectCheckIds(
+export async function bulkChecks(
   slug: string,
-  filters: CheckApiFilters,
-  maxIds: number,
-): Promise<CollectedCheckIds> {
-  const ids: string[] = []
-  let cursor: string | undefined
-  for (let page = 0; page < MAX_BULK_PAGES; page += 1) {
-    const result = await fetchChecks(slug, filters, cursor)
-    ids.push(...result.items.map((item) => item.id))
-    if (result.nextCursor === null) {
-      return { ids, complete: ids.length <= maxIds }
-    }
-    if (ids.length >= maxIds) {
-      return { ids, complete: false }
-    }
-    cursor = result.nextCursor
-  }
-  return { ids, complete: false }
+  request: BulkChecksRequest,
+): Promise<BulkChecksResult> {
+  const response = await serverClient.post<unknown>(
+    operationPath(contract.bulkChecks.path, slug),
+    request,
+  )
+  return bulkChecksResponseSchema.parse(response.data)
 }

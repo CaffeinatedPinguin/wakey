@@ -1,153 +1,96 @@
 import type { TFunction } from 'i18next'
-import type {
-  SettingFieldError,
-  SettingKind,
-  SettingOption,
-  SettingRowData,
-  SettingSource,
-  SettingsGroup,
-} from './types'
-import { ApiError } from '../../shared/api/problem'
+import { SettingFieldClientErrorCode, SettingKind } from './types'
+import type { SettingFieldError, SettingOption, SettingRowData, SettingsGroup } from './types'
+import { ApiException } from '../../shared/api/apiException'
+import { HttpStatus } from '../../shared/api/httpStatus'
+import { ErrorCode, SettingGroup, SettingType, SpaceRole } from '../../shared/api/generated/enums'
 import type { SpaceAccess, SpaceSetting } from './api/settings.schemas'
 
-type SettingsGroupKind = 'general' | 'defaults'
-
-interface SettingDefinition {
-  key: string
-  labelKey: string
-  group: SettingsGroupKind
-  kind: SettingKind
-  unit?: string
-  options?: readonly SettingOption[]
+// The descriptor type chooses the control; the contract values stay the only
+// source of truth for what a setting is.
+const KIND_BY_TYPE: Record<SettingType, SettingKind> = {
+  [SettingType.STRING]: SettingKind.TEXT,
+  [SettingType.INTEGER]: SettingKind.NUMBER,
+  [SettingType.ENUM]: SettingKind.SELECT,
 }
 
-const LANGUAGE_OPTIONS: readonly SettingOption[] = [
-  { value: 'pl', label: 'Polski' },
-  { value: 'en', label: 'English' },
-]
-
-const SETTING_DEFINITIONS: readonly SettingDefinition[] = [
-  { key: 'timezone', labelKey: 'settings.keys.timezone', group: 'general', kind: 'text' },
-  {
-    key: 'language',
-    labelKey: 'settings.keys.language',
-    group: 'general',
-    kind: 'select',
-    options: LANGUAGE_OPTIONS,
-  },
-  {
-    key: 'check.interval',
-    labelKey: 'settings.keys.interval',
-    group: 'defaults',
-    kind: 'number',
-    unit: 's',
-  },
-  {
-    key: 'check.timeout',
-    labelKey: 'settings.keys.timeout',
-    group: 'defaults',
-    kind: 'number',
-    unit: 's',
-  },
-  {
-    key: 'check.retries',
-    labelKey: 'settings.keys.retries',
-    group: 'defaults',
-    kind: 'number',
-  },
-]
-
-const SOURCES: Record<SpaceSetting['source'], SettingSource> = {
-  SPACE: 'space',
-  PLAN: 'plan',
-  INSTANCE: 'instance',
-  DEFAULT: 'default',
+// Only labels live in i18n; a key without a translation is shown as it arrives.
+function labelFor(key: string, t: TFunction): string {
+  return t(`settings.keys.${key}`, { defaultValue: key })
 }
 
-const BOUND_UNITS: Record<string, string> = {
-  'check.interval': 's',
-  'check.timeout': 's',
+function optionsFor(setting: SpaceSetting, t: TFunction): readonly SettingOption[] {
+  const values = setting.options ?? []
+  return values.map((value) => ({ value, label: t(`settings.languages.${value}`) }))
 }
 
-function toRow(definition: SettingDefinition, setting: SpaceSetting, t: TFunction): SettingRowData {
-  const row: SettingRowData = {
-    key: definition.key,
-    label: t(definition.labelKey),
-    value: setting.value,
-    source: SOURCES[setting.source],
-    kind: definition.kind,
-  }
+function toRow(setting: SpaceSetting, t: TFunction): SettingRowData {
+  const kind = KIND_BY_TYPE[setting.type]
+  const unit = setting.unit ?? undefined
+  const min = setting.min ?? undefined
+  const max = setting.max ?? undefined
   return {
-    ...row,
-    ...(definition.unit === undefined ? {} : { unit: definition.unit }),
-    ...(definition.options === undefined ? {} : { options: definition.options }),
+    key: setting.key,
+    label: labelFor(setting.key, t),
+    value: setting.value,
+    source: setting.source,
+    kind,
+    ...(unit === undefined ? {} : { unit }),
+    ...(kind === SettingKind.SELECT ? { options: optionsFor(setting, t) } : {}),
+    ...(min === undefined ? {} : { min }),
+    ...(max === undefined ? {} : { max }),
   }
 }
 
 function rowsFor(
-  group: SettingsGroupKind,
+  group: SettingGroup,
   settings: readonly SpaceSetting[],
   t: TFunction,
 ): SettingRowData[] {
-  return SETTING_DEFINITIONS.filter((definition) => definition.group === group).flatMap(
-    (definition) => {
-      const setting = settings.find((item) => item.key === definition.key)
-      return setting === undefined ? [] : [toRow(definition, setting, t)]
-    },
-  )
+  return settings.filter((setting) => setting.group === group).map((setting) => toRow(setting, t))
 }
 
 export function buildSettingsGroups(
   settings: readonly SpaceSetting[],
   t: TFunction,
 ): SettingsGroup[] {
-  return [
-    {
-      key: 'general',
-      title: t('settings.groups.general'),
-      rows: rowsFor('general', settings, t),
-    },
-    {
-      key: 'defaults',
-      title: t('settings.groups.defaults'),
-      rows: rowsFor('defaults', settings, t),
-    },
-  ]
-}
-
-export function overriddenSettingKeys(settings: readonly SpaceSetting[]): string[] {
-  return settings.filter((setting) => setting.source === 'SPACE').map((setting) => setting.key)
+  return Object.values(SettingGroup).map((group) => ({
+    key: group,
+    title: t(`settings.groups.${group}`),
+    rows: rowsFor(group, settings, t),
+  }))
 }
 
 export function canEditSpace(access: SpaceAccess | undefined, isAdmin: boolean): boolean {
   if (access === undefined) {
     return false
   }
-  return isAdmin || access.role === 'EDITOR'
+  return isAdmin || access.role === SpaceRole.EDITOR
 }
 
-function boundText(key: string, bound: unknown): string | undefined {
+function boundText(bound: unknown, unit: string | undefined): string | undefined {
   if (typeof bound === 'number') {
-    const unit = BOUND_UNITS[key]
     return unit === undefined ? String(bound) : `${String(bound)} ${unit}`
   }
   if (typeof bound === 'string') {
-    const unit = BOUND_UNITS[key]
     return unit !== undefined && /^\d+$/.test(bound) ? `${bound} ${unit}` : bound
   }
   return undefined
 }
 
-export function settingFieldError(key: string, error: unknown): SettingFieldError | undefined {
-  if (!(error instanceof ApiError)) {
+export function settingFieldError(
+  error: unknown,
+  unit: string | undefined,
+): SettingFieldError | undefined {
+  if (!(error instanceof ApiException)) {
     return undefined
   }
-  if (error.code === 'out_of_plan') {
-    const bound = boundText(key, error.params.bound)
-    return { code: 'out_of_plan', ...(bound === undefined ? {} : { bound }) }
+  if (error.code === ErrorCode.OUT_OF_PLAN) {
+    const bound = boundText(error.params.bound, unit)
+    return { code: ErrorCode.OUT_OF_PLAN, ...(bound === undefined ? {} : { bound }) }
   }
-  if (error.code === 'validation_failed' || error.status === 403) {
-    return { code: 'invalid' }
+  if (error.code === ErrorCode.VALIDATION_FAILED || error.status === HttpStatus.FORBIDDEN) {
+    return { code: ErrorCode.VALIDATION_FAILED }
   }
-  return undefined
+  return { code: SettingFieldClientErrorCode.SAVE_FAILED }
 }

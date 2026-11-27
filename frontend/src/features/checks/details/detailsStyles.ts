@@ -7,5 +7,3 @@ export const targetStyle: CSSProperties = {
   fontFamily: 'var(--app-font-mono)',
   overflowWrap: 'anywhere',
 }
-
-export const tabListStyle: CSSProperties = { overflowX: 'auto' }

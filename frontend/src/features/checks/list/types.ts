@@ -1,25 +1,26 @@
+import type { CheckState, CheckType } from '../../../shared/api/generated/enums'
 import type { StatusState } from '../../../shared/ui'
 
-export type ListStatus = 'loading' | 'ready' | 'empty' | 'noResults' | 'error'
+export const SelectionMode = {
+  NONE: 'none',
+  PAGE: 'page',
+  ALL: 'all',
+} as const
+export type SelectionMode = (typeof SelectionMode)[keyof typeof SelectionMode]
 
-export type SelectionMode = 'none' | 'page' | 'all'
-
-export type FacetKey = 'state' | 'type' | 'tag' | 'group'
-
-export type BulkAction = 'pause' | 'resume' | 'delete'
-
-export type RowAction = 'pause' | 'resume'
-
-export interface BulkProgress {
-  done: number
-  total: number
-}
+export const FacetKey = {
+  STATE: 'state',
+  TYPE: 'type',
+  TAG: 'tag',
+  GROUP: 'group',
+} as const
+export type FacetKey = (typeof FacetKey)[keyof typeof FacetKey]
 
 export interface CheckRowData {
   id: string
   name: string
   target: string
-  type: string
+  type: CheckType
   state: StatusState
   lastResultAt: string | null
   intervalSeconds: number
@@ -27,21 +28,24 @@ export interface CheckRowData {
   tags: string[]
 }
 
-export interface FacetOption {
-  value: string
+export interface FacetOption<Value extends string = string> {
+  value: Value
   label: string
   count: number
 }
 
-export interface FilterFacet {
-  key: FacetKey
-  options: FacetOption[]
-}
+// Every facet carries options whose value type follows its key, so a choice
+// stays a contract value instead of a plain string.
+export type FilterFacet =
+  | { key: typeof FacetKey.STATE; options: FacetOption<CheckState>[] }
+  | { key: typeof FacetKey.TYPE; options: FacetOption<CheckType>[] }
+  | { key: typeof FacetKey.TAG; options: FacetOption[] }
+  | { key: typeof FacetKey.GROUP; options: FacetOption[] }
 
 export interface ListFilters {
   q: string
-  state: string[]
-  type: string[]
+  state: CheckState[]
+  type: CheckType[]
   tag: string[]
   group: string[]
 }

@@ -1,5 +1,7 @@
+import { Alert } from '@mantine/core'
+import type { QueryStatus, UseQueryResult } from '@tanstack/react-query'
 import type { ReactElement } from 'react'
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import {
   useChangeSetting,
@@ -7,15 +9,12 @@ import {
   useRestoreSetting,
   useSpaceSettings,
 } from './api/settings.queries'
-import type { SpaceAccess } from './api/settings.schemas'
+import type { RestoreHandlers } from './api/settings.queries'
+import type { SpaceAccess, SpaceSetting } from './api/settings.schemas'
+import { apiErrorMessage } from '../../shared/api/formErrors'
 import { GeneralDefaultsView } from './GeneralDefaultsView'
-import {
-  buildSettingsGroups,
-  canEditSpace,
-  overriddenSettingKeys,
-  settingFieldError,
-} from './settingsModel'
-import type { SettingFieldError, SettingFieldErrors, SettingsStatus } from './types'
+import { buildSettingsGroups, canEditSpace, settingFieldError } from './settingsModel'
+import type { SettingFieldError, SettingFieldErrors } from './types'
 
 export interface SettingsPageProps {
   spaceSlug: string | undefined
@@ -41,53 +40,115 @@ function withoutKey(errors: SettingFieldErrors, key: string): SettingFieldErrors
 
 interface SettingsActions {
   fieldErrors: SettingFieldErrors
+  restoreError: string | null
+  restoring: boolean
   onChange: (key: string, value: string) => void
   onRestore: (key: string) => void
-  onRestoreAll: (keys: readonly string[]) => void
+  onRestoreAll: () => void
 }
 
-function useSettingsActions(spaceSlug: string | undefined): SettingsActions {
-  const change = useChangeSetting(spaceSlug)
-  const restore = useRestoreSetting(spaceSlug)
-  const restoreAll = useRestoreAllSettings(spaceSlug)
-  const [fieldErrors, setFieldErrors] = useState<SettingFieldErrors>(NO_FIELD_ERRORS)
+interface SettingChanges {
+  fieldErrors: SettingFieldErrors
+  onChange: (key: string, value: string) => void
+}
 
-  return {
-    fieldErrors,
-    onChange: (key, value) => {
-      setFieldErrors((previous) => withoutKey(previous, key))
-      change.mutate(
-        { key, value },
-        {
-          onError: (error) => {
-            const fieldError = settingFieldError(key, error)
-            if (fieldError !== undefined) {
-              setFieldErrors((previous) => ({ ...previous, [key]: fieldError }))
-            }
-          },
+function unitFor(settings: readonly SpaceSetting[], key: string): string | undefined {
+  return settings.find((setting) => setting.key === key)?.unit ?? undefined
+}
+
+function useSettingChanges(
+  spaceSlug: string | undefined,
+  settings: readonly SpaceSetting[],
+): SettingChanges {
+  const change = useChangeSetting(spaceSlug)
+  const [fieldErrors, setFieldErrors] = useState<SettingFieldErrors>(NO_FIELD_ERRORS)
+  const onChange = (key: string, value: string): void => {
+    setFieldErrors((previous) => withoutKey(previous, key))
+    change.mutate(
+      { key, value },
+      {
+        onError: (error) => {
+          const fieldError = settingFieldError(error, unitFor(settings, key))
+          if (fieldError !== undefined) {
+            setFieldErrors((previous) => ({ ...previous, [key]: fieldError }))
+          }
         },
-      )
+      },
+    )
+  }
+  return { fieldErrors, onChange }
+}
+
+interface SettingRestores {
+  restoreError: string | null
+  restoring: boolean
+  onRestore: (key: string) => void
+  onRestoreAll: () => void
+}
+
+function useSettingRestores(spaceSlug: string | undefined): SettingRestores {
+  const { t } = useTranslation()
+  const [restoreError, setRestoreError] = useState<string | null>(null)
+  const [restoring, setRestoring] = useState(false)
+  const restoringRef = useRef(false)
+  const handlers: RestoreHandlers = {
+    onError: (error) => {
+      setRestoreError(apiErrorMessage(t, error))
     },
-    onRestore: (key) => {
-      restore.mutate(key)
-    },
-    onRestoreAll: (keys) => {
-      restoreAll.mutate(keys)
+    onSettled: () => {
+      restoringRef.current = false
+      setRestoring(false)
     },
   }
+  const restore = useRestoreSetting(spaceSlug, handlers)
+  const restoreAll = useRestoreAllSettings(spaceSlug, handlers)
+  const beginRestore = (): boolean => {
+    if (restoringRef.current) {
+      return false
+    }
+    restoringRef.current = true
+    setRestoring(true)
+    setRestoreError(null)
+    return true
+  }
+  const onRestore = (key: string): void => {
+    if (beginRestore()) {
+      restore.mutate(key)
+    }
+  }
+  const onRestoreAll = (): void => {
+    if (beginRestore()) {
+      restoreAll.mutate()
+    }
+  }
+  return { restoreError, restoring, onRestore, onRestoreAll }
+}
+
+function useSettingsActions(
+  spaceSlug: string | undefined,
+  settings: readonly SpaceSetting[],
+): SettingsActions {
+  const changes = useSettingChanges(spaceSlug, settings)
+  const restores = useSettingRestores(spaceSlug)
+  return { ...changes, ...restores }
 }
 
 function settingsStatus(
-  settings: ReturnType<typeof useSpaceSettings>,
+  settings: UseQueryResult<SpaceSetting[]>,
   accessLoading: boolean,
-): SettingsStatus {
-  if (settings.isError) {
-    return 'error'
+): QueryStatus {
+  return settings.status === 'success' && accessLoading ? 'pending' : settings.status
+}
+
+function RestoreErrorAlert({ message }: { message: string | null }): ReactElement | null {
+  if (message === null) {
+    return null
   }
-  if (settings.isPending || accessLoading) {
-    return 'loading'
-  }
-  return 'ready'
+  return (
+    <Alert color="danger" mb="sm">
+      {message}
+    </Alert>
+  )
 }
 
 export function SettingsPage({
@@ -98,25 +159,30 @@ export function SettingsPage({
 }: SettingsPageProps): ReactElement {
   const { t } = useTranslation()
   const settings = useSpaceSettings(spaceSlug)
-  const actions = useSettingsActions(spaceSlug)
+  const actions = useSettingsActions(spaceSlug, settings.data ?? [])
   const groups = buildSettingsGroups(settings.data ?? [], t)
-  const keys = overriddenSettingKeys(settings.data ?? [])
 
   return (
-    <GeneralDefaultsView
-      embedded
-      groups={groups}
-      status={settingsStatus(settings, accessLoading)}
-      canEdit={canEditSpace(access, isAdmin)}
-      fieldErrors={actions.fieldErrors}
-      onChange={actions.onChange}
-      onRestore={actions.onRestore}
-      onRestoreAll={() => {
-        actions.onRestoreAll(keys)
-      }}
-      onRetry={() => {
-        void settings.refetch()
-      }}
-    />
+    <>
+      <RestoreErrorAlert message={actions.restoreError} />
+      <GeneralDefaultsView
+        data={{
+          groups,
+          status: settingsStatus(settings, accessLoading),
+          canEdit: canEditSpace(access, isAdmin),
+          fieldErrors: actions.fieldErrors,
+          embedded: true,
+        }}
+        actions={{
+          onChange: actions.onChange,
+          onRestore: actions.onRestore,
+          onRestoreAll: actions.onRestoreAll,
+          onRetry: () => {
+            void settings.refetch()
+          },
+          restoring: actions.restoring,
+        }}
+      />
+    </>
   )
 }

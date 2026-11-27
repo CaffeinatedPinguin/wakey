@@ -5,17 +5,27 @@ import static org.springframework.security.test.web.servlet.request.SecurityMock
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.request;
 
+import com.tngtech.archunit.core.domain.JavaClass;
+import com.tngtech.archunit.core.domain.JavaClasses;
+import com.tngtech.archunit.core.importer.ClassFileImporter;
+import com.tngtech.archunit.core.importer.ImportOption;
 import dev.wakey.spaces.SpaceMember;
 import dev.wakey.spaces.SpaceRole;
 import dev.wakey.spaces.SpaceSlug;
 import dev.wakey.testsupport.ContractFile;
 import dev.wakey.testsupport.SecurityIntegrationTest;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.Deque;
+import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import org.junit.jupiter.api.BeforeEach;
@@ -23,7 +33,6 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
-import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
@@ -34,7 +43,6 @@ import tools.jackson.databind.ObjectMapper;
 import tools.jackson.databind.SerializationFeature;
 import tools.jackson.databind.json.JsonMapper;
 
-@TestPropertySource(properties = "springdoc.api-docs.enabled=true")
 class OpenApiContractTest extends SecurityIntegrationTest {
 
     private static final String DOCS_PATH = "/v3/api-docs/public";
@@ -114,6 +122,212 @@ class OpenApiContractTest extends SecurityIntegrationTest {
     }
 
     @Test
+    void checkOperationsDocumentExactlyTheirOwnResponses() throws Exception {
+        // when
+        JsonNode paths = MAPPER.readTree(generatedContract()).path("paths");
+
+        // then
+        assertResponses(paths, "/api/v1/spaces/{slug}/checks", "get", "200", "400", "401", "404");
+        assertResponses(paths, "/api/v1/spaces/{slug}/checks/counts", "get", "200", "401", "404");
+        assertResponses(paths, "/api/v1/spaces/{slug}/checks/{id}", "get", "200", "401", "404");
+        assertResponses(paths, "/api/v1/spaces/{slug}/checks", "post", "201", "400", "401", "403", "404");
+        assertResponses(paths, "/api/v1/spaces/{slug}/checks/{id}", "put", "200", "400", "401", "403", "404", "409");
+        assertResponses(paths, "/api/v1/spaces/{slug}/checks/{id}/pause", "post", "200", "400", "401", "403", "404");
+        assertResponses(paths, "/api/v1/spaces/{slug}/checks/{id}/resume", "post", "200", "401", "403", "404");
+        assertResponses(paths, "/api/v1/spaces/{slug}/checks/{id}", "delete", "204", "401", "403", "404");
+    }
+
+    @Test
+    void everyChecksOperationIsDocumented() throws Exception {
+        // given
+        JsonNode paths = MAPPER.readTree(generatedContract()).path("paths");
+        Map<String, String[]> expected = Map.ofEntries(
+                Map.entry("get /api/v1/spaces/{slug}/checks", new String[] {"200", "400", "401", "404"}),
+                Map.entry("post /api/v1/spaces/{slug}/checks", new String[] {"201", "400", "401", "403", "404"}),
+                Map.entry(
+                        "post /api/v1/spaces/{slug}/checks/bulk",
+                        new String[] {"200", "400", "401", "403", "404", "409"}),
+                Map.entry("get /api/v1/spaces/{slug}/checks/counts", new String[] {"200", "401", "404"}),
+                Map.entry("get /api/v1/spaces/{slug}/checks/{id}", new String[] {"200", "401", "404"}),
+                Map.entry(
+                        "put /api/v1/spaces/{slug}/checks/{id}",
+                        new String[] {"200", "400", "401", "403", "404", "409"}),
+                Map.entry(
+                        "post /api/v1/spaces/{slug}/checks/{id}/pause",
+                        new String[] {"200", "400", "401", "403", "404"}),
+                Map.entry("post /api/v1/spaces/{slug}/checks/{id}/resume", new String[] {"200", "401", "403", "404"}),
+                Map.entry("delete /api/v1/spaces/{slug}/checks/{id}", new String[] {"204", "401", "403", "404"}));
+        int checked = 0;
+
+        // when
+        for (Map.Entry<String, String[]> operationEntry : expected.entrySet()) {
+            String[] label = operationEntry.getKey().split(" ");
+            String method = label[0];
+            String path = label[1];
+            JsonNode operation = paths.path(path).path(method);
+            String operationId = operation.path("operationId").asString();
+            String summary = operation.path("summary").asString();
+            assertResponses(paths, path, method, operationEntry.getValue());
+            assertThat(operationId).as(path).isNotBlank();
+            assertThat(summary).as(path).isNotBlank();
+            checked++;
+        }
+
+        // then
+        assertThat(checked).isEqualTo(9);
+    }
+
+    @Test
+    void everySlugOperationDocumentsNotFoundOnce() throws Exception {
+        // given
+        JsonNode document = MAPPER.readTree(generatedContract());
+        JsonNode paths = document.path("paths");
+        int checked = 0;
+
+        // when
+        for (String path : paths.propertyNames()) {
+            if (!path.contains("{slug}")) {
+                continue;
+            }
+            for (String method : HTTP_METHODS) {
+                JsonNode operation = paths.path(path).path(method);
+                if (!operation.isMissingNode()) {
+                    checked++;
+                    boolean hasNotFound = operation.path("responses").has("404");
+                    assertThat(hasNotFound).as(path + " " + method).isTrue();
+                }
+            }
+        }
+        JavaClasses classes = new ClassFileImporter()
+                .withImportOption(new ImportOption.DoNotIncludeTests())
+                .importPackages("dev.wakey.checks.web");
+        for (JavaClass javaClass : classes) {
+            if (javaClass.getSimpleName().endsWith("Operation")) {
+                assertThat(responseCodes(javaClass)).as(javaClass.getName()).doesNotContain("401", "404");
+            }
+        }
+
+        // then
+        assertThat(checked).isPositive();
+    }
+
+    @Test
+    void theCountOperationHasNoPagingParameters() throws Exception {
+        // given
+        JsonNode document = MAPPER.readTree(generatedContract());
+        JsonNode paths = document.path("paths");
+        JsonNode operation = paths.path("/api/v1/spaces/{slug}/checks/counts").path("get");
+        JsonNode parameters = operation.path("parameters");
+        List<String> names = new ArrayList<>();
+
+        // when
+        for (JsonNode parameter : parameters) {
+            String name = parameter.path("name").asString();
+            names.add(name);
+        }
+
+        // then
+        assertThat(names).doesNotContain("limit", "cursor");
+        assertThat(names).contains("q", "state", "type", "tag", "group", "pausedReason");
+    }
+
+    @Test
+    void theCheckListDocumentsTheLimitParameter() throws Exception {
+        // given
+        JsonNode document = MAPPER.readTree(generatedContract());
+        JsonNode parameters = document.path("paths")
+                .path("/api/v1/spaces/{slug}/checks")
+                .path("get")
+                .path("parameters");
+        int maxPageSize = bean(ApiProperties.class).maxPageSize();
+
+        // when
+        JsonNode limit = parameterNamed(parameters, "limit");
+        JsonNode schema = limit.path("schema");
+        String description = limit.path("description").asString();
+        int example = schema.path("example").asInt();
+        int minimum = schema.path("minimum").asInt();
+        int maximum = schema.path("maximum").asInt();
+
+        // then
+        assertThat(description).isEqualTo("The maximum number of items to return");
+        assertThat(example).isEqualTo(20);
+        assertThat(minimum).isEqualTo(1);
+        assertThat(maximum).isEqualTo(maxPageSize);
+    }
+
+    @Test
+    void everyChecksOperationDocumentsItsSlugFromTheSignature() throws Exception {
+        // given
+        JsonNode document = MAPPER.readTree(generatedContract());
+        JsonNode paths = document.path("paths");
+        int checked = 0;
+
+        // when
+        for (String path : paths.propertyNames()) {
+            if (!path.startsWith("/api/v1/spaces/{slug}/checks")) {
+                continue;
+            }
+            for (String method : HTTP_METHODS) {
+                JsonNode operation = paths.path(path).path(method);
+                if (!operation.isMissingNode()) {
+                    JsonNode parameters = operation.path("parameters");
+                    JsonNode slug = parameterNamed(parameters, "slug");
+                    JsonNode location = slug.path("in");
+                    String in = location.asString();
+                    assertThat(in).as(path + " " + method).isEqualTo("path");
+                    checked++;
+                }
+            }
+        }
+
+        // then
+        assertThat(checked).isPositive();
+    }
+
+    private static List<String> responseCodes(JavaClass javaClass) {
+        Class<?> type = javaClass.reflect();
+        List<String> codes = new ArrayList<>();
+        for (ApiResponse response : type.getAnnotationsByType(ApiResponse.class)) {
+            codes.add(response.responseCode());
+        }
+        ApiResponses container = type.getAnnotation(ApiResponses.class);
+        if (container != null) {
+            for (ApiResponse response : container.value()) {
+                codes.add(response.responseCode());
+            }
+        }
+        return codes;
+    }
+
+    private static void assertResponses(JsonNode paths, String path, String method, String... expected) {
+        JsonNode operation = paths.path(path).path(method);
+        JsonNode responses = operation.path("responses");
+        List<String> codes = new ArrayList<>();
+        responses.propertyNames().forEach(codes::add);
+        assertThat(operation.isMissingNode()).isFalse();
+        assertThat(codes).containsExactlyInAnyOrder(expected);
+        assertMediaTypes(responses);
+    }
+
+    private static void assertMediaTypes(JsonNode responses) {
+        for (String code : List.of("200", "201")) {
+            assertMediaType(responses, code, "application/json");
+        }
+        for (String code : List.of("400", "401", "403", "404", "409")) {
+            assertMediaType(responses, code, "application/problem+json");
+        }
+    }
+
+    private static void assertMediaType(JsonNode responses, String code, String mediaType) {
+        JsonNode response = responses.path(code);
+        if (!response.isMissingNode()) {
+            JsonNode content = response.path("content");
+            assertThat(content.has(mediaType)).isTrue();
+        }
+    }
+
+    @Test
     void spaceRoleIsANamedSchemaInTheContract() throws Exception {
         // given
         JsonNode document = MAPPER.readTree(generatedContract());
@@ -128,6 +342,24 @@ class OpenApiContractTest extends SecurityIntegrationTest {
         // then
         assertThat(roleValues).containsExactly("EDITOR", "VIEWER");
         assertThat(roleReference).isEqualTo(SPACE_ROLE_REFERENCE);
+    }
+
+    @Test
+    void theLanguageIsANamedSchemaInTheContract() throws Exception {
+        // given
+        JsonNode document = MAPPER.readTree(generatedContract());
+        JsonNode schemas = document.path("components").path("schemas");
+        JsonNode language = schemas.path("Language");
+        JsonNode options =
+                schemas.path("SpaceSettingResponse").path("properties").path("options");
+
+        // when
+        List<String> values = valuesOf(language.path("enum"));
+        String itemsReference = options.path("items").path("$ref").asString();
+
+        // then the frontend reads the options from the generated Language constant
+        assertThat(values).containsExactly("pl", "en");
+        assertThat(itemsReference).isEqualTo("#/components/schemas/Language");
     }
 
     @Test
@@ -214,21 +446,27 @@ class OpenApiContractTest extends SecurityIntegrationTest {
         // given
         JsonNode document = MAPPER.readTree(generatedContract());
         JsonNode paths = document.path("paths");
+        Set<String> spacesPaths = Set.of(
+                "/api/v1/spaces",
+                "/api/v1/spaces/{slug}",
+                "/api/v1/spaces/{slug}/members",
+                "/api/v1/spaces/{slug}/members/role");
         Set<String> spacesTags = new LinkedHashSet<>();
         int spacesOperations = 0;
 
         // when
         for (String path : paths.propertyNames()) {
-            if (!path.startsWith("/api/v1/spaces")) {
-                continue;
-            }
             for (String method : HTTP_METHODS) {
                 JsonNode operation = paths.path(path).path(method);
-                if (!operation.isMissingNode()) {
+                if (operation.isMissingNode()) {
+                    continue;
+                }
+                assertNoPreconditionHeader(operation);
+                if (spacesPaths.contains(path)) {
                     spacesOperations++;
                     JsonNode tags = operation.path("tags");
+                    assertThat(valuesOf(tags)).as(path + " " + method).containsExactly("spaces");
                     spacesTags.addAll(valuesOf(tags));
-                    assertNoPreconditionHeader(operation);
                 }
             }
         }
@@ -439,6 +677,130 @@ class OpenApiContractTest extends SecurityIntegrationTest {
             }
         }
         return "";
+    }
+
+    @Test
+    void everyClosedStringSetIsANamedSchema() throws Exception {
+        // given
+        JsonNode document = MAPPER.readTree(generatedContract());
+        Map<String, List<String>> definitions = new LinkedHashMap<>();
+        List<String> inline = new ArrayList<>();
+
+        // when
+        collectStringEnums(document, new ArrayDeque<>(), definitions, inline);
+
+        // then
+        assertThat(definitions)
+                .containsEntry("CheckState", List.of("UP", "DEGRADED", "DOWN", "UNKNOWN"))
+                .containsEntry("CheckType", List.of("HTTP", "TCP", "CERTIFICATE"))
+                .containsEntry("PausedReason", List.of("MANUAL", "PLAN_LIMIT", "ABANDONED", "UNVERIFIED"))
+                .containsEntry("ErrorCategory", List.of("TARGET_DOWN", "LOCATION_NETWORK", "AUTH"))
+                .containsEntry("TokenScope", List.of("READ", "WRITE"))
+                .containsEntry("SettingSource", List.of("SPACE", "PLAN", "INSTANCE"))
+                .containsEntry("SettingType", List.of("STRING", "INTEGER", "ENUM"))
+                .containsEntry("SettingGroup", List.of("GENERAL", "DEFAULTS"))
+                .containsEntry("Language", List.of("pl", "en"))
+                .containsEntry("SpaceRole", List.of("EDITOR", "VIEWER"));
+        assertThat(inline).isEmpty();
+    }
+
+    private static void collectStringEnums(
+            JsonNode node, Deque<String> path, Map<String, List<String>> definitions, List<String> inline) {
+        JsonNode values = node.path("enum");
+        if (values.isArray() && isTextEnum(values)) {
+            collectEnum(path, values, definitions, inline);
+        }
+        if (node.isObject()) {
+            for (Map.Entry<String, JsonNode> field : node.properties()) {
+                String segment = field.getKey();
+                JsonNode child = field.getValue();
+                collectStringEnums(child, subPath(path, segment), definitions, inline);
+            }
+        } else if (node.isArray()) {
+            for (int index = 0; index < node.size(); index++) {
+                JsonNode child = node.get(index);
+                String segment = Integer.toString(index);
+                Deque<String> childPath = subPath(path, segment);
+                collectStringEnums(child, childPath, definitions, inline);
+            }
+        }
+    }
+
+    private static void collectEnum(
+            Deque<String> path, JsonNode values, Map<String, List<String>> definitions, List<String> inline) {
+        List<String> enumValues = valuesOf(values);
+        if (isNamedSchemaDefinition(path)) {
+            definitions.put(path.getLast(), enumValues);
+        } else if (!isProblemCode(path)) {
+            String location = String.join("/", path) + " " + enumValues;
+            inline.add(location);
+        }
+    }
+
+    private static Deque<String> subPath(Deque<String> path, String segment) {
+        Deque<String> subPath = new ArrayDeque<>(path);
+        subPath.addLast(segment);
+        return subPath;
+    }
+
+    private static boolean isTextEnum(JsonNode values) {
+        for (JsonNode value : values) {
+            if (!value.isTextual()) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    private static boolean isNamedSchemaDefinition(Deque<String> path) {
+        List<String> segments = List.copyOf(path);
+        return segments.size() == 3
+                && segments.get(0).equals("components")
+                && segments.get(1).equals("schemas");
+    }
+
+    private static boolean isProblemCode(Deque<String> path) {
+        List<String> problemCode = List.of("components", "schemas", "ProblemDetail", "properties", "code");
+        return List.copyOf(path).equals(problemCode);
+    }
+
+    @Test
+    void tokenOperationsRequireTheSessionSchemeInTheContract() throws Exception {
+        // given
+        JsonNode document = MAPPER.readTree(generatedContract());
+        JsonNode schemes = document.path("components").path("securitySchemes");
+        JsonNode paths = document.path("paths");
+        String tokensPath = "/api/v1/spaces/{slug}/tokens";
+        JsonNode collection = paths.path(tokensPath);
+        JsonNode token = paths.path(tokensPath + "/{id}");
+        JsonNode me = paths.path("/api/v1/me");
+
+        // when
+        List<String> createSecurity = securityNames(document, collection.path("post"));
+        List<String> listSecurity = securityNames(document, collection.path("get"));
+        List<String> revokeSecurity = securityNames(document, token.path("delete"));
+        List<String> meSecurity = securityNames(document, me.path("get"));
+
+        // then
+        String sessionDescription =
+                schemes.path("sessionAuth").path("description").asString();
+        assertThat(schemes.has("bearerAuth")).isTrue();
+        assertThat(schemes.has("sessionAuth")).isTrue();
+        assertThat(sessionDescription).contains("CSRF");
+        assertThat(createSecurity).containsExactly("sessionAuth");
+        assertThat(listSecurity).containsExactly("sessionAuth");
+        assertThat(revokeSecurity).containsExactly("sessionAuth");
+        assertThat(meSecurity).containsExactlyInAnyOrder("bearerAuth", "sessionAuth");
+    }
+
+    private static List<String> securityNames(JsonNode document, JsonNode operation) {
+        JsonNode security = operation.path("security");
+        JsonNode effective = security.isMissingNode() ? document.path("security") : security;
+        List<String> names = new ArrayList<>();
+        for (JsonNode requirement : effective) {
+            requirement.propertyNames().forEach(names::add);
+        }
+        return names;
     }
 
     @Test

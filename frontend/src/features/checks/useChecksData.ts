@@ -1,16 +1,18 @@
+import type { QueryStatus } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { stateFacets, toCheckRow, totalFromCounts } from './api/checks.adapters'
 import type { CheckApiFilters } from './api/checks.api'
 import { useCheckCounts, useChecksList } from './api/checks.queries'
 import { hasActiveFilters, toApiFilters, toListFilters } from './api/checks.search'
 import type { ChecksSearch } from './api/checks.search'
-import type { CheckRowData, FilterFacet, ListFilters, ListStatus } from './list/types'
+import type { CheckRowData, FilterFacet, ListFilters } from './list/types'
 
 export interface ChecksPageData {
   rows: CheckRowData[]
   facets: FilterFacet[]
   filters: ListFilters
-  status: ListStatus
+  status: QueryStatus
+  hasActiveFilters: boolean
   totalCount: number
   hasNextPage: boolean
   apiFilters: CheckApiFilters
@@ -23,23 +25,6 @@ function flattenRows(query: ReturnType<typeof useChecksList>): CheckRowData[] {
   return pages.flatMap((page) => page.items.map(toCheckRow))
 }
 
-function statusOf(
-  query: ReturnType<typeof useChecksList>,
-  rows: CheckRowData[],
-  filtersActive: boolean,
-): ListStatus {
-  if (query.isPending) {
-    return 'loading'
-  }
-  if (query.isError) {
-    return 'error'
-  }
-  if (rows.length === 0) {
-    return filtersActive ? 'noResults' : 'empty'
-  }
-  return 'ready'
-}
-
 export function useChecksData(space: string, search: ChecksSearch): ChecksPageData {
   const { t } = useTranslation()
   const filters = toListFilters(search)
@@ -47,8 +32,6 @@ export function useChecksData(space: string, search: ChecksSearch): ChecksPageDa
   const list = useChecksList(space, apiFilters)
   const counts = useCheckCounts(space, apiFilters)
   const rows = flattenRows(list)
-  const filtersActive = hasActiveFilters(search)
-  const status = statusOf(list, rows, filtersActive)
   const totalCount = totalFromCounts(counts.data) ?? rows.length
   const facets = stateFacets(counts.data, (state) => t(`common.state.${state}`))
   const reload = list.refetch
@@ -56,7 +39,8 @@ export function useChecksData(space: string, search: ChecksSearch): ChecksPageDa
     rows,
     facets,
     filters,
-    status,
+    status: list.status,
+    hasActiveFilters: hasActiveFilters(search),
     totalCount,
     hasNextPage: list.hasNextPage,
     apiFilters,

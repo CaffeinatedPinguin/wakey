@@ -1,18 +1,19 @@
 import { Badge, Box, Checkbox, Group, Paper, Stack, Text } from '@mantine/core'
 import type { ReactElement } from 'react'
 import { useTranslation } from 'react-i18next'
+import type { BulkCheckAction } from '../../../shared/api/generated/enums'
 import { StatusBadge } from '../../../shared/ui'
 import { cardStyle, monoStyle } from './listStyles'
 import { RowMenu } from './RowMenu'
 import { isRowSelected, rowSelection } from './selection'
-import type { CheckRowData, RowAction, SelectionState } from './types'
+import type { CheckRowData, SelectionState } from './types'
 
 export interface CheckCardProps {
   row: CheckRowData
   rows: CheckRowData[]
   selection: SelectionState
   onSelectionChange: (selection: SelectionState) => void
-  onRowAction: (id: string, action: RowAction) => void
+  onRowAction: (id: string, action: BulkCheckAction) => void
 }
 
 function CardMeta({ row }: { row: CheckRowData }): ReactElement {

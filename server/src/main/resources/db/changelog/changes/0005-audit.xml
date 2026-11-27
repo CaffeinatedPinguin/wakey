@@ -52,5 +52,19 @@
       CREATE INDEX ix_audit_event_space
         ON audit_event (space_id, occurred_at DESC);
     </sql>
+
+    <!-- postgres-only: PL/pgSQL trigger rejects UPDATE and DELETE on the audit table; another database needs its own append-only mechanism. -->
+    <sql splitStatements="false">
+      CREATE OR REPLACE FUNCTION reject_audit_event_change() RETURNS trigger AS $$
+      BEGIN
+        RAISE EXCEPTION 'audit_event is append-only: % is not allowed', TG_OP;
+      END;
+      $$ LANGUAGE plpgsql;
+    </sql>
+    <sql>
+      CREATE TRIGGER trg_audit_event_append_only
+        BEFORE UPDATE OR DELETE ON audit_event
+        FOR EACH ROW EXECUTE FUNCTION reject_audit_event_change();
+    </sql>
   </changeSet>
 </databaseChangeLog>

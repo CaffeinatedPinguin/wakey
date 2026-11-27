@@ -3,12 +3,13 @@ package dev.wakey.spaces;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.catchThrowable;
 
-import dev.wakey.security.CurrentUser;
+import dev.wakey.settings.PlanAssignment;
 import dev.wakey.spaces.internal.SpaceMemberEntity;
 import dev.wakey.spaces.internal.SpaceMemberRepository;
 import dev.wakey.testsupport.PostgresIntegrationTest;
 import dev.wakey.web.ApiException;
 import dev.wakey.web.CommonError;
+import dev.wakey.web.CurrentUser;
 import dev.wakey.web.ErrorCode;
 import jakarta.validation.ConstraintViolation;
 import jakarta.validation.ConstraintViolationException;
@@ -38,6 +39,9 @@ import org.springframework.session.FindByIndexNameSessionRepository;
 import org.springframework.session.Session;
 import org.springframework.session.SessionRepository;
 import org.springframework.session.jdbc.JdbcIndexedSessionRepository;
+import org.springframework.transaction.IllegalTransactionStateException;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.support.TransactionTemplate;
 
 class SpaceServiceIntegrationTest extends PostgresIntegrationTest {
 
@@ -162,11 +166,11 @@ class SpaceServiceIntegrationTest extends PostgresIntegrationTest {
         // when
         Throwable read = catchThrowable(() -> service.view(STRANGER, space.slug()));
         Throwable add = catchThrowable(
-                () -> service.addMember(STRANGER, space.slug(), new SpaceMember(ISSUER, subject, SpaceRole.VIEWER)));
+                () -> members().addMember(STRANGER, space.slug(), new SpaceMember(ISSUER, subject, SpaceRole.VIEWER)));
         Throwable change = catchThrowable(
-                () -> service.changeRole(STRANGER, space.slug(), new SpaceMember(ISSUER, subject, SpaceRole.EDITOR)));
-        Throwable remove =
-                catchThrowable(() -> service.removeMember(STRANGER, space.slug(), new SpaceMemberId(ISSUER, subject)));
+                () -> members().changeRole(STRANGER, space.slug(), new SpaceMember(ISSUER, subject, SpaceRole.EDITOR)));
+        Throwable remove = catchThrowable(
+                () -> members().removeMember(STRANGER, space.slug(), new SpaceMemberId(ISSUER, subject)));
         Throwable write = catchThrowable(() -> service.put(STRANGER, uniqueSlug("stranger-write"), "Denied", null));
         List<SpaceView> visible = service.listVisible(STRANGER, null, 100);
 
@@ -180,6 +184,19 @@ class SpaceServiceIntegrationTest extends PostgresIntegrationTest {
     }
 
     @Test
+    void assigningAPlanRequiresAnAdmin() {
+        // given
+        PlanAssignment assignments = bean(PlanAssignment.class);
+        Space space = seedSpace("plan-admin");
+
+        // when
+        Throwable assigned = catchThrowable(() -> assignments.assign(EDITOR, space.slug(), "default", false));
+
+        // then
+        assertError(assigned, CommonError.FORBIDDEN);
+    }
+
+    @Test
     void viewerReadsButCannotWrite() {
         // given
         SpaceService service = service();
@@ -190,12 +207,12 @@ class SpaceServiceIntegrationTest extends PostgresIntegrationTest {
         SpaceView read = service.view(VIEWER, slug);
         List<SpaceView> visible = service.listVisible(VIEWER, null, 100);
         Throwable write = catchThrowable(() -> service.put(VIEWER, uniqueSlug("viewer-write"), "Denied", null));
-        Throwable add = catchThrowable(() -> service.addMember(
-                VIEWER, slug, new SpaceMember(ISSUER, uniqueSubject("viewer-target"), SpaceRole.VIEWER)));
+        Throwable add = catchThrowable(() -> members()
+                .addMember(VIEWER, slug, new SpaceMember(ISSUER, uniqueSubject("viewer-target"), SpaceRole.VIEWER)));
         Throwable change = catchThrowable(
-                () -> service.changeRole(VIEWER, slug, new SpaceMember(ISSUER, EDITOR.subject(), SpaceRole.VIEWER)));
+                () -> members().changeRole(VIEWER, slug, new SpaceMember(ISSUER, EDITOR.subject(), SpaceRole.VIEWER)));
         Throwable remove =
-                catchThrowable(() -> service.removeMember(VIEWER, slug, new SpaceMemberId(ISSUER, EDITOR.subject())));
+                catchThrowable(() -> members().removeMember(VIEWER, slug, new SpaceMemberId(ISSUER, EDITOR.subject())));
 
         // then
         assertThat(read.id()).isEqualTo(space.id());
@@ -220,17 +237,17 @@ class SpaceServiceIntegrationTest extends PostgresIntegrationTest {
         CurrentUser member = new CurrentUser(ISSUER, subject, false);
 
         // when
-        service.addMember(EDITOR, ownSlug, new SpaceMember(ISSUER, subject, SpaceRole.VIEWER));
+        members().addMember(EDITOR, ownSlug, new SpaceMember(ISSUER, subject, SpaceRole.VIEWER));
         List<SpaceView> afterAdd = service.listVisible(member, null, 100);
-        service.changeRole(EDITOR, ownSlug, new SpaceMember(ISSUER, subject, SpaceRole.EDITOR));
+        members().changeRole(EDITOR, ownSlug, new SpaceMember(ISSUER, subject, SpaceRole.EDITOR));
         List<SpaceView> afterChange = service.listVisible(member, null, 100);
         Throwable foreignAdd = catchThrowable(() ->
-                service.addMember(EDITOR, externalForeignSlug, new SpaceMember(ISSUER, subject, SpaceRole.VIEWER)));
+                members().addMember(EDITOR, externalForeignSlug, new SpaceMember(ISSUER, subject, SpaceRole.VIEWER)));
         Throwable foreignChange = catchThrowable(() ->
-                service.changeRole(EDITOR, externalForeignSlug, new SpaceMember(ISSUER, subject, SpaceRole.EDITOR)));
+                members().changeRole(EDITOR, externalForeignSlug, new SpaceMember(ISSUER, subject, SpaceRole.EDITOR)));
         Throwable foreignRemove = catchThrowable(
-                () -> service.removeMember(EDITOR, externalForeignSlug, new SpaceMemberId(ISSUER, subject)));
-        service.removeMember(EDITOR, ownSlug, new SpaceMemberId(ISSUER, subject));
+                () -> members().removeMember(EDITOR, externalForeignSlug, new SpaceMemberId(ISSUER, subject)));
+        members().removeMember(EDITOR, ownSlug, new SpaceMemberId(ISSUER, subject));
         List<SpaceView> afterRemove = service.listVisible(member, null, 100);
 
         // then
@@ -340,19 +357,18 @@ class SpaceServiceIntegrationTest extends PostgresIntegrationTest {
     @Test
     void addingAMemberValidatesTheSubject() {
         // given
-        SpaceService service = service();
         Space space = seedSpace("subject-validation");
         String tooLong = "x".repeat(256);
 
         // when
         Throwable addEmpty = catchThrowable(
-                () -> service.addMember(ADMIN, space.slug(), new SpaceMember(ISSUER, "", SpaceRole.VIEWER)));
+                () -> members().addMember(ADMIN, space.slug(), new SpaceMember(ISSUER, "", SpaceRole.VIEWER)));
         Throwable addTooLong = catchThrowable(
-                () -> service.addMember(ADMIN, space.slug(), new SpaceMember(ISSUER, tooLong, SpaceRole.VIEWER)));
+                () -> members().addMember(ADMIN, space.slug(), new SpaceMember(ISSUER, tooLong, SpaceRole.VIEWER)));
         Throwable changeBlank = catchThrowable(
-                () -> service.changeRole(ADMIN, space.slug(), new SpaceMember(ISSUER, "   ", SpaceRole.EDITOR)));
+                () -> members().changeRole(ADMIN, space.slug(), new SpaceMember(ISSUER, "   ", SpaceRole.EDITOR)));
         Throwable removeTooLong =
-                catchThrowable(() -> service.removeMember(ADMIN, space.slug(), new SpaceMemberId(ISSUER, tooLong)));
+                catchThrowable(() -> members().removeMember(ADMIN, space.slug(), new SpaceMemberId(ISSUER, tooLong)));
 
         // then
         assertThat(addEmpty).isInstanceOf(ConstraintViolationException.class);
@@ -375,7 +391,7 @@ class SpaceServiceIntegrationTest extends PostgresIntegrationTest {
         CurrentUser member = new CurrentUser(ISSUER, subject, false);
 
         // when
-        service.addMember(ADMIN, space.slug(), new SpaceMember(ISSUER, subject, SpaceRole.VIEWER));
+        members().addMember(ADMIN, space.slug(), new SpaceMember(ISSUER, subject, SpaceRole.VIEWER));
         List<SpaceView> visible = service.listVisible(member, null, 100);
 
         // then
@@ -385,13 +401,12 @@ class SpaceServiceIntegrationTest extends PostgresIntegrationTest {
     @Test
     void aSubjectLongerThan255CharactersIsRejected() {
         // given
-        SpaceService service = service();
         Space space = seedSpace("subject-too-long");
         String subject = "x".repeat(SpaceMember.SUBJECT_MAX_LENGTH + 1);
 
         // when
         Throwable rejected = catchThrowable(
-                () -> service.addMember(ADMIN, space.slug(), new SpaceMember(ISSUER, subject, SpaceRole.VIEWER)));
+                () -> members().addMember(ADMIN, space.slug(), new SpaceMember(ISSUER, subject, SpaceRole.VIEWER)));
 
         // then
         List<ConstraintViolation<?>> violations = violationsOf(rejected);
@@ -411,12 +426,11 @@ class SpaceServiceIntegrationTest extends PostgresIntegrationTest {
     @Test
     void aBlankSubjectIsRejected() {
         // given
-        SpaceService service = service();
         Space space = seedSpace("subject-blank");
 
         // when
         Throwable rejected = catchThrowable(
-                () -> service.addMember(ADMIN, space.slug(), new SpaceMember(ISSUER, "   ", SpaceRole.VIEWER)));
+                () -> members().addMember(ADMIN, space.slug(), new SpaceMember(ISSUER, "   ", SpaceRole.VIEWER)));
 
         // then
         List<ConstraintViolation<?>> violations = violationsOf(rejected);
@@ -429,16 +443,15 @@ class SpaceServiceIntegrationTest extends PostgresIntegrationTest {
     @Test
     void aSubjectWithAControlCharacterIsRejected() {
         // given
-        SpaceService service = service();
         Space space = seedSpace("subject-control");
         String control = "user\u0000name";
         String unpairedSurrogate = "user\uD800name";
 
         // when
         Throwable controlFailure = catchThrowable(
-                () -> service.addMember(ADMIN, space.slug(), new SpaceMember(ISSUER, control, SpaceRole.VIEWER)));
+                () -> members().addMember(ADMIN, space.slug(), new SpaceMember(ISSUER, control, SpaceRole.VIEWER)));
         Throwable surrogateFailure = catchThrowable(() ->
-                service.addMember(ADMIN, space.slug(), new SpaceMember(ISSUER, unpairedSurrogate, SpaceRole.VIEWER)));
+                members().addMember(ADMIN, space.slug(), new SpaceMember(ISSUER, unpairedSurrogate, SpaceRole.VIEWER)));
 
         // then
         List<ConstraintViolation<?>> controlViolations = violationsOf(controlFailure);
@@ -459,11 +472,11 @@ class SpaceServiceIntegrationTest extends PostgresIntegrationTest {
         service.put(ADMIN, slug, "Two issuers", null);
         CurrentUser firstMember = new CurrentUser("https://issuer-one.example", subject, false);
         CurrentUser secondMember = new CurrentUser("https://issuer-two.example", subject, false);
-        service.addMember(ADMIN, slug, new SpaceMember(firstMember.issuer(), subject, SpaceRole.VIEWER));
-        service.addMember(ADMIN, slug, new SpaceMember(secondMember.issuer(), subject, SpaceRole.VIEWER));
+        members().addMember(ADMIN, slug, new SpaceMember(firstMember.issuer(), subject, SpaceRole.VIEWER));
+        members().addMember(ADMIN, slug, new SpaceMember(secondMember.issuer(), subject, SpaceRole.VIEWER));
 
         // when
-        service.removeMember(ADMIN, slug, new SpaceMemberId(firstMember.issuer(), subject));
+        members().removeMember(ADMIN, slug, new SpaceMemberId(firstMember.issuer(), subject));
         Throwable firstView = catchThrowable(() -> service.view(firstMember, slug));
         SpaceView secondView = service.view(secondMember, slug);
 
@@ -476,16 +489,15 @@ class SpaceServiceIntegrationTest extends PostgresIntegrationTest {
     @Test
     void changingARoleInvalidatesTheUsersSessions() {
         // given
-        SpaceService service = service();
         Space space = seedSpace("role-session");
         String subject = uniqueSubject("role-change");
         String bystander = uniqueSubject("bystander");
-        service.addMember(ADMIN, space.slug(), new SpaceMember(ISSUER, subject, SpaceRole.VIEWER));
+        members().addMember(ADMIN, space.slug(), new SpaceMember(ISSUER, subject, SpaceRole.VIEWER));
         Session changedSession = createSession(subject);
         Session bystanderSession = createSession(bystander);
 
         // when
-        service.changeRole(ADMIN, space.slug(), new SpaceMember(ISSUER, subject, SpaceRole.EDITOR));
+        members().changeRole(ADMIN, space.slug(), new SpaceMember(ISSUER, subject, SpaceRole.EDITOR));
 
         // then
         assertThat(sessionExists(changedSession)).isFalse();
@@ -495,16 +507,15 @@ class SpaceServiceIntegrationTest extends PostgresIntegrationTest {
     @Test
     void removingAMemberInvalidatesTheUsersSessions() {
         // given
-        SpaceService service = service();
         Space space = seedSpace("remove-session");
         String subject = uniqueSubject("removed");
         String bystander = uniqueSubject("kept");
-        service.addMember(ADMIN, space.slug(), new SpaceMember(ISSUER, subject, SpaceRole.VIEWER));
+        members().addMember(ADMIN, space.slug(), new SpaceMember(ISSUER, subject, SpaceRole.VIEWER));
         Session removedSession = createSession(subject);
         Session bystanderSession = createSession(bystander);
 
         // when
-        service.removeMember(ADMIN, space.slug(), new SpaceMemberId(ISSUER, subject));
+        members().removeMember(ADMIN, space.slug(), new SpaceMemberId(ISSUER, subject));
 
         // then
         assertThat(sessionExists(removedSession)).isFalse();
@@ -514,14 +525,13 @@ class SpaceServiceIntegrationTest extends PostgresIntegrationTest {
     @Test
     void removingAMemberEndsTheirSessions() {
         // given
-        SpaceService service = service();
         Space space = seedSpace("remove-ends");
         String subject = uniqueSubject("removed-ends");
-        service.addMember(ADMIN, space.slug(), new SpaceMember(ISSUER, subject, SpaceRole.VIEWER));
+        members().addMember(ADMIN, space.slug(), new SpaceMember(ISSUER, subject, SpaceRole.VIEWER));
         Session session = createSession(subject);
 
         // when
-        service.removeMember(ADMIN, space.slug(), new SpaceMemberId(ISSUER, subject));
+        members().removeMember(ADMIN, space.slug(), new SpaceMemberId(ISSUER, subject));
 
         // then
         assertThat(sessionExists(session)).isFalse();
@@ -530,20 +540,37 @@ class SpaceServiceIntegrationTest extends PostgresIntegrationTest {
     @Test
     void removingAMemberKeepsTheSessionsOfTheSameSubjectFromAnotherIssuer() {
         // given
-        SpaceService service = service();
         Space space = seedSpace("remove-issuer");
         String subject = uniqueSubject("shared-subject");
         String otherIssuer = "https://other-issuer.example";
-        service.addMember(ADMIN, space.slug(), new SpaceMember(ISSUER, subject, SpaceRole.VIEWER));
+        members().addMember(ADMIN, space.slug(), new SpaceMember(ISSUER, subject, SpaceRole.VIEWER));
         Session removedSession = createSession(ISSUER, subject);
         Session otherIssuerSession = createSession(otherIssuer, subject);
 
         // when
-        service.removeMember(ADMIN, space.slug(), new SpaceMemberId(ISSUER, subject));
+        members().removeMember(ADMIN, space.slug(), new SpaceMemberId(ISSUER, subject));
 
         // then
         assertThat(sessionExists(removedSession)).isFalse();
         assertThat(sessionExists(otherIssuerSession)).isTrue();
+    }
+
+    @Test
+    void sessionsEndThroughAMembershipEvent() {
+        // given
+        Space space = seedSpace("membership-event");
+        String subject = uniqueSubject("membership-event");
+        members().addMember(ADMIN, space.slug(), new SpaceMember(ISSUER, subject, SpaceRole.EDITOR));
+        Session beforeRoleChange = createSession(subject);
+
+        // when the role really changes
+        members().changeRole(ADMIN, space.slug(), new SpaceMember(ISSUER, subject, SpaceRole.VIEWER));
+        Session afterRoleChange = createSession(subject);
+        members().removeMember(ADMIN, space.slug(), new SpaceMemberId(ISSUER, subject));
+
+        // then both the old and the later sessions end through the published events
+        assertThat(sessionExists(beforeRoleChange)).isFalse();
+        assertThat(sessionExists(afterRoleChange)).isFalse();
     }
 
     @Test
@@ -555,7 +582,7 @@ class SpaceServiceIntegrationTest extends PostgresIntegrationTest {
         Session session = createSession(subject);
 
         // when
-        service.addMember(ADMIN, space.slug(), new SpaceMember(ISSUER, subject, SpaceRole.VIEWER));
+        members().addMember(ADMIN, space.slug(), new SpaceMember(ISSUER, subject, SpaceRole.VIEWER));
         CurrentUser member = new CurrentUser(ISSUER, subject, false);
         List<SpaceView> visible = service.listVisible(member, null, 100);
 
@@ -595,7 +622,6 @@ class SpaceServiceIntegrationTest extends PostgresIntegrationTest {
     @Test
     void addingTheSameMemberConcurrentlyKeepsOneMembershipAndItsRole() throws Exception {
         // given
-        SpaceService service = service();
         Space space = seedSpace("concurrent-member");
         String subject = uniqueSubject("concurrent-member");
         ExecutorService executor = Executors.newFixedThreadPool(2);
@@ -605,12 +631,12 @@ class SpaceServiceIntegrationTest extends PostgresIntegrationTest {
         try {
             Callable<Void> addEditor = () -> {
                 start.await();
-                service.addMember(ADMIN, space.slug(), new SpaceMember(ISSUER, subject, SpaceRole.EDITOR));
+                members().addMember(ADMIN, space.slug(), new SpaceMember(ISSUER, subject, SpaceRole.EDITOR));
                 return null;
             };
             Callable<Void> addViewer = () -> {
                 start.await();
-                service.addMember(ADMIN, space.slug(), new SpaceMember(ISSUER, subject, SpaceRole.VIEWER));
+                members().addMember(ADMIN, space.slug(), new SpaceMember(ISSUER, subject, SpaceRole.VIEWER));
                 return null;
             };
             List<Future<Void>> futures = new ArrayList<>();
@@ -630,7 +656,7 @@ class SpaceServiceIntegrationTest extends PostgresIntegrationTest {
         assertThat(memberships).hasSize(1);
         SpaceRole storedRole = memberships.getFirst().role();
         SpaceRole otherRole = storedRole == SpaceRole.EDITOR ? SpaceRole.VIEWER : SpaceRole.EDITOR;
-        service.addMember(ADMIN, space.slug(), new SpaceMember(ISSUER, subject, otherRole));
+        members().addMember(ADMIN, space.slug(), new SpaceMember(ISSUER, subject, otherRole));
         List<SpaceMemberEntity> afterRepeatedAdd = repository.findByKeyIssuerAndKeySubject(ISSUER, subject);
         assertThat(afterRepeatedAdd).hasSize(1);
         SpaceRole repeatedRole = afterRepeatedAdd.getFirst().role();
@@ -656,8 +682,38 @@ class SpaceServiceIntegrationTest extends PostgresIntegrationTest {
         assertThat(afterFirst).isEqualTo(expectedTail);
     }
 
+    @Test
+    void lockingAMissingSpaceIsNotFound() {
+        // given
+        SpaceService service = service();
+        UUID missingSpace = UUID.randomUUID();
+
+        // when
+        Throwable thrown = catchThrowable(() -> inTransaction(() -> service.lock(missingSpace)));
+
+        // then
+        assertError(thrown, CommonError.NOT_FOUND);
+    }
+
+    @Test
+    void lockingRequiresATransaction() {
+        // given
+        SpaceService service = service();
+        Space space = seedSpace("locking");
+
+        // when
+        Throwable thrown = catchThrowable(() -> service.lock(space.id()));
+
+        // then
+        assertThat(thrown).isInstanceOf(IllegalTransactionStateException.class);
+    }
+
     private SpaceService service() {
         return bean(SpaceService.class);
+    }
+
+    private SpaceMembers members() {
+        return bean(SpaceMembers.class);
     }
 
     private Space seedSpace(String prefix) {
@@ -665,8 +721,8 @@ class SpaceServiceIntegrationTest extends PostgresIntegrationTest {
         PutResult created = service.put(ADMIN, uniqueSlug(prefix), "Space " + prefix, null);
         Space space = created.space();
         String slug = space.slug();
-        service.addMember(ADMIN, slug, new SpaceMember(ISSUER, EDITOR.subject(), SpaceRole.EDITOR));
-        service.addMember(ADMIN, slug, new SpaceMember(ISSUER, VIEWER.subject(), SpaceRole.VIEWER));
+        members().addMember(ADMIN, slug, new SpaceMember(ISSUER, EDITOR.subject(), SpaceRole.EDITOR));
+        members().addMember(ADMIN, slug, new SpaceMember(ISSUER, VIEWER.subject(), SpaceRole.VIEWER));
         return space;
     }
 
@@ -715,6 +771,12 @@ class SpaceServiceIntegrationTest extends PostgresIntegrationTest {
     private boolean sessionExists(Session session) {
         JdbcIndexedSessionRepository repository = bean(JdbcIndexedSessionRepository.class);
         return repository.findById(session.getId()) != null;
+    }
+
+    private void inTransaction(Runnable action) {
+        PlatformTransactionManager manager = bean(PlatformTransactionManager.class);
+        TransactionTemplate template = new TransactionTemplate(manager);
+        template.executeWithoutResult(status -> action.run());
     }
 
     private static List<ConstraintViolation<?>> violationsOf(Throwable thrown) {

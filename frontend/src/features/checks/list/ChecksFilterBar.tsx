@@ -4,9 +4,10 @@ import { IconFilter } from '@tabler/icons-react'
 import type { ReactElement } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useIsMobile } from '../../../shared/ui'
-import { withFacetChoice } from './filterUtils'
+import { isFacetChosen, withFacetChoice } from './filterUtils'
 import { sheetStyles, touchStyle } from './listStyles'
-import type { FacetKey, FacetOption, FilterFacet, ListFilters } from './types'
+import { FacetKey } from './types'
+import type { FacetOption, FilterFacet, ListFilters } from './types'
 
 interface FilterControlsProps {
   filters: ListFilters
@@ -25,22 +26,22 @@ interface FacetGroupProps {
 }
 
 interface FacetOptionRowProps {
-  facetKey: FacetKey
+  facet: FilterFacet
   option: FacetOption
   filters: ListFilters
   onFiltersChange: (filters: ListFilters) => void
 }
 
 function FacetOptionRow(props: FacetOptionRowProps): ReactElement {
-  const { filters, facetKey, option, onFiltersChange } = props
+  const { filters, facet, option, onFiltersChange } = props
 
   return (
     <Group justify="space-between" wrap="nowrap">
       <Checkbox
         label={option.label}
-        checked={filters[facetKey].includes(option.value)}
+        checked={isFacetChosen(filters, facet, option.value)}
         onChange={() => {
-          onFiltersChange(withFacetChoice(filters, facetKey, option.value))
+          onFiltersChange(withFacetChoice(filters, facet, option.value))
         }}
       />
       <Text size="xs" c="dimmed">
@@ -48,6 +49,73 @@ function FacetOptionRow(props: FacetOptionRowProps): ReactElement {
       </Text>
     </Group>
   )
+}
+
+interface FacetOptionsProps<Value extends string> {
+  facet: FilterFacet
+  options: FacetOption<Value>[]
+  filters: ListFilters
+  onFiltersChange: (filters: ListFilters) => void
+}
+
+function FacetOptions<Value extends string>(props: FacetOptionsProps<Value>): ReactElement {
+  const { facet, options, filters, onFiltersChange } = props
+  return (
+    <>
+      {options.map((option) => (
+        <FacetOptionRow
+          key={option.value}
+          facet={facet}
+          option={option}
+          filters={filters}
+          onFiltersChange={onFiltersChange}
+        />
+      ))}
+    </>
+  )
+}
+
+// Each contract facet keeps its own value type, so the chosen option stays a
+// contract value instead of a plain string.
+function FacetRows({ facet, filters, onFiltersChange }: FacetGroupProps): ReactElement {
+  switch (facet.key) {
+    case FacetKey.STATE:
+      return (
+        <FacetOptions
+          facet={facet}
+          options={facet.options}
+          filters={filters}
+          onFiltersChange={onFiltersChange}
+        />
+      )
+    case FacetKey.TYPE:
+      return (
+        <FacetOptions
+          facet={facet}
+          options={facet.options}
+          filters={filters}
+          onFiltersChange={onFiltersChange}
+        />
+      )
+    case FacetKey.TAG:
+      return (
+        <FacetOptions
+          facet={facet}
+          options={facet.options}
+          filters={filters}
+          onFiltersChange={onFiltersChange}
+        />
+      )
+    case FacetKey.GROUP:
+      return (
+        <FacetOptions
+          facet={facet}
+          options={facet.options}
+          filters={filters}
+          onFiltersChange={onFiltersChange}
+        />
+      )
+  }
 }
 
 function FacetGroup({ facet, filters, onFiltersChange }: FacetGroupProps): ReactElement {
@@ -58,15 +126,7 @@ function FacetGroup({ facet, filters, onFiltersChange }: FacetGroupProps): React
       <Text size="xs" fw={600} tt="uppercase" c="dimmed">
         {t(`checks.list.facets.${facet.key}`)}
       </Text>
-      {facet.options.map((option) => (
-        <FacetOptionRow
-          key={option.value}
-          facetKey={facet.key}
-          option={option}
-          filters={filters}
-          onFiltersChange={onFiltersChange}
-        />
-      ))}
+      <FacetRows facet={facet} filters={filters} onFiltersChange={onFiltersChange} />
     </Stack>
   )
 }

@@ -4,8 +4,9 @@ import io.swagger.v3.core.util.RefUtils;
 import io.swagger.v3.oas.models.Components;
 import io.swagger.v3.oas.models.OpenAPI;
 import io.swagger.v3.oas.models.info.Info;
-import java.util.ArrayList;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Set;
 import org.springdoc.core.models.GroupedOpenApi;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
@@ -35,6 +36,7 @@ public class ApiConfiguration {
                 .pathsToMatch(ApiPaths.API_V1_ALL)
                 .addOpenApiCustomizer(openApi -> documentPublicApi(openApi, apiProperties, codes))
                 .addOperationCustomizer(OpenApiUnauthenticatedResponse.customizer(ERROR_SCHEMA_REF))
+                .addOperationCustomizer(OpenApiSlugNotFoundResponse.customizer(ERROR_SCHEMA_REF))
                 .build();
     }
 
@@ -51,7 +53,7 @@ public class ApiConfiguration {
     }
 
     private static List<String> errorCodeValues(List<ErrorCodeSet> errorCodeSets) {
-        List<String> codes = new ArrayList<>();
+        Set<String> codes = new LinkedHashSet<>();
         for (CommonError error : CommonError.values()) {
             codes.add(error.getCode());
         }

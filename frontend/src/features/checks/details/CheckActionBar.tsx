@@ -1,31 +1,23 @@
 import { Button, Group, Menu, Modal, Stack, Text } from '@mantine/core'
-import {
-  IconCopy,
-  IconDots,
-  IconEdit,
-  IconPlayerPause,
-  IconPlayerPlay,
-  IconRefresh,
-  IconTrash,
-} from '@tabler/icons-react'
+import { IconDots, IconPlayerPause, IconPlayerPlay, IconTrash } from '@tabler/icons-react'
 import type { ComponentType, ReactElement } from 'react'
 import { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import { BulkCheckAction } from '../../../shared/api/generated/enums'
 import { useIsMobile } from '../../../shared/ui'
-import type { CheckAction } from './checkDetailsTypes'
 import { touchStyle } from './detailsStyles'
 
 interface CheckActionBarProps {
   readonly paused: boolean
-  readonly onAction: (action: CheckAction) => void
-  readonly unavailableActions?: readonly CheckAction[]
+  readonly busy: boolean
+  readonly onAction: (action: BulkCheckAction) => void
 }
 
 interface ActionListProps {
   readonly paused: boolean
-  readonly onAction: (action: CheckAction) => void
+  readonly busy: boolean
+  readonly onAction: (action: BulkCheckAction) => void
   readonly onDelete: () => void
-  readonly unavailableActions: readonly CheckAction[]
 }
 
 interface DeleteCheckDialogProps {
@@ -34,102 +26,74 @@ interface DeleteCheckDialogProps {
   readonly onConfirm: () => void
 }
 
-interface MobileMenuItemProps {
-  readonly action: CheckAction
-  readonly paused: boolean
-  readonly onAction: (action: CheckAction) => void
-  readonly onDelete: () => void
-  readonly unavailableActions: readonly CheckAction[]
-}
-
 type IconComponent = ComponentType<{ size?: number }>
 
-const ACTION_LABEL_KEYS: Record<CheckAction, string> = {
-  'check-now': 'checks.details.actions.checkNow',
-  pause: 'checks.details.actions.pause',
-  resume: 'checks.details.actions.resume',
-  edit: 'checks.details.actions.edit',
-  duplicate: 'checks.details.actions.duplicate',
-  delete: 'checks.details.actions.delete',
+const ACTION_LABEL_KEYS: Record<BulkCheckAction, string> = {
+  [BulkCheckAction.PAUSE]: 'checks.details.actions.pause',
+  [BulkCheckAction.RESUME]: 'checks.details.actions.resume',
+  [BulkCheckAction.DELETE]: 'checks.details.actions.delete',
 }
 
-const ACTION_ICONS: Record<CheckAction, IconComponent> = {
-  'check-now': IconRefresh,
-  pause: IconPlayerPause,
-  resume: IconPlayerPlay,
-  edit: IconEdit,
-  duplicate: IconCopy,
-  delete: IconTrash,
+const ACTION_ICONS: Record<BulkCheckAction, IconComponent> = {
+  [BulkCheckAction.PAUSE]: IconPlayerPause,
+  [BulkCheckAction.RESUME]: IconPlayerPlay,
+  [BulkCheckAction.DELETE]: IconTrash,
 }
 
-const DESKTOP_ACTIONS: readonly CheckAction[] = ['check-now', 'pause', 'edit', 'duplicate']
-const MOBILE_ACTIONS: readonly CheckAction[] = ['check-now', 'pause', 'edit', 'duplicate', 'delete']
-
-function resolveAction(action: CheckAction, paused: boolean): CheckAction {
-  return action === 'pause' && paused ? 'resume' : action
-}
-
-function isUnavailable(actions: readonly CheckAction[], action: CheckAction): boolean {
-  return actions.includes(action)
+function resolvePauseAction(paused: boolean): BulkCheckAction {
+  return paused ? BulkCheckAction.RESUME : BulkCheckAction.PAUSE
 }
 
 function DesktopActions(props: ActionListProps): ReactElement {
   const { t } = useTranslation()
+  const pauseAction = resolvePauseAction(props.paused)
+
   return (
     <Group gap="xs">
-      {DESKTOP_ACTIONS.map((action) => {
-        const resolved = resolveAction(action, props.paused)
-        const unavailable = isUnavailable(props.unavailableActions, resolved)
-        return (
-          <Button
-            key={action}
-            variant={action === 'check-now' ? 'filled' : 'default'}
-            disabled={unavailable}
-            {...(unavailable ? { title: t('checks.details.actions.unavailable') } : {})}
-            onClick={() => {
-              props.onAction(resolved)
-            }}
-          >
-            {t(ACTION_LABEL_KEYS[resolved])}
-          </Button>
-        )
-      })}
-      <Button variant="default" color="danger" onClick={props.onDelete}>
-        {t(ACTION_LABEL_KEYS.delete)}
+      <Button
+        variant="default"
+        disabled={props.busy}
+        onClick={() => {
+          props.onAction(pauseAction)
+        }}
+      >
+        {t(ACTION_LABEL_KEYS[pauseAction])}
+      </Button>
+      <Button variant="default" color="danger" disabled={props.busy} onClick={props.onDelete}>
+        {t(ACTION_LABEL_KEYS[BulkCheckAction.DELETE])}
       </Button>
     </Group>
   )
 }
 
-function MobileMenuItem(props: MobileMenuItemProps): ReactElement {
-  const { t } = useTranslation()
-  const resolved = resolveAction(props.action, props.paused)
-  const unavailable = isUnavailable(props.unavailableActions, resolved)
-  const Icon = ACTION_ICONS[resolved]
+interface MobileMenuActionProps {
+  readonly action: BulkCheckAction
+  readonly busy: boolean
+  readonly onAction: (action: BulkCheckAction) => void
+}
 
-  function handleClick(): void {
-    if (resolved === 'delete') {
-      props.onDelete()
-      return
-    }
-    props.onAction(resolved)
-  }
+function MobileMenuAction({ action, busy, onAction }: MobileMenuActionProps): ReactElement {
+  const { t } = useTranslation()
+  const Icon = ACTION_ICONS[action]
 
   return (
     <Menu.Item
       leftSection={<Icon size={16} />}
       style={touchStyle}
-      disabled={unavailable}
-      {...(unavailable ? { title: t('checks.details.actions.unavailable') } : {})}
-      onClick={handleClick}
+      disabled={busy}
+      onClick={() => {
+        onAction(action)
+      }}
     >
-      {t(ACTION_LABEL_KEYS[resolved])}
+      {t(ACTION_LABEL_KEYS[action])}
     </Menu.Item>
   )
 }
 
 function MobileActions(props: ActionListProps): ReactElement {
   const { t } = useTranslation()
+  const pauseAction = resolvePauseAction(props.paused)
+
   return (
     <Menu position="bottom-end" width="var(--app-size-dropdown-min)">
       <Menu.Target>
@@ -138,21 +102,21 @@ function MobileActions(props: ActionListProps): ReactElement {
           leftSection={<IconDots size={16} />}
           aria-label={t('checks.details.actions.menu')}
           style={touchStyle}
+          disabled={props.busy}
         >
           {t('checks.details.actions.menu')}
         </Button>
       </Menu.Target>
       <Menu.Dropdown>
-        {MOBILE_ACTIONS.map((action) => (
-          <MobileMenuItem
-            key={action}
-            action={action}
-            paused={props.paused}
-            onAction={props.onAction}
-            onDelete={props.onDelete}
-            unavailableActions={props.unavailableActions}
-          />
-        ))}
+        <MobileMenuAction action={pauseAction} busy={props.busy} onAction={props.onAction} />
+        <Menu.Item
+          leftSection={<IconTrash size={16} />}
+          style={touchStyle}
+          disabled={props.busy}
+          onClick={props.onDelete}
+        >
+          {t(ACTION_LABEL_KEYS[BulkCheckAction.DELETE])}
+        </Menu.Item>
       </Menu.Dropdown>
     </Menu>
   )
@@ -203,15 +167,14 @@ export function CheckActionBar(props: CheckActionBarProps): ReactElement {
 
   function confirmDelete(): void {
     setConfirmOpen(false)
-    props.onAction('delete')
+    props.onAction(BulkCheckAction.DELETE)
   }
 
-  const unavailableActions = props.unavailableActions ?? []
   const actions = {
     paused: props.paused,
+    busy: props.busy,
     onAction: props.onAction,
     onDelete: requestDelete,
-    unavailableActions,
   }
   return (
     <>

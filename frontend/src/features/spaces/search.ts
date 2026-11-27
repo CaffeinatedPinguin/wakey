@@ -14,3 +14,11 @@ export function validateSpaceSearch(search: Record<string, unknown>): SpaceSearc
   }
   return {}
 }
+
+export function spaceFromSearch(search: unknown): string | undefined {
+  if (typeof search !== 'object' || search === null) {
+    return undefined
+  }
+  const value = (search as Record<string, unknown>).space
+  return typeof value === 'string' ? value : undefined
+}

@@ -2,4 +2,8 @@
 <!DOCTYPE suppressions PUBLIC
     "-//Checkstyle//DTD SuppressionFilter Configuration 1.2//EN"
     "https://checkstyle.org/dtds/suppressions_1_2.dtd">
-<suppressions/>
+<suppressions>
+  <!-- The single checks controller binds one argument type per review rule (filter, path, page
+       limit), so its fan-out is above the limit; owner decision of 2026-11-27, this class only. -->
+  <suppress checks="ClassFanOutComplexity" files="[\/]checks[\/]web[\/]ChecksController\.java$"/>
+</suppressions>

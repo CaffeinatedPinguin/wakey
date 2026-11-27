@@ -1,7 +1,8 @@
 import { notifications } from '@mantine/notifications'
 import { useQueryClient } from '@tanstack/react-query'
 import type { TFunction } from 'i18next'
-import { ApiError } from '../../shared/api/problem'
+import { ApiException, ClientErrorCode } from '../../shared/api/apiException'
+import { HttpStatus } from '../../shared/api/httpStatus'
 import { deleteCheck, pauseCheck, resumeCheck } from './api/checks.api'
 import { checksQueryKeys } from './api/checks.queries'
 
@@ -30,14 +31,14 @@ export function useCheckActions(space: string): CheckActions {
 }
 
 function errorKey(error: unknown): string {
-  if (error instanceof ApiError) {
-    if (error.status === 403) {
+  if (error instanceof ApiException) {
+    if (error.status === HttpStatus.FORBIDDEN) {
       return 'checks.page.actionForbidden'
     }
-    if (error.status === 404) {
+    if (error.status === HttpStatus.NOT_FOUND) {
       return 'checks.page.actionNotFound'
     }
-    if (error.code === 'network') {
+    if (error.code === ClientErrorCode.NETWORK) {
       return 'checks.page.actionNetwork'
     }
   }

@@ -2,13 +2,14 @@ import { ActionIcon, Menu } from '@mantine/core'
 import { IconDots } from '@tabler/icons-react'
 import type { ReactElement } from 'react'
 import { useTranslation } from 'react-i18next'
-import type { CheckRowData, RowAction } from './types'
+import { BulkCheckAction } from '../../../shared/api/generated/enums'
+import type { CheckRowData } from './types'
 
-const rowActions: RowAction[] = ['pause', 'resume']
+const rowActions: BulkCheckAction[] = [BulkCheckAction.PAUSE, BulkCheckAction.RESUME]
 
 interface RowMenuProps {
   row: CheckRowData
-  onRowAction: (id: string, action: RowAction) => void
+  onRowAction: (id: string, action: BulkCheckAction) => void
 }
 
 export function RowMenu({ row, onRowAction }: RowMenuProps): ReactElement {

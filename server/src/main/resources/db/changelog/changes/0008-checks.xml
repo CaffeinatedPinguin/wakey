@@ -39,6 +39,9 @@
         <constraints nullable="false"/>
       </column>
       <column name="paused_reason" type="VARCHAR(16)"/>
+      <column name="last_state" type="VARCHAR(16)" defaultValue="UNKNOWN">
+        <constraints nullable="false"/>
+      </column>
       <column name="version" type="BIGINT">
         <constraints nullable="false"/>
       </column>
@@ -63,6 +66,9 @@
       ALTER TABLE "check"
         ADD CONSTRAINT ck_check_paused_reason
           CHECK (paused_reason IN ('MANUAL', 'PLAN_LIMIT', 'ABANDONED', 'UNVERIFIED'));
+      ALTER TABLE "check"
+        ADD CONSTRAINT ck_check_last_state
+          CHECK (last_state IN ('UP', 'DEGRADED', 'DOWN', 'UNKNOWN'));
     </sql>
 
     <createIndex tableName="check" indexName="ix_check_space_name_id">
@@ -71,8 +77,16 @@
       <column name="id"/>
     </createIndex>
 
+    <createIndex tableName="check" indexName="ix_check_space_last_state">
+      <column name="space_id"/>
+      <column name="last_state"/>
+    </createIndex>
+
     <createTable tableName="check_tag">
       <column name="check_id" type="UUID">
+        <constraints nullable="false"/>
+      </column>
+      <column name="space_id" type="UUID">
         <constraints nullable="false"/>
       </column>
       <column name="tag" type="VARCHAR(50)">
@@ -88,6 +102,10 @@
                              referencedTableName="check"
                              referencedColumnNames="id"
                              onDelete="CASCADE"/>
+    <createIndex tableName="check_tag" indexName="ix_check_tag_space_tag">
+      <column name="space_id"/>
+      <column name="tag"/>
+    </createIndex>
 
     <createTable tableName="check_result">
       <column name="id" type="UUID">

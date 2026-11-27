@@ -1,17 +1,18 @@
 package dev.wakey.spaces;
 
-import dev.wakey.security.CurrentUser;
-import dev.wakey.security.UserSessions;
 import dev.wakey.spaces.internal.SpaceEntity;
+import dev.wakey.spaces.internal.SpaceMemberEntity;
 import dev.wakey.spaces.internal.SpaceStore;
 import dev.wakey.web.ApiException;
 import dev.wakey.web.CommonError;
-import jakarta.validation.Valid;
+import dev.wakey.web.CurrentUser;
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.jspecify.annotations.Nullable;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.validation.annotation.Validated;
 
@@ -26,8 +27,6 @@ public class SpaceService {
 
     private final SpaceStore store;
 
-    private final UserSessions sessions;
-
     /**
      * Creates a space or renames it by slug. A repeat with the same name and the current version (or
      * no version) changes nothing while every other write bumps the version; a stale {@code
@@ -35,7 +34,7 @@ public class SpaceService {
      */
     public PutResult put(
             CurrentUser actor, @InvalidSlug String slug, @InvalidName String name, @Nullable Long expectedVersion) {
-        requireAdmin(actor);
+        actor.requireAdmin();
         String checkedName = SpaceName.normalize(name);
         Optional<SpaceEntity> found = store.findBySlug(slug);
         if (found.isEmpty()) {
@@ -52,7 +51,7 @@ public class SpaceService {
 
     /** Creates a space only when its slug is still free; an existing name is never changed. */
     public PutResult create(CurrentUser actor, @InvalidSlug String slug, @InvalidName String name) {
-        requireAdmin(actor);
+        actor.requireAdmin();
         String checkedName = SpaceName.normalize(name);
         Optional<SpaceEntity> inserted = store.insert(slug, checkedName);
         if (inserted.isEmpty()) {
@@ -65,58 +64,80 @@ public class SpaceService {
     /** Reads one space together with the caller's role; a non-member non-admin gets 404. */
     public SpaceView view(CurrentUser actor, @InvalidSlug String slug) {
         SpaceEntity space = requireSpace(slug);
-        Optional<SpaceRole> role = store.findRole(space.id(), actor.issuer(), actor.subject());
-        if (!actor.admin() && role.isEmpty()) {
+        SpaceMemberId caller = memberIdOf(actor);
+        Optional<SpaceMemberEntity> membership = store.findMember(space.id(), caller);
+        if (!actor.admin() && membership.isEmpty()) {
             throw new ApiException(CommonError.NOT_FOUND);
         }
-        @Nullable SpaceRole callerRole = role.isPresent() ? role.get() : null;
-        return store.toView(space, callerRole);
+        @Nullable SpaceMemberEntity member = membership.orElse(null);
+        return store.toView(space, actor.admin(), member);
+    }
+
+    /** Reads one space as a non-admin member with the given identity; used by other modules. */
+    public SpaceView viewForMember(String issuer, String subject, String slug) {
+        return view(new CurrentUser(issuer, subject, false), slug);
+    }
+
+    /** Reads one space as a non-admin member by id; a missing space or a non-member is empty. */
+    public Optional<SpaceView> viewForMemberById(UUID spaceId, String issuer, String subject) {
+        Optional<SpaceEntity> found = store.findById(spaceId);
+        if (found.isEmpty()) {
+            return Optional.empty();
+        }
+        SpaceEntity space = found.get();
+        SpaceMemberId caller = new SpaceMemberId(issuer, subject);
+        return store.findMember(space.id(), caller).map(member -> store.toView(space, false, member));
+    }
+
+    /** Reads one space for a write: a stranger gets 404 and a viewer gets 403. */
+    public SpaceView viewForWrite(CurrentUser actor, @InvalidSlug String slug) {
+        SpaceView view = view(actor, slug);
+        if (!view.canWrite()) {
+            throw new ApiException(CommonError.FORBIDDEN);
+        }
+        return view;
+    }
+
+    /** Whether a space with the slug exists; the upsert uses it before the body is validated. */
+    public boolean exists(String slug) {
+        return store.findBySlug(slug).isPresent();
+    }
+
+    /** Returns the slug of a space by id, or empty when there is no such space. */
+    public Optional<String> slugOf(UUID spaceId) {
+        return store.findSlug(spaceId);
+    }
+
+    /** Returns the assigned plan name of a space by id; empty means the instance default plan. */
+    public Optional<String> planNameOf(UUID spaceId) {
+        return store.findById(spaceId).flatMap(space -> Optional.ofNullable(space.planName()));
+    }
+
+    /** Locks one space row until the surrounding transaction ends; a missing space is not found. */
+    @Transactional(propagation = Propagation.MANDATORY)
+    public void lock(UUID spaceId) {
+        if (store.lock(spaceId).isEmpty()) {
+            throw new ApiException(CommonError.NOT_FOUND);
+        }
     }
 
     /** Lists the spaces the caller can see, ordered by slug and resuming after the given slug. */
     public List<SpaceView> listVisible(CurrentUser actor, @Nullable String afterSlug, int limit) {
         String cursor = afterSlug == null ? "" : afterSlug;
+        SpaceMemberId caller = memberIdOf(actor);
         if (actor.admin()) {
-            return store.listAll(actor.issuer(), actor.subject(), cursor, limit);
+            return store.listAll(caller, cursor, limit, true);
         }
-        return store.listForMember(actor.issuer(), actor.subject(), cursor, limit);
+        return store.listForMember(caller, cursor, limit);
     }
 
-    /**
-     * Adds a member to a space the caller manages and reports whether it was created; an existing
-     * membership keeps its role.
-     */
-    public AddMemberResult addMember(CurrentUser actor, @InvalidSlug String slug, @Valid SpaceMember member) {
-        SpaceEntity space = requireManageableSpace(actor, slug);
-        return store.addMember(space.id(), member);
-    }
-
-    /** Lists the members of a space the caller can read, ordered by issuer and subject. */
-    public List<SpaceMember> listMembers(CurrentUser actor, @InvalidSlug String slug, SpaceMemberId after, int limit) {
-        SpaceView space = view(actor, slug);
-        return store.listMembers(space.id(), after, limit);
-    }
-
-    /** Changes a member's role and invalidates that user's sessions when the role really changes. */
-    @Transactional
-    public void changeRole(CurrentUser actor, @InvalidSlug String slug, @Valid SpaceMember member) {
-        SpaceEntity space = requireManageableSpace(actor, slug);
-        Optional<SpaceRole> current = store.findRole(space.id(), member.issuer(), member.subject());
-        SpaceRole currentRole = current.orElseThrow(() -> new ApiException(CommonError.NOT_FOUND));
-        if (currentRole != member.role()) {
-            store.updateRole(space.id(), member);
-            sessions.invalidateAll(member.issuer(), member.subject());
+    /** Stores the plan of a space; the caller must be an application Admin. Repeating it changes nothing. */
+    public void assignPlan(CurrentUser actor, @InvalidSlug String slug, String planName) {
+        actor.requireAdmin();
+        SpaceEntity space = requireSpace(slug);
+        if (!planName.equals(space.planName())) {
+            store.updatePlan(space, planName);
         }
-    }
-
-    /** Removes a member and invalidates that user's sessions. */
-    @Transactional
-    public void removeMember(CurrentUser actor, @InvalidSlug String slug, @Valid SpaceMemberId member) {
-        SpaceEntity space = requireManageableSpace(actor, slug);
-        if (!store.removeMember(space.id(), member.issuer(), member.subject())) {
-            throw new ApiException(CommonError.NOT_FOUND);
-        }
-        sessions.invalidateAll(member.issuer(), member.subject());
     }
 
     private PutResult keepOrRename(SpaceEntity existing, String name, @Nullable Long expectedVersion) {
@@ -134,35 +155,17 @@ public class SpaceService {
         return sameName && currentVersion;
     }
 
-    private SpaceEntity requireManageableSpace(CurrentUser actor, String slug) {
-        SpaceEntity space = requireSpace(slug);
-        if (!actor.admin()) {
-            requireManager(space, actor);
-        }
-        return space;
-    }
-
-    private void requireManager(SpaceEntity space, CurrentUser actor) {
-        Optional<SpaceRole> role = store.findRole(space.id(), actor.issuer(), actor.subject());
-        if (role.isEmpty()) {
-            throw new ApiException(CommonError.NOT_FOUND);
-        }
-        if (role.get() == SpaceRole.VIEWER) {
-            throw new ApiException(CommonError.FORBIDDEN);
-        }
-    }
-
     private SpaceEntity requireSpace(String slug) {
         return store.findBySlug(slug).orElseThrow(() -> new ApiException(CommonError.NOT_FOUND));
     }
 
-    private static ApiException slugTaken() {
-        return ApiException.withField(SpaceError.SLUG_TAKEN, "/slug");
+    private static SpaceMemberId memberIdOf(CurrentUser actor) {
+        String issuer = actor.issuer();
+        String subject = actor.subject();
+        return new SpaceMemberId(issuer, subject);
     }
 
-    private static void requireAdmin(CurrentUser actor) {
-        if (!actor.admin()) {
-            throw new ApiException(CommonError.FORBIDDEN);
-        }
+    private static ApiException slugTaken() {
+        return ApiException.withField(SpaceError.SLUG_TAKEN, "/slug");
     }
 }

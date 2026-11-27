@@ -5,7 +5,7 @@ afterEach(async () => {
   await i18n.changeLanguage('pl')
 })
 
-it('polish count texts use the right plural form', async () => {
+it('Polish count texts use the right plural form', async () => {
   await i18n.changeLanguage('pl')
 
   expect(i18n.t('checks.list.resultsTotal', { count: 1 })).toBe('1 wynik')
@@ -13,6 +13,9 @@ it('polish count texts use the right plural form', async () => {
   expect(i18n.t('checks.list.resultsTotal', { count: 5 })).toBe('5 wyników')
 
   expect(i18n.t('checks.list.selection.page', { count: 2 })).toBe('Zaznaczono 2 na stronie')
+  expect(i18n.t('checks.page.bulkAffected', { count: 1 })).toBe('Zmieniono 1 check')
+  expect(i18n.t('checks.page.bulkAffected', { count: 3 })).toBe('Zmieniono 3 checki')
+  expect(i18n.t('checks.page.bulkAffected', { count: 5 })).toBe('Zmieniono 5 checków')
   expect(
     i18n.t('checks.page.delete.body', {
       count: 1,
@@ -29,4 +32,8 @@ it('polish count texts use the right plural form', async () => {
       total: 5,
     }),
   ).toBe('Zaznacz wszystkie 5 wyników')
+
+  await i18n.changeLanguage('en')
+  expect(i18n.t('checks.page.bulkAffected', { count: 1 })).toBe('Changed 1 check')
+  expect(i18n.t('checks.page.bulkAffected', { count: 2 })).toBe('Changed 2 checks')
 })

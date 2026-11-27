@@ -1,5 +1,6 @@
 package dev.wakey.security;
 
+import dev.wakey.tokens.ApiTokens;
 import dev.wakey.web.ApiPaths;
 import java.time.Clock;
 import lombok.RequiredArgsConstructor;
@@ -7,24 +8,24 @@ import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.annotation.Order;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.oauth2.client.registration.ClientRegistrationRepository;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.context.SecurityContextHolderFilter;
-import org.springframework.security.web.servlet.util.matcher.PathPatternRequestMatcher;
-import org.springframework.security.web.util.matcher.RequestMatcher;
+import org.springframework.security.web.csrf.CsrfFilter;
 
 /** The three filter chains and the request logging shared by every surface. */
 @Configuration(proxyBeanMethods = false)
 @RequiredArgsConstructor
 class SecurityConfiguration {
 
-    private static final RequestMatcher API_REQUESTS = PathPatternRequestMatcher.pathPattern(ApiPaths.API_V1_ALL);
-
     private final UnauthorizedRequestLog unauthorized;
 
     private final ForbiddenRequestLog forbidden;
+
+    private final ApiTokens apiTokens;
 
     @Bean
     @Order(1)
@@ -55,17 +56,23 @@ class SecurityConfiguration {
                 .authorizeHttpRequests(authorize -> authorize
                         .requestMatchers(ApiPaths.OAUTH2_ALL, ApiPaths.LOGIN_ALL)
                         .permitAll()
+                        .requestMatchers(HttpMethod.GET, ApiPaths.API_V1_ALL)
+                        .authenticated()
+                        .requestMatchers(ApiPaths.API_V1_ALL)
+                        .access(ApiTokenSecurity.writeAccess())
                         .anyRequest()
                         .authenticated())
-                .csrf(csrf -> csrf.spa())
+                .csrf(csrf -> csrf.spa().ignoringRequestMatchers(ApiTokenSecurity.bearerApiRequests()))
                 .requestCache(cache -> cache.disable())
                 .exceptionHandling(exceptions -> exceptions
-                        .defaultAuthenticationEntryPointFor(unauthorized, API_REQUESTS)
+                        .defaultAuthenticationEntryPointFor(unauthorized, ApiTokenSecurity.apiRequests())
                         .accessDeniedHandler(forbidden))
                 .logout(LogoutConfiguration::configure)
                 .headers(SecurityHeaders::applyTo);
         SessionMaxAgeFilter maxAgeFilter = new SessionMaxAgeFilter(clock, properties.sessionMaxAge());
         http.addFilterBefore(maxAgeFilter, SecurityContextHolderFilter.class);
+        var tokenFilter = ApiTokenSecurity.authenticationFilter(apiTokens, unauthorized);
+        http.addFilterBefore(tokenFilter, CsrfFilter.class);
         if (registrations.getIfAvailable() != null) {
             configureLogin(http, properties.frontendUrl());
         }

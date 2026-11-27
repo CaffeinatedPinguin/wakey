@@ -11,24 +11,15 @@ import { checkDetailsResources } from './translations'
 const DESKTOP_WIDTH = 1024
 const MOBILE_WIDTH = 375
 
-const TAB_LABELS = [
-  'Zdarzenia',
-  'Lokalizacje',
-  'Powiadomienia',
-  'Konfiguracja',
-  'Certyfikat',
-  'Historia zmian',
-]
-
 function renderView(overrides: Partial<CheckDetailsViewProps> = {}): CheckDetailsViewProps {
   const props: CheckDetailsViewProps = {
     data: checkDetailsFixture,
-    status: 'ready',
-    activeTab: 'events',
-    onTabChange: vi.fn(),
+    status: 'success',
+    notFound: false,
     onAction: vi.fn(),
     onRetry: vi.fn(),
     now: NOW,
+    busy: false,
     ...overrides,
   }
   renderWithProviders(<CheckDetailsView {...props} />)
@@ -57,15 +48,12 @@ describe('check details header', () => {
     expect(screen.getByRole('heading', { name: 'API płatności' })).toBeTruthy()
     expect(screen.getByText('https://payments.example/health')).toBeTruthy()
     expect(screen.getAllByText('Nie działa').length).toBeGreaterThan(0)
-    for (const name of ['Sprawdź teraz', 'Wstrzymaj', 'Edytuj', 'Duplikuj', 'Usuń']) {
+    for (const name of ['Wstrzymaj', 'Usuń']) {
       expect(screen.getByRole('button', { name })).toBeTruthy()
     }
 
-    fireEvent.click(screen.getByRole('button', { name: 'Sprawdź teraz' }))
-    expect(props.onAction).toHaveBeenCalledWith('check-now')
-
-    fireEvent.click(screen.getByRole('tab', { name: 'Certyfikat' }))
-    expect(props.onTabChange).toHaveBeenCalledWith('certificate')
+    fireEvent.click(screen.getByRole('button', { name: 'Wstrzymaj' }))
+    expect(props.onAction).toHaveBeenCalledWith('PAUSE')
   })
 
   it('a paused check offers resume instead of pause', () => {
@@ -83,41 +71,21 @@ describe('check details header', () => {
   })
 })
 
-describe('check details tabs', () => {
-  it('the config hint is shown on every tab when there are reasons', () => {
+describe('check details tabs and controls', () => {
+  it('the details page shows only tabs that have data', () => {
     renderView()
-    for (const label of TAB_LABELS) {
-      fireEvent.click(screen.getByRole('tab', { name: label }))
-      expect(screen.getByText('Do sprawdzenia konfiguracji')).toBeTruthy()
+
+    expect(screen.queryAllByRole('tab')).toHaveLength(0)
+    expect(screen.queryByText('Do sprawdzenia konfiguracji')).toBeNull()
+  })
+
+  it('the check details show no actions that cannot work', () => {
+    renderView()
+
+    for (const name of ['Sprawdź teraz', 'Edytuj', 'Duplikuj']) {
+      expect(screen.queryByRole('button', { name })).toBeNull()
     }
-    expect(screen.getByText(checkDetailsFixture.configIssues[0] ?? '')).toBeTruthy()
-  })
-
-  it('the events tab lists time, state and error category', () => {
-    renderView({ activeTab: 'events' })
-
-    expect(screen.getByText('timeout')).toBeTruthy()
-    expect(screen.getByText('Warszawa · HTTP 503')).toBeTruthy()
-    expect(screen.getAllByText('Nie działa').length).toBeGreaterThan(0)
-    expect(screen.getAllByText(/\d{2}:\d{2}/).length).toBeGreaterThan(0)
-  })
-
-  it('the certificate tab shows issuer, expiry and days left', () => {
-    renderView({ activeTab: 'certificate' })
-
-    expect(screen.getByText("R11 · Let's Encrypt")).toBeTruthy()
-    expect(screen.getByText('2027-02-01')).toBeTruthy()
-    expect(screen.getByText('68')).toBeTruthy()
-    expect(screen.getByText('AB:CD:EF:01')).toBeTruthy()
-  })
-
-  it('the change history shows who, when, what and the source', () => {
-    renderView({ activeTab: 'history' })
-
-    expect(screen.getByText('Anna K.')).toBeTruthy()
-    expect(screen.getByText('Interwał 60 s → 300 s')).toBeTruthy()
-    expect(screen.getByText('Plik')).toBeTruthy()
-    expect(screen.getAllByText(/\d{2}\.\d{2}\.\d{4}/).length).toBeGreaterThan(0)
+    expect(screen.queryByText('—')).toBeNull()
   })
 })
 
@@ -135,32 +103,33 @@ describe('check details actions', () => {
     fireEvent.click(confirm)
     fireEvent.click(confirm)
 
-    expect(props.onAction).toHaveBeenCalledWith('delete')
+    expect(props.onAction).toHaveBeenCalledWith('DELETE')
     expect(props.onAction).toHaveBeenCalledTimes(1)
   })
 
-  it('on mobile there are four tabs and the actions are in a menu', async () => {
+  it('on mobile the actions are in a menu', async () => {
     installViewport(MOBILE_WIDTH)
     renderView()
 
-    expect(screen.getAllByRole('tab')).toHaveLength(4)
+    expect(screen.queryAllByRole('tab')).toHaveLength(0)
     expect(screen.queryByRole('button', { name: 'Sprawdź teraz' })).toBeNull()
 
     fireEvent.click(screen.getByRole('button', { name: 'Akcje' }))
-    expect(await screen.findByRole('menuitem', { name: 'Sprawdź teraz' })).toBeTruthy()
+    expect(await screen.findByRole('menuitem', { name: 'Wstrzymaj' })).toBeTruthy()
+    expect(screen.getByRole('menuitem', { name: 'Usuń' })).toBeTruthy()
   })
 })
 
 describe('check details states', () => {
-  it('the check details show a skeleton while loading', () => {
-    renderView({ status: 'loading', data: null })
+  it('the check details show a skeleton while the query is pending', () => {
+    renderView({ status: 'pending', data: null })
 
     const status = screen.getByRole('status', { name: 'Ładowanie checka…' })
     expect(status.querySelector('[style*="--skeleton-height"]')).not.toBeNull()
   })
 
   it('a missing check shows the not found view with a way back', () => {
-    renderView({ status: 'notFound', data: null })
+    renderView({ status: 'error', notFound: true, data: null })
 
     expect(screen.getByRole('heading', { name: 'Nie znaleziono checka' })).toBeTruthy()
     const backLink = screen.getByRole('link', { name: 'Wróć do listy checków' })

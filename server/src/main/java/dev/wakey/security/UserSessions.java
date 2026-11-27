@@ -1,5 +1,6 @@
 package dev.wakey.security;
 
+import dev.wakey.web.CurrentUser;
 import java.util.Map;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

@@ -15,4 +15,15 @@ public record AuditEntry(
         AuditSource source,
         AuditActor actor,
         @Nullable UUID spaceId,
-        String details) {}
+        String details) {
+
+    /** The longest accepted {@code details} payload, in characters. */
+    public static final int MAX_DETAILS_LENGTH = 4000;
+
+    public AuditEntry {
+        if (details.length() > MAX_DETAILS_LENGTH) {
+            throw new IllegalArgumentException(
+                    "details must be at most " + MAX_DETAILS_LENGTH + " characters, but was " + details.length());
+        }
+    }
+}

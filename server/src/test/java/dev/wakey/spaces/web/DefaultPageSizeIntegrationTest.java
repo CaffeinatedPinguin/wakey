@@ -4,10 +4,10 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.oidcLogin;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 
-import dev.wakey.security.CurrentUser;
 import dev.wakey.spaces.SpaceService;
 import dev.wakey.testsupport.SecurityIntegrationTest;
 import dev.wakey.web.ApiProperties;
+import dev.wakey.web.CurrentUser;
 import java.util.List;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;

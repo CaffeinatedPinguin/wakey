@@ -1,31 +1,34 @@
 package dev.wakey.security;
 
 import dev.wakey.tokens.TokenIdentity;
+import dev.wakey.tokens.TokenScope;
+import dev.wakey.web.TokenScopedAuthentication;
 import java.util.List;
-import org.springframework.security.authentication.AbstractAuthenticationToken;
+import java.util.Set;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 
 /** The authentication of a request that presented a valid {@code wk_} token. */
-public final class ApiTokenAuthentication extends AbstractAuthenticationToken {
+public final class ApiTokenAuthentication extends TokenScopedAuthentication {
 
     private static final long serialVersionUID = 1L;
+
+    private static final Set<String> WRITE_METHODS = Set.of("POST", "PUT", "PATCH", "DELETE");
 
     private final transient TokenIdentity identity;
 
     ApiTokenAuthentication(TokenIdentity identity) {
-        super(authorities(identity));
+        super(identity.spaceSlug(), identity.ownerIssuer(), identity.ownerSubject(), authorities(identity));
         this.identity = identity;
-        setAuthenticated(true);
     }
 
     TokenIdentity identity() {
         return identity;
     }
 
-    /** The token context used by the HTTP adapters; it is not part of the {@code /me} response. */
-    public TokenContext context() {
-        return new TokenContext(identity.spaceSlug());
+    /** True when this is a read token trying to write; it is the insufficient-scope case. */
+    boolean deniesWrite(String method) {
+        return identity.scope() == TokenScope.READ && WRITE_METHODS.contains(method);
     }
 
     @Override
@@ -43,7 +46,4 @@ public final class ApiTokenAuthentication extends AbstractAuthenticationToken {
         GrantedAuthority authority = new SimpleGrantedAuthority(scope);
         return List.of(authority);
     }
-
-    /** The one space an API token may reach. */
-    public record TokenContext(String spaceSlug) {}
 }

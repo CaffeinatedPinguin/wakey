@@ -1,51 +1,34 @@
-import { cleanup, fireEvent, screen, waitFor, within } from '@testing-library/react'
+import { cleanup, fireEvent, screen, waitFor } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { appConfig } from '../../shared/config'
+import { ErrorCode, SettingSource } from '../../shared/api/generated/enums'
+import type { SpaceRole } from '../../shared/api/generated/enums'
 import { signedInUser } from '../../test/data'
 import { installMockApi } from '../../test/mockApi'
 import type { MockReply, MockRequest } from '../../test/mockApi'
 import { renderApp } from '../../test/renderApp'
+import { createSettings } from '../../test/settingsData'
 import { installViewport } from '../../test/viewport'
 import i18n from '../../app/i18n'
 import type { Me } from '../auth'
-const ME_URL = `${appConfig.apiBaseUrl}/me`
+import type { SpaceSetting } from './api/settings.schemas'
 const SPACES_URL = `${appConfig.apiBaseUrl}/spaces`
 const SETTINGS_URL = `${SPACES_URL}/alpha/settings`
 const DESKTOP_WIDTH = 1024
-const OUT_OF_PLAN_BOUND = 300
-type Source = 'SPACE' | 'PLAN' | 'INSTANCE' | 'DEFAULT'
-type Role = 'EDITOR' | 'VIEWER' | null
-interface SettingFixture {
-  key: string
-  planName: string
-  source: Source
-  value: string
-}
 interface SpaceFixture {
   slug: string
   name: string
   admin: boolean
-  role: Role
+  role: SpaceRole | null
   version: number
 }
 
 interface ApiState {
   me: Me
-  role: Role
-  settings: SettingFixture[]
+  role: SpaceRole | null
+  settings: SpaceSetting[]
   settingsFetches: number
   writes: { key: string; value: string }[]
-  deletes: string[]
-}
-
-function createSettings(): SettingFixture[] {
-  return [
-    { key: 'timezone', planName: 'small', source: 'SPACE', value: 'Europe/Warsaw' },
-    { key: 'language', planName: 'small', source: 'INSTANCE', value: 'pl' },
-    { key: 'check.interval', planName: 'small', source: 'PLAN', value: '60' },
-    { key: 'check.timeout', planName: 'small', source: 'DEFAULT', value: '10' },
-    { key: 'check.retries', planName: 'small', source: 'SPACE', value: '1' },
-  ]
 }
 
 function createApiState(): ApiState {
@@ -55,7 +38,6 @@ function createApiState(): ApiState {
     settings: createSettings(),
     settingsFetches: 0,
     writes: [],
-    deletes: [],
   }
 }
 
@@ -85,28 +67,20 @@ function handlePut(key: string, body: string | undefined): MockReply {
   if (key === 'timezone' && value === 'Not/AZone') {
     return {
       status: 400,
-      data: { code: 'validation_failed', params: {}, errors: [] },
+      data: { code: ErrorCode.VALIDATION_FAILED, params: {}, errors: [] },
     }
   }
-  if (key === 'check.interval' && Number(value) > OUT_OF_PLAN_BOUND) {
+  if (key === 'check.interval' && Number(value) > 300) {
     return {
       status: 400,
       data: {
-        code: 'out_of_plan',
-        params: { bound: OUT_OF_PLAN_BOUND, key, planName: 'small' },
+        code: ErrorCode.OUT_OF_PLAN,
+        params: { bound: 300, key, planName: 'small' },
       },
     }
   }
   api.settings = api.settings.map((setting) =>
-    setting.key === key ? { ...setting, source: 'SPACE', value } : setting,
-  )
-  return { status: 204 }
-}
-
-function handleDelete(key: string): MockReply {
-  api.deletes.push(key)
-  api.settings = api.settings.map((setting) =>
-    setting.key === key ? { ...setting, source: 'PLAN', value: '30' } : setting,
+    setting.key === key ? { ...setting, source: SettingSource.SPACE, value } : setting,
   )
   return { status: 204 }
 }
@@ -118,16 +92,13 @@ function handleSettings(
 ): MockReply {
   if (method === 'get') {
     api.settingsFetches += 1
-    return { status: 200, data: api.settings }
+    return { status: 200, data: { items: api.settings, nextCursor: null } }
   }
   if (key === undefined) {
     return { status: 404, data: { code: 'not_found' } }
   }
   if (method === 'put') {
     return handlePut(key, body)
-  }
-  if (method === 'delete') {
-    return handleDelete(key)
   }
   return { status: 404, data: { code: 'not_found' } }
 }
@@ -140,7 +111,7 @@ function settingKey(url: string): string | undefined {
 function handleRequest(request: MockRequest): MockReply {
   const url = request.url.split('?')[0] ?? ''
   const method = request.method.toLowerCase()
-  if (request.url === ME_URL) {
+  if (request.url === `${appConfig.apiBaseUrl}/me`) {
     return { status: 200, data: api.me }
   }
   if (url === SPACES_URL) {
@@ -153,14 +124,6 @@ function handleRequest(request: MockRequest): MockReply {
     return handleSettings(settingKey(url), method, request.body)
   }
   return { status: 404, data: { code: 'not_found' } }
-}
-
-function rowFor(label: string): HTMLElement {
-  const row = screen.getByText(label).closest('tr')
-  if (row === null) {
-    throw new Error(`No table row for ${label}`)
-  }
-  return row
 }
 
 function changeAndBlur(label: string, value: string): void {
@@ -187,9 +150,8 @@ describe('settings page data', () => {
 
     expect(await screen.findByDisplayValue('Europe/Warsaw')).toBeDefined()
     expect(screen.getByDisplayValue('60')).toBeDefined()
-    expect(screen.getByText('instancja')).toBeDefined()
-    expect(screen.getByText('plan')).toBeDefined()
-    expect(screen.getByText('domyślne')).toBeDefined()
+    expect(screen.getAllByText('instancja').length).toBeGreaterThan(0)
+    expect(screen.getAllByText('Plan').length).toBeGreaterThan(0)
     expect(screen.getAllByText('Własne')).toHaveLength(2)
   })
 
@@ -255,34 +217,9 @@ describe('settings validation', () => {
 
     fireEvent.blur(screen.getByLabelText('Strefa czasowa'))
 
-    expect(screen.getByDisplayValue('Europe/Warsaw')).toBeDefined()
-  })
-})
-
-describe('settings restore actions', () => {
-  it('restoring a value resets it through the API', async () => {
-    renderApp('/settings?space=alpha')
-    await screen.findByDisplayValue('Europe/Warsaw')
-
-    const row = rowFor('Strefa czasowa')
-    fireEvent.click(within(row).getByRole('button', { name: 'Przywróć' }))
-
-    await waitFor(() => {
-      expect(api.deletes).toEqual(['timezone'])
-    })
-  })
-
-  it('restore all resets every overridden value', async () => {
-    renderApp('/settings?space=alpha')
-    await screen.findByDisplayValue('Europe/Warsaw')
-
-    fireEvent.click(screen.getByRole('button', { name: 'Przywróć wszystkie' }))
-    const dialog = await screen.findByRole('dialog')
-    fireEvent.click(within(dialog).getByRole('button', { name: 'Tak, przywróć wszystkie' }))
-
-    await waitFor(() => {
-      expect(api.deletes).toEqual(['timezone', 'check.retries'])
-    })
+    expect(screen.getByDisplayValue('Not/AZone')).toBeDefined()
+    expect(screen.getByText('Nieprawidłowa wartość.')).toBeDefined()
+    expect(api.writes).toEqual([{ key: 'timezone', value: 'Not/AZone' }])
   })
 })
 

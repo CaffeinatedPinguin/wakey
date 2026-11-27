@@ -14,7 +14,10 @@
       <column name="space_id" type="UUID">
         <constraints nullable="false"/>
       </column>
-      <column name="owner_subject" type="VARCHAR(100)">
+      <column name="owner_issuer" type="VARCHAR(255)">
+        <constraints nullable="false"/>
+      </column>
+      <column name="owner_subject" type="VARCHAR(255)">
         <constraints nullable="false"/>
       </column>
       <column name="name" type="VARCHAR(100)">
@@ -44,7 +47,10 @@
       ALTER TABLE api_token
         ADD CONSTRAINT ck_api_token_scope CHECK (scope IN ('READ', 'WRITE'));
     </sql>
-    <createIndex tableName="api_token" indexName="ix_api_token_owner_subject">
+    <!-- Token queries filter by (space_id, owner_issuer, owner_subject); the leading space_id also indexes the cascading foreign key. -->
+    <createIndex tableName="api_token" indexName="ix_api_token_space_owner">
+      <column name="space_id"/>
+      <column name="owner_issuer"/>
       <column name="owner_subject"/>
     </createIndex>
   </changeSet>

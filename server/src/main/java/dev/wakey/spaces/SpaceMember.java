@@ -1,5 +1,6 @@
 package dev.wakey.spaces;
 
+import dev.wakey.web.DisplayText;
 import jakarta.validation.constraints.NotNull;
 import org.jspecify.annotations.Nullable;
 
@@ -32,6 +33,6 @@ public record SpaceMember(
         return value != null
                 && !value.isBlank()
                 && value.length() <= maxLength
-                && !SpaceText.hasForbiddenCodePoint(value);
+                && !DisplayText.hasForbiddenCodePoint(value);
     }
 }

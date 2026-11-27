@@ -1,59 +1,52 @@
 package dev.wakey.checks.internal;
 
 import dev.wakey.checks.CheckDraft;
+import dev.wakey.checks.CheckError;
+import dev.wakey.checks.CheckFieldLimits;
 import dev.wakey.checks.CheckLimits;
-import dev.wakey.checks.CheckOutOfPlanException;
 import dev.wakey.checks.CheckType;
-import dev.wakey.checks.InvalidCheckException;
-import dev.wakey.checks.PlanLimits;
+import dev.wakey.checks.HttpUrlRule;
+import dev.wakey.spaces.SpaceError;
+import dev.wakey.web.ApiException;
+import dev.wakey.web.ApiFieldError;
+import dev.wakey.web.CommonError;
+import dev.wakey.web.DisplayText;
+import dev.wakey.web.ErrorCode;
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.text.Normalizer;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
-import java.util.regex.Pattern;
 import org.jspecify.annotations.Nullable;
 
-/** Validates and normalizes the editable check fields before they are stored. */
-final class CheckValidator {
-
-    private static final int MAX_NAME_LENGTH = 100;
-
-    private static final int MAX_TARGET_LENGTH = 2048;
-
-    private static final int MAX_GROUP_LENGTH = 100;
-
-    private static final int MAX_DESCRIPTION_LENGTH = 1000;
-
-    private static final int MAX_RUNBOOK_LENGTH = 2048;
-
-    private static final int MAX_TAGS = 20;
-
-    private static final int MAX_TAG_LENGTH = 50;
+/** Normalizes the editable check fields and applies the domain rules the request contract cannot express. */
+public final class CheckValidator {
 
     private static final int MIN_PORT = 1;
 
     private static final int MAX_PORT = 65535;
 
-    private static final Pattern PORT_PATTERN = Pattern.compile("\\d{1,5}");
+    private static final int NO_PORT = -1;
+
+    private static final TextRule GROUP_RULE =
+            new TextRule("groupName", CheckError.INVALID_GROUP_NAME, CheckFieldLimits.MAX_GROUP_LENGTH, false);
+
+    private static final TextRule DESCRIPTION_RULE =
+            new TextRule("description", CheckError.INVALID_DESCRIPTION, CheckFieldLimits.MAX_DESCRIPTION_LENGTH, true);
 
     private CheckValidator() {}
 
-    static CheckDraft validate(CheckDraft draft, PlanLimits limits) {
+    public static CheckDraft validate(CheckDraft draft) {
         String name = requireName(draft.name());
         String target = requireTarget(draft.target(), draft.type());
         int intervalSeconds = draft.intervalSeconds();
         int timeoutSeconds = draft.timeoutSeconds();
         int retries = draft.retries();
-        requireInterval(intervalSeconds);
         requireTimeout(timeoutSeconds, intervalSeconds);
-        requireRetries(retries);
-        requireWithinPlan(limits, intervalSeconds, timeoutSeconds, retries);
         List<String> tags = normalizeTags(draft.tags());
-        @Nullable String groupName = optionalText(draft.groupName(), MAX_GROUP_LENGTH, "groupName");
-        @Nullable String description = optionalText(draft.description(), MAX_DESCRIPTION_LENGTH, "description");
+        @Nullable String groupName = optionalText(draft.groupName(), GROUP_RULE);
+        @Nullable String description = optionalText(draft.description(), DESCRIPTION_RULE);
         @Nullable String runbookUrl = optionalRunbookUrl(draft.runbookUrl());
         return new CheckDraft(
                 name,
@@ -69,150 +62,131 @@ final class CheckValidator {
     }
 
     private static String requireName(String name) {
-        String trimmed = name.trim();
-        if (trimmed.isEmpty() || trimmed.length() > MAX_NAME_LENGTH) {
-            throw new InvalidCheckException("name", "invalid_name", "A check name must have 1-100 characters");
+        String normalized = DisplayText.normalize(name);
+        if (!DisplayText.isValid(normalized, CheckFieldLimits.MAX_NAME_LENGTH, false)) {
+            throw invalid(SpaceError.INVALID_NAME, "name");
         }
-        return trimmed;
+        return normalized;
     }
 
     private static String requireTarget(String target, CheckType type) {
-        String trimmed = target.trim();
-        if (trimmed.isEmpty() || trimmed.length() > MAX_TARGET_LENGTH) {
-            throw new InvalidCheckException("target", "invalid_target", "A target must have 1-2048 characters");
+        String normalized = DisplayText.normalize(target);
+        boolean withinLimits = DisplayText.isValid(normalized, CheckFieldLimits.MAX_TARGET_LENGTH, false);
+        if (!withinLimits || !targetMatchesType(normalized, type)) {
+            throw invalid(CheckError.INVALID_TARGET, "target");
         }
-        boolean valid = targetMatchesType(trimmed, type);
-        if (!valid) {
-            throw new InvalidCheckException(
-                    "target", "invalid_target", "The target syntax does not match the check type");
-        }
-        return trimmed;
+        return normalized;
     }
 
     private static boolean targetMatchesType(String target, CheckType type) {
         return switch (type) {
-            case HTTP -> isHttpUrl(target, "target", "invalid_target");
+            case HTTP -> HttpUrlRule.isHttpUrl(target);
             case TCP -> isHostAndPort(target);
-            case CERTIFICATE -> isHostName(target) || isHostAndPort(target);
+            case CERTIFICATE -> isCertificateTarget(target);
         };
     }
 
-    private static void requireInterval(int intervalSeconds) {
-        if (intervalSeconds < CheckLimits.MIN_INTERVAL_SECONDS) {
-            throw new InvalidCheckException(
-                    "intervalSeconds", "invalid_interval", "An interval must be at least 1 second");
-        }
-    }
-
     private static void requireTimeout(int timeoutSeconds, int intervalSeconds) {
-        boolean valid = timeoutSeconds >= CheckLimits.MIN_TIMEOUT_SECONDS && timeoutSeconds <= intervalSeconds;
-        if (!valid) {
-            throw new InvalidCheckException(
-                    "timeoutSeconds", "invalid_timeout", "A timeout must be between 1 second and the interval");
-        }
-    }
-
-    private static void requireRetries(int retries) {
-        if (retries < 0 || retries > CheckLimits.MAX_RETRIES) {
-            throw new InvalidCheckException("retries", "invalid_retries", "Retries must be between 0 and 10");
-        }
-    }
-
-    private static void requireWithinPlan(PlanLimits limits, int intervalSeconds, int timeoutSeconds, int retries) {
-        Integer minInterval = limits.minInterval();
-        if (minInterval != null && intervalSeconds < minInterval) {
-            throw new CheckOutOfPlanException("check.interval", minInterval, limits.planName());
-        }
-        Integer maxTimeout = limits.maxTimeout();
-        if (maxTimeout != null && timeoutSeconds > maxTimeout) {
-            throw new CheckOutOfPlanException("check.timeout", maxTimeout, limits.planName());
-        }
-        Integer maxRetries = limits.maxRetries();
-        if (maxRetries != null && retries > maxRetries) {
-            throw new CheckOutOfPlanException("check.retries", maxRetries, limits.planName());
+        if (!CheckLimits.timeoutWithinInterval(timeoutSeconds, intervalSeconds)) {
+            throw invalid(CheckError.INVALID_TIMEOUT, "timeoutSeconds");
         }
     }
 
     private static List<String> normalizeTags(List<String> tags) {
-        if (tags.size() > MAX_TAGS) {
-            throw new InvalidCheckException("tags", "invalid_tags", "A check may have at most 20 tags");
-        }
         Map<String, String> unique = new LinkedHashMap<>();
         for (String tag : tags) {
             if (tag == null) {
-                throw new InvalidCheckException("tags", "invalid_tags", "A tag must not be null");
+                throw invalid(CheckError.INVALID_TAGS, "tags");
             }
-            String normalized = Normalizer.normalize(tag.strip(), Normalizer.Form.NFC);
-            if (normalized.isEmpty() || normalized.length() > MAX_TAG_LENGTH) {
-                throw new InvalidCheckException("tags", "invalid_tags", "A tag must have 1-50 characters");
+            String normalized = normalizeTag(tag);
+            if (!DisplayText.isValid(normalized, CheckFieldLimits.MAX_TAG_LENGTH, false)) {
+                throw invalid(CheckError.INVALID_TAGS, "tags");
             }
             unique.putIfAbsent(normalized.toLowerCase(Locale.ROOT), normalized);
         }
         return List.copyOf(unique.values());
     }
 
+    private static String normalizeTag(String tag) {
+        String spaced = tag.replace('\u00A0', ' ');
+        return DisplayText.normalize(spaced);
+    }
+
     private static @Nullable String optionalRunbookUrl(@Nullable String value) {
-        @Nullable String trimmed = optionalText(value, MAX_RUNBOOK_LENGTH, "runbookUrl");
-        if (trimmed != null && !isHttpUrl(trimmed, "runbookUrl", "invalid_runbookUrl")) {
-            throw new InvalidCheckException(
-                    "runbookUrl", "invalid_runbookUrl", "A runbook URL must be an http or https address");
+        @Nullable String normalized = normalizeOptional(value);
+        if (normalized == null) {
+            return null;
         }
-        return trimmed;
-    }
-
-    private static boolean isHttpUrl(String value, String field, String code) {
-        URI uri = parseUri(value, field, code);
-        String scheme = uri.getScheme();
-        boolean httpScheme = "http".equalsIgnoreCase(scheme) || "https".equalsIgnoreCase(scheme);
-        return httpScheme && hasHost(uri);
-    }
-
-    private static boolean hasHost(URI uri) {
-        String host = uri.getHost();
-        return host != null && !host.isBlank();
-    }
-
-    private static URI parseUri(String value, String field, String code) {
-        try {
-            return new URI(value);
-        } catch (URISyntaxException exception) {
-            throw new InvalidCheckException(field, code, "The value is not a valid URL", exception);
+        boolean withinLimits = DisplayText.isValid(normalized, CheckFieldLimits.MAX_RUNBOOK_LENGTH, false);
+        if (!withinLimits || !HttpUrlRule.isHttpUrl(normalized)) {
+            throw invalid(CheckError.INVALID_RUNBOOK_URL, "runbookUrl");
         }
+        return normalized;
     }
 
     private static boolean isHostAndPort(String value) {
-        int colon = value.lastIndexOf(':');
-        if (colon <= 0 || colon == value.length() - 1) {
-            return false;
-        }
-        String host = value.substring(0, colon);
-        String port = value.substring(colon + 1);
-        return isHostName(host) && isPort(port);
+        URI uri = targetAuthority(value);
+        return isPlainAuthority(uri) && isPort(uri.getPort());
     }
 
-    private static boolean isHostName(String value) {
-        if (value.isBlank()) {
+    private static boolean isCertificateTarget(String value) {
+        URI uri = targetAuthority(value);
+        if (!isPlainAuthority(uri)) {
             return false;
         }
-        return value.chars()
-                .noneMatch(character -> Character.isWhitespace(character) || character == '/' || character == ':');
+        int port = uri.getPort();
+        return port == NO_PORT || isPort(port);
     }
 
-    private static boolean isPort(String value) {
-        boolean digits = PORT_PATTERN.matcher(value).matches();
-        int port = digits ? Integer.parseInt(value) : 0;
+    private static URI targetAuthority(String value) {
+        try {
+            return new URI("tcp://" + value);
+        } catch (URISyntaxException exception) {
+            throw invalid(CheckError.INVALID_TARGET, "target", exception);
+        }
+    }
+
+    private static boolean isPlainAuthority(URI uri) {
+        String host = uri.getHost();
+        String path = uri.getPath();
+        boolean hasHost = host != null && !host.isBlank();
+        boolean emptyPath = path == null || path.isEmpty();
+        boolean noExtras = uri.getRawUserInfo() == null && uri.getQuery() == null && uri.getFragment() == null;
+        return hasHost && emptyPath && noExtras;
+    }
+
+    private static boolean isPort(int port) {
         return port >= MIN_PORT && port <= MAX_PORT;
     }
 
-    private static @Nullable String optionalText(@Nullable String value, int maxLength, String field) {
-        @Nullable String trimmed = value == null ? null : value.trim();
-        if (trimmed == null || trimmed.isEmpty()) {
+    private static @Nullable String optionalText(@Nullable String value, TextRule rule) {
+        @Nullable String normalized = normalizeOptional(value);
+        if (normalized == null) {
             return null;
         }
-        if (trimmed.length() > maxLength) {
-            throw new InvalidCheckException(
-                    field, "invalid_" + field, "The value must have at most " + maxLength + " characters");
+        if (!DisplayText.isValid(normalized, rule.maxLength(), rule.multiline())) {
+            throw invalid(rule.code(), rule.pointer());
         }
-        return trimmed;
+        return normalized;
     }
+
+    private static @Nullable String normalizeOptional(@Nullable String value) {
+        if (value == null) {
+            return null;
+        }
+        String normalized = DisplayText.normalize(value);
+        return normalized.isEmpty() ? null : normalized;
+    }
+
+    private static ApiException invalid(ErrorCode code, String field) {
+        ApiFieldError problem = new ApiFieldError("/" + field, code.getCode(), Map.of());
+        return new ApiException(CommonError.VALIDATION_FAILED, List.of(problem));
+    }
+
+    private static ApiException invalid(ErrorCode code, String field, Throwable cause) {
+        ApiFieldError problem = new ApiFieldError("/" + field, code.getCode(), Map.of());
+        return new ApiException(CommonError.VALIDATION_FAILED, List.of(problem), Map.of(), cause);
+    }
+
+    private record TextRule(String pointer, ErrorCode code, int maxLength, boolean multiline) {}
 }

@@ -1,8 +1,10 @@
 import { NumberInput, Select, Text, TextInput } from '@mantine/core'
 import type { TFunction } from 'i18next'
 import type { KeyboardEvent, ReactElement } from 'react'
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import { ErrorCode } from '../../shared/api/generated/enums'
+import { SettingFieldClientErrorCode, SettingKind } from './types'
 import type { SettingFieldError, SettingRowData } from './types'
 
 type Commit = (key: string, value: string) => void
@@ -29,10 +31,67 @@ function errorText(error: SettingFieldError | undefined, t: TFunction): string |
   if (error === undefined) {
     return undefined
   }
-  if (error.code === 'out_of_plan' && error.bound !== undefined) {
+  if (error.code === ErrorCode.OUT_OF_PLAN && error.bound !== undefined) {
     return t('settings.fieldError.outOfPlan', { bound: error.bound })
   }
-  return t('settings.fieldError.generic')
+  if (error.code === ErrorCode.VALIDATION_FAILED) {
+    return t('settings.fieldError.generic')
+  }
+  return t('settings.fieldError.saveFailed')
+}
+
+interface DraftMessageInput {
+  missing: boolean
+  changed: boolean
+  error: SettingFieldError | undefined
+  t: TFunction
+}
+
+// A fresh draft hides the server error of the previous value; committing the
+// same value again keeps it, so a rejected value stays editable.
+function draftMessage({ missing, changed, error, t }: DraftMessageInput): string | undefined {
+  if (missing) {
+    return t('settings.fieldError.required')
+  }
+  if (changed) {
+    return undefined
+  }
+  return errorText(error, t)
+}
+
+interface DraftSetters {
+  setDraft: (value: DraftState | null) => void
+  setMissing: (value: boolean) => void
+  setChanged: (value: boolean) => void
+}
+
+interface DraftCommit {
+  next: string
+  row: SettingRowData
+  lastSent: { current: string | null }
+  setters: DraftSetters
+  onChange: Commit
+}
+
+function commitDraft({ next, row, lastSent, setters, onChange }: DraftCommit): void {
+  setters.setMissing(false)
+  setters.setChanged(false)
+  if (next.trim() === '') {
+    setters.setDraft(null)
+    setters.setMissing(true)
+    return
+  }
+  if (next === lastSent.current) {
+    setters.setDraft({ base: row.value, value: next })
+    return
+  }
+  if (next === row.value) {
+    setters.setDraft(null)
+    return
+  }
+  lastSent.current = next
+  setters.setDraft({ base: row.value, value: next })
+  onChange(row.key, next)
 }
 
 function useDraft(
@@ -43,36 +102,25 @@ function useDraft(
   const { t } = useTranslation()
   const [draft, setDraft] = useState<DraftState | null>(null)
   const [missing, setMissing] = useState(false)
+  const [changed, setChanged] = useState(false)
   const lastSent = useRef<string | null>(null)
-  const message = missing ? t('settings.fieldError.required') : errorText(error, t)
+  const message = draftMessage({ missing, changed, error, t })
   const value = draft !== null && draft.base === row.value ? draft.value : row.value
-
-  function change(next: string): void {
+  const setters: DraftSetters = { setDraft, setMissing, setChanged }
+  useEffect(() => {
+    if (error?.code === SettingFieldClientErrorCode.SAVE_FAILED) {
+      lastSent.current = null
+    }
+  }, [error])
+  const change = (next: string): void => {
     setDraft({ base: row.value, value: next })
     setMissing(false)
+    setChanged(true)
     lastSent.current = null
   }
-
-  function commit(next: string): void {
-    setMissing(false)
-    if (next.trim() === '') {
-      setDraft(null)
-      setMissing(true)
-      return
-    }
-    if (error !== undefined && lastSent.current === next) {
-      setDraft(null)
-      return
-    }
-    if (next === row.value || next === lastSent.current) {
-      setDraft({ base: row.value, value: next })
-      return
-    }
-    lastSent.current = next
-    setDraft({ base: row.value, value: next })
-    onChange(row.key, next)
+  const commit = (next: string): void => {
+    commitDraft({ next, row, lastSent, setters, onChange })
   }
-
   return { value, error: message, change, commit }
 }
 
@@ -123,6 +171,10 @@ function NumberSetting({ row, error, onChange }: SettingFieldProps): ReactElemen
     <NumberInput
       aria-label={row.label}
       value={draft.value}
+      {...(row.min === undefined ? {} : { min: row.min })}
+      {...(row.max === undefined ? {} : { max: row.max })}
+      clampBehavior="none"
+      allowDecimal={false}
       rightSection={unitSection(row)}
       error={draft.error}
       onChange={(value) => {
@@ -162,10 +214,10 @@ function SelectSetting({ row, error, onChange }: SettingFieldProps): ReactElemen
 }
 
 export function SettingField({ row, error, onChange }: SettingFieldProps): ReactElement {
-  if (row.kind === 'select') {
+  if (row.kind === SettingKind.SELECT) {
     return <SelectSetting row={row} error={error} onChange={onChange} />
   }
-  if (row.kind === 'number') {
+  if (row.kind === SettingKind.NUMBER) {
     return <NumberSetting row={row} error={error} onChange={onChange} />
   }
   return <TextSetting row={row} error={error} onChange={onChange} />

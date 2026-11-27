@@ -15,17 +15,3 @@ export function formatRelativeAge(at: string, now: Date, locale: string): string
   }
   return formatter.format(-Math.round(hours / HOURS_PER_DAY), 'day')
 }
-
-/** Clock time of an event, e.g. "14:02". */
-export function formatClock(at: string, locale: string): string {
-  return new Intl.DateTimeFormat(locale, { hour: '2-digit', minute: '2-digit' }).format(
-    new Date(at),
-  )
-}
-
-/** Date and time of a configuration change. */
-export function formatMoment(at: string, locale: string): string {
-  return new Intl.DateTimeFormat(locale, { dateStyle: 'short', timeStyle: 'short' }).format(
-    new Date(at),
-  )
-}

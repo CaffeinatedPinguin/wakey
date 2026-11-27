@@ -13,7 +13,7 @@ public final class SpaceName {
 
     private SpaceName() {}
 
-    /** Strips the surrounding whitespace and applies Unicode NFC, keeping the rule in one place. */
+    /** Strips the surrounding whitespace and applies Unicode NFC, keeping the normalization in one place. */
     public static String normalize(String candidate) {
         return Normalizer.normalize(candidate.strip(), Normalizer.Form.NFC);
     }

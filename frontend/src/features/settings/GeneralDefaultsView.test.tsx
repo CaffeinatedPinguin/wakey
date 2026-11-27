@@ -1,32 +1,32 @@
 import { cleanup, fireEvent, screen, within } from '@testing-library/react'
-import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import i18n from '../../app/i18n'
+import { ErrorCode, SettingGroup, SettingSource } from '../../shared/api/generated/enums'
 import { renderWithProviders } from '../../test/providers'
-import { registerSettingsTranslations } from '../../test/settings'
 import { installViewport } from '../../test/viewport'
 import { GeneralDefaultsView } from './GeneralDefaultsView'
-import type { GeneralDefaultsViewProps, SettingsGroup } from './index'
+import type { GeneralDefaultsActions, GeneralDefaultsData, SettingsGroup } from './index'
 
 const DESKTOP_WIDTH = 1024
 const MOBILE_WIDTH = 375
 
 const groups: readonly SettingsGroup[] = [
   {
-    key: 'general',
+    key: SettingGroup.GENERAL,
     title: 'Ogólne',
     rows: [
       {
         key: 'name',
         label: 'Nazwa przestrzeni',
         value: 'Produkcja',
-        source: 'space',
+        source: SettingSource.SPACE,
         kind: 'text',
       },
       {
         key: 'language',
         label: 'Język',
         value: 'Polski',
-        source: 'instance',
+        source: SettingSource.INSTANCE,
         kind: 'select',
         options: [
           { value: 'pl', label: 'Polski' },
@@ -37,7 +37,7 @@ const groups: readonly SettingsGroup[] = [
         key: 'timezone',
         label: 'Strefa czasowa',
         value: 'Europe/Warsaw',
-        source: 'space',
+        source: SettingSource.SPACE,
         overriddenValue: 'UTC',
         kind: 'select',
         options: [
@@ -48,14 +48,14 @@ const groups: readonly SettingsGroup[] = [
     ],
   },
   {
-    key: 'defaults',
+    key: SettingGroup.DEFAULTS,
     title: 'Domyślne dla nowych checków',
     rows: [
       {
         key: 'interval',
         label: 'Interwał',
         value: '300',
-        source: 'space',
+        source: SettingSource.SPACE,
         overriddenValue: '60 s',
         kind: 'number',
         unit: 's',
@@ -64,7 +64,7 @@ const groups: readonly SettingsGroup[] = [
         key: 'timeout',
         label: 'Timeout',
         value: '10',
-        source: 'instance',
+        source: SettingSource.INSTANCE,
         kind: 'number',
         unit: 's',
       },
@@ -74,14 +74,14 @@ const groups: readonly SettingsGroup[] = [
 
 const inheritedGroups: readonly SettingsGroup[] = [
   {
-    key: 'general',
+    key: SettingGroup.GENERAL,
     title: 'Ogólne',
     rows: [
       {
         key: 'timeout',
         label: 'Timeout',
         value: '10',
-        source: 'default',
+        source: SettingSource.INSTANCE,
         kind: 'number',
         unit: 's',
       },
@@ -89,18 +89,23 @@ const inheritedGroups: readonly SettingsGroup[] = [
   },
 ]
 
-function renderView(overrides: Partial<GeneralDefaultsViewProps> = {}): void {
-  const props: GeneralDefaultsViewProps = {
+type ViewOverrides = Partial<GeneralDefaultsData & GeneralDefaultsActions>
+
+function renderView(overrides: ViewOverrides = {}): void {
+  const data: GeneralDefaultsData = {
     groups,
-    status: 'ready',
+    status: 'success',
     canEdit: true,
+    ...overrides,
+  }
+  const actions: GeneralDefaultsActions = {
     onChange: vi.fn(),
     onRestore: vi.fn(),
     onRestoreAll: vi.fn(),
     onRetry: vi.fn(),
     ...overrides,
   }
-  renderWithProviders(<GeneralDefaultsView {...props} />)
+  renderWithProviders(<GeneralDefaultsView data={data} actions={actions} />)
 }
 
 function rowFor(label: string): HTMLElement {
@@ -111,10 +116,6 @@ function rowFor(label: string): HTMLElement {
   }
   return row
 }
-
-beforeAll(() => {
-  registerSettingsTranslations()
-})
 
 beforeEach(() => {
   installViewport(DESKTOP_WIDTH)
@@ -196,7 +197,7 @@ describe('settings editing', () => {
     const onChange = vi.fn()
     renderView({
       onChange,
-      fieldErrors: { interval: { code: 'out_of_plan', bound: '300 s' } },
+      fieldErrors: { interval: { code: ErrorCode.OUT_OF_PLAN, bound: '300 s' } },
     })
 
     expect(screen.getByText('Poza planem: maksymalnie 300 s.')).toBeDefined()
@@ -235,7 +236,7 @@ describe('settings states', () => {
   })
 
   it('the settings view shows a skeleton while loading', () => {
-    renderView({ status: 'loading', groups: [] })
+    renderView({ status: 'pending', groups: [] })
 
     expect(screen.getByRole('status', { name: 'Ładowanie ustawień…' })).toBeDefined()
   })

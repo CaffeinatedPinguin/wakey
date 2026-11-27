@@ -1,21 +1,13 @@
 package dev.wakey.settings;
 
-import org.jspecify.annotations.Nullable;
 import org.springframework.boot.context.properties.ConfigurationProperties;
+import org.springframework.boot.context.properties.bind.DefaultValue;
 
 /**
- * Instance defaults from {@code wakey.defaults.*}; when present they override the catalog default
- * but stay below a plan value and a space override.
+ * The instance defaults of the general settings from {@code wakey.defaults.*}; each value is written
+ * once, in the annotation. A plan bound may still clamp it, and a space override wins inside the bound.
  */
 @ConfigurationProperties(prefix = "wakey.defaults")
 public record InstanceDefaultsProperties(
-        @Nullable String timezone,
-        @Nullable String language,
-        @Nullable CheckDefaults check) {
-
-    /** The instance defaults of the check settings. */
-    public record CheckDefaults(
-            @Nullable Integer interval,
-            @Nullable Integer timeout,
-            @Nullable Integer retries) {}
-}
+        @DefaultValue("UTC") String timezone,
+        @DefaultValue("pl") Language language) {}

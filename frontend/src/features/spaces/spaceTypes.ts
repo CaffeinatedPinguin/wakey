@@ -1,6 +1,14 @@
+import type { SpaceRole } from '../../shared/api/generated/enums'
+
 export interface SpaceSummary {
   slug: string
   name: string
+}
+
+// The role of the caller in the space; whether the caller is an application
+// administrator comes from the `me` query, not from the space.
+export interface SpaceDetail extends SpaceSummary {
+  role: SpaceRole | null
 }
 
 export interface SpaceFormValues {

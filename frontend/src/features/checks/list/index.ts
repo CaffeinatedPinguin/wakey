@@ -11,14 +11,11 @@ export { SelectionBanner } from './SelectionBanner'
 export type { SelectionBannerProps } from './SelectionBanner'
 export { checksListResources } from './translations'
 export type {
-  BulkAction,
   CheckRowData,
   FacetKey,
   FacetOption,
   FilterFacet,
   ListFilters,
-  ListStatus,
-  RowAction,
   SelectionMode,
   SelectionState,
 } from './types'

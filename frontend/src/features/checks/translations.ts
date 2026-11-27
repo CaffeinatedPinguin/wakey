@@ -4,8 +4,10 @@ import { checksListResources } from './list/translations'
 const pageResources = {
   pl: {
     page: {
-      bulkLimit:
-        'Nie wykonano akcji na wszystkich wynikach: lista jest zbyt duża. Zawęź filtry i spróbuj ponownie.',
+      bulkAffected_one: 'Zmieniono 1 check',
+      bulkAffected_few: 'Zmieniono {{count}} checki',
+      bulkAffected_many: 'Zmieniono {{count}} checków',
+      bulkAffected_other: 'Zmieniono {{count}} checka',
       bulkError: 'Nie udało się wykonać akcji. Spróbuj ponownie.',
       actionForbidden: 'Nie masz uprawnień do wykonania tej akcji.',
       actionNotFound: 'Nie znaleziono checka.',
@@ -23,8 +25,8 @@ const pageResources = {
   },
   en: {
     page: {
-      bulkLimit:
-        'The action did not run on every result: the list is too large. Narrow the filters and try again.',
+      bulkAffected_one: 'Changed 1 check',
+      bulkAffected_other: 'Changed {{count}} checks',
       bulkError: 'The action failed. Please try again.',
       actionForbidden: 'You do not have permission to perform this action.',
       actionNotFound: 'The check was not found.',

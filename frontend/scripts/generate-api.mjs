@@ -216,7 +216,27 @@ function requestSchemaNames(operations) {
   return names
 }
 
-function limitEntries(document, operations) {
+function propertyLimits(prefix, schema) {
+  if (schema === null || typeof schema !== 'object') {
+    return []
+  }
+  const entries = []
+  if (typeof schema.minLength === 'number') {
+    entries.push({ name: `${prefix}_MIN_LENGTH`, value: String(schema.minLength) })
+  }
+  if (typeof schema.maxLength === 'number') {
+    entries.push({ name: `${prefix}_MAX_LENGTH`, value: String(schema.maxLength) })
+  }
+  if (typeof schema.maxItems === 'number') {
+    entries.push({ name: `${prefix}_MAX_ITEMS`, value: String(schema.maxItems) })
+  }
+  if (typeof schema.pattern === 'string') {
+    entries.push({ name: `${prefix}_PATTERN`, value: quote(schema.pattern) })
+  }
+  return entries
+}
+
+function requestLimitEntries(document, operations) {
   const schemas = document.components?.schemas ?? {}
   const entries = []
   for (const schemaName of [...requestSchemaNames(operations)].sort()) {
@@ -225,19 +245,32 @@ function limitEntries(document, operations) {
       continue
     }
     for (const propertyName of Object.keys(properties).sort()) {
-      const property = properties[propertyName]
       const prefix = `${upperSnake(schemaName)}_${upperSnake(propertyName)}`
-      if (typeof property?.minLength === 'number') {
-        entries.push({ name: `${prefix}_MIN_LENGTH`, value: String(property.minLength) })
-      }
-      if (typeof property?.maxLength === 'number') {
-        entries.push({ name: `${prefix}_MAX_LENGTH`, value: String(property.maxLength) })
-      }
-      if (typeof property?.pattern === 'string') {
-        entries.push({ name: `${prefix}_PATTERN`, value: quote(property.pattern) })
-      }
+      entries.push(...propertyLimits(prefix, properties[propertyName]))
     }
   }
+  return entries
+}
+
+function queryLimitEntries(operations) {
+  const entries = []
+  for (const { operation, operationId } of operations) {
+    if (!Array.isArray(operation.parameters)) {
+      continue
+    }
+    for (const parameter of operation.parameters) {
+      if (parameter?.in !== 'query' || typeof parameter.name !== 'string') {
+        continue
+      }
+      const prefix = `${upperSnake(operationId)}_QUERY_${upperSnake(parameter.name)}`
+      entries.push(...propertyLimits(prefix, parameter.schema))
+    }
+  }
+  return entries
+}
+
+function limitEntries(document, operations) {
+  const entries = [...requestLimitEntries(document, operations), ...queryLimitEntries(operations)]
   return entries.sort((left, right) =>
     left.name < right.name ? -1 : left.name > right.name ? 1 : 0,
   )

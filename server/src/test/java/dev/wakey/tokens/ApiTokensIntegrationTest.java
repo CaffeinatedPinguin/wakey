@@ -5,37 +5,51 @@ import static org.assertj.core.api.Assertions.catchThrowable;
 
 import dev.wakey.spaces.PutResult;
 import dev.wakey.spaces.Space;
-import dev.wakey.spaces.SpaceAccessDeniedException;
-import dev.wakey.spaces.SpaceNotFoundException;
-import dev.wakey.spaces.SpacePrincipal;
+import dev.wakey.spaces.SpaceError;
+import dev.wakey.spaces.SpaceMember;
+import dev.wakey.spaces.SpaceMemberId;
+import dev.wakey.spaces.SpaceMembers;
 import dev.wakey.spaces.SpaceRole;
 import dev.wakey.spaces.SpaceService;
 import dev.wakey.testsupport.PostgresIntegrationTest;
+import dev.wakey.web.ApiException;
+import dev.wakey.web.ApiFieldError;
+import dev.wakey.web.CommonError;
+import dev.wakey.web.CurrentUser;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.time.Clock;
+import java.time.Duration;
 import java.time.Instant;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
+import java.util.ArrayList;
 import java.util.HexFormat;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.concurrent.Callable;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 import org.junit.jupiter.api.Test;
 
 class ApiTokensIntegrationTest extends PostgresIntegrationTest {
 
-    private static final SpacePrincipal ADMIN = new SpacePrincipal("fixture-admin", true);
+    private static final String ISSUER = "https://issuer.example.com";
 
-    private static final SpacePrincipal EDITOR = new SpacePrincipal("fixture-editor", false);
+    private static final CurrentUser ADMIN = new CurrentUser(ISSUER, "fixture-admin", true);
 
-    private static final SpacePrincipal VIEWER = new SpacePrincipal("fixture-viewer", false);
+    private static final CurrentUser EDITOR = new CurrentUser(ISSUER, "fixture-editor", false);
 
-    private static final TokenOwner EDITOR_OWNER = new TokenOwner(EDITOR.subject());
+    private static final CurrentUser VIEWER = new CurrentUser(ISSUER, "fixture-viewer", false);
 
-    private static final TokenOwner VIEWER_OWNER = new TokenOwner(VIEWER.subject());
+    private static final TokenOwner EDITOR_OWNER = new TokenOwner(ISSUER, EDITOR.subject());
+
+    private static final TokenOwner VIEWER_OWNER = new TokenOwner(ISSUER, VIEWER.subject());
 
     @Test
     void secretIsShownOnceAndOnlyTheHashIsStored() {
@@ -123,22 +137,150 @@ class ApiTokensIntegrationTest extends PostgresIntegrationTest {
     }
 
     @Test
-    void aReInvitedMemberTokenStaysDead() {
+    void removingAMemberRevokesTheirTokensInThatSpace() {
         // given
-        Space space = seedSpaceWithMembers("re-invited");
-        String slug = space.slug();
-        CreatedToken old = tokens().create(EDITOR_OWNER, slug, "old", new TokenOptions(TokenScope.WRITE, null));
-        spaces().removeMember(ADMIN, slug, EDITOR.subject());
-        spaces().addMember(ADMIN, slug, EDITOR.subject(), SpaceRole.EDITOR);
+        Space revokedSpace = seedSpaceWithMembers("revoke-in");
+        Space otherSpace = seedSpaceWithMembers("revoke-out");
+        CreatedToken revokedToken =
+                tokens().create(EDITOR_OWNER, revokedSpace.slug(), "revoked", new TokenOptions(TokenScope.WRITE, null));
+        CreatedToken otherSpaceToken =
+                tokens().create(EDITOR_OWNER, otherSpace.slug(), "other", new TokenOptions(TokenScope.WRITE, null));
+        CreatedToken otherMemberToken =
+                tokens().create(VIEWER_OWNER, revokedSpace.slug(), "viewer", new TokenOptions(TokenScope.READ, null));
 
         // when
-        Optional<TokenIdentity> afterReInvite = tokens().authenticate(old.secret());
-        CreatedToken fresh = tokens().create(EDITOR_OWNER, slug, "fresh", new TokenOptions(TokenScope.WRITE, null));
-        Optional<TokenIdentity> freshIdentity = tokens().authenticate(fresh.secret());
+        members().removeMember(ADMIN, revokedSpace.slug(), new SpaceMemberId(ISSUER, EDITOR.subject()));
+        Optional<TokenIdentity> afterRemoval = tokens().authenticate(revokedToken.secret());
+        Optional<TokenIdentity> otherSpaceStill = tokens().authenticate(otherSpaceToken.secret());
+        Optional<TokenIdentity> otherMemberStill = tokens().authenticate(otherMemberToken.secret());
 
         // then
-        assertThat(afterReInvite).isEmpty();
-        assertThat(freshIdentity).isPresent();
+        assertThat(afterRemoval).isEmpty();
+        assertThat(otherSpaceStill).isPresent();
+        assertThat(otherMemberStill).isPresent();
+    }
+
+    @Test
+    void parallelCreatesNeverExceedTheTokenLimit() throws Exception {
+        // given
+        Space space = seedSpaceWithMembers("parallel-limit");
+        String slug = space.slug();
+        for (int index = 0; index < 49; index++) {
+            tokens().create(EDITOR_OWNER, slug, "token-" + index, new TokenOptions(TokenScope.READ, null));
+        }
+        ExecutorService executor = Executors.newFixedThreadPool(2);
+        CountDownLatch start = new CountDownLatch(1);
+        List<Boolean> outcomes = new ArrayList<>();
+
+        // when
+        try {
+            Callable<Boolean> create = () -> {
+                start.await();
+                return createsOneMoreToken(slug);
+            };
+            List<Future<Boolean>> futures = new ArrayList<>();
+            futures.add(executor.submit(create));
+            futures.add(executor.submit(create));
+            start.countDown();
+            for (Future<Boolean> future : futures) {
+                outcomes.add(future.get());
+            }
+        } finally {
+            executor.shutdown();
+        }
+        long stored = countStoredTokens(space.id(), EDITOR.subject());
+
+        // then
+        long created = outcomes.stream().filter(Boolean::booleanValue).count();
+        assertThat(created).isEqualTo(1L);
+        assertThat(stored).isEqualTo(50L);
+    }
+
+    @Test
+    void tokenOwnersAreKeyedOnIssuerAndSubject() {
+        // given
+        String subject = uniqueSubject("shared-owner");
+        String otherIssuer = "https://other-issuer.example.com";
+        PutResult created = spaces().put(ADMIN, uniqueSlug("owner-issuers"), "Owner issuers", null);
+        Space space = created.space();
+        String slug = space.slug();
+        members().addMember(ADMIN, slug, new SpaceMember(ISSUER, subject, SpaceRole.EDITOR));
+        members().addMember(ADMIN, slug, new SpaceMember(otherIssuer, subject, SpaceRole.EDITOR));
+        TokenOwner firstOwner = new TokenOwner(ISSUER, subject);
+        TokenOwner secondOwner = new TokenOwner(otherIssuer, subject);
+        for (int index = 0; index < 50; index++) {
+            tokens().create(firstOwner, slug, "first-" + index, new TokenOptions(TokenScope.READ, null));
+        }
+
+        // when
+        CreatedToken second = tokens().create(secondOwner, slug, "second", new TokenOptions(TokenScope.READ, null));
+        List<TokenSummary> firstList = tokens().list(firstOwner, slug);
+        List<TokenSummary> secondList = tokens().list(secondOwner, slug);
+
+        // then
+        TokenSummary secondToken = second.token();
+        assertThat(secondToken.name()).isEqualTo("second");
+        assertThat(firstList).hasSize(50);
+        assertThat(secondList).extracting(TokenSummary::id).containsExactly(secondToken.id());
+    }
+
+    @Test
+    void aLongRevokedTokenDisappearsFromTheList() {
+        // given
+        Space space = seedSpaceWithMembers("long-revoked");
+        String slug = space.slug();
+        CreatedToken created = tokens().create(EDITOR_OWNER, slug, "old", new TokenOptions(TokenScope.READ, null));
+        UUID tokenId = created.token().id();
+        tokens().revoke(EDITOR_OWNER, slug, tokenId);
+        Instant longAgo = Instant.now(bean(Clock.class)).minus(Duration.ofDays(31));
+        setRevokedAt(tokenId, longAgo);
+
+        // when
+        List<TokenSummary> listed = tokens().list(EDITOR_OWNER, slug);
+        tokens().create(EDITOR_OWNER, slug, "fresh", new TokenOptions(TokenScope.READ, null));
+        long remaining = countToken(tokenId);
+
+        // then
+        assertThat(listed).extracting(TokenSummary::id).doesNotContain(tokenId);
+        assertThat(remaining).isZero();
+    }
+
+    @Test
+    void aRecentlyRevokedTokenStaysListed() {
+        // given
+        Space space = seedSpaceWithMembers("recent-revoked");
+        String slug = space.slug();
+        CreatedToken created = tokens().create(EDITOR_OWNER, slug, "recent", new TokenOptions(TokenScope.READ, null));
+        UUID tokenId = created.token().id();
+        tokens().revoke(EDITOR_OWNER, slug, tokenId);
+        Instant tenDaysAgo = Instant.now(bean(Clock.class)).minus(Duration.ofDays(10));
+        setRevokedAt(tokenId, tenDaysAgo);
+
+        // when
+        List<TokenSummary> listed = tokens().list(EDITOR_OWNER, slug);
+
+        // then
+        assertThat(listed).extracting(TokenSummary::id).contains(tokenId);
+    }
+
+    private boolean createsOneMoreToken(String slug) {
+        try {
+            tokens().create(EDITOR_OWNER, slug, "parallel", new TokenOptions(TokenScope.READ, null));
+            return true;
+        } catch (ApiException exception) {
+            if (exception.getErrorCode() != TokenError.TOKEN_LIMIT) {
+                throw exception;
+            }
+            return false;
+        }
+    }
+
+    private long countStoredTokens(UUID spaceId, String subject) {
+        return jdbc().sql("SELECT count(*) FROM api_token WHERE space_id = :spaceId AND owner_subject = :subject")
+                .param("spaceId", spaceId)
+                .param("subject", subject)
+                .query(Long.class)
+                .single();
     }
 
     @Test
@@ -153,7 +295,7 @@ class ApiTokensIntegrationTest extends PostgresIntegrationTest {
 
         // then
         assertThat(indexes).doesNotContain("ix_api_token_owner_subject");
-        assertThat(definitions).anyMatch(definition -> definition.contains("(space_id, owner_subject)"));
+        assertThat(definitions).anyMatch(definition -> definition.contains("(space_id, owner_issuer, owner_subject)"));
     }
 
     @Test
@@ -176,6 +318,26 @@ class ApiTokensIntegrationTest extends PostgresIntegrationTest {
     }
 
     @Test
+    void aTokenNameWithAControlCharacterIsRejected() {
+        // given
+        Space space = seedSpaceWithMembers("control-name");
+        String slug = space.slug();
+
+        // when
+        Throwable rejected = catchThrowable(
+                () -> tokens().create(EDITOR_OWNER, slug, "bad\u0007name", new TokenOptions(TokenScope.READ, null)));
+
+        // then
+        assertThat(rejected).isInstanceOf(ApiException.class);
+        ApiException exception = (ApiException) rejected;
+        assertThat(exception.getErrorCode()).isEqualTo(CommonError.VALIDATION_FAILED);
+        assertThat(exception.getFieldErrors()).hasSize(1);
+        ApiFieldError problem = exception.getFieldErrors().getFirst();
+        assertThat(problem.pointer()).isEqualTo("/name");
+        assertThat(problem.code()).isEqualTo(SpaceError.INVALID_NAME.getCode());
+    }
+
+    @Test
     void viewerCannotCreateAWriteToken() {
         // given
         Space space = seedSpaceWithMembers("viewer-write");
@@ -188,7 +350,8 @@ class ApiTokensIntegrationTest extends PostgresIntegrationTest {
 
         // then
         TokenScope createdScope = read.token().scope();
-        assertThat(denied).isInstanceOf(SpaceAccessDeniedException.class);
+        assertThat(denied).isInstanceOf(ApiException.class);
+        assertThat(((ApiException) denied).getErrorCode()).isEqualTo(CommonError.FORBIDDEN);
         assertThat(createdScope).isEqualTo(TokenScope.READ);
     }
 
@@ -201,7 +364,7 @@ class ApiTokensIntegrationTest extends PostgresIntegrationTest {
 
         // when
         Optional<TokenIdentity> before = tokens().authenticate(created.secret());
-        spaces().changeRole(ADMIN, slug, EDITOR.subject(), SpaceRole.VIEWER);
+        members().changeRole(ADMIN, slug, new SpaceMember(ISSUER, EDITOR.subject(), SpaceRole.VIEWER));
         Optional<TokenIdentity> after = tokens().authenticate(created.secret());
 
         // then
@@ -220,7 +383,7 @@ class ApiTokensIntegrationTest extends PostgresIntegrationTest {
 
         // when
         Optional<TokenIdentity> beforeRemoval = tokens().authenticate(created.secret());
-        spaces().removeMember(ADMIN, slug, EDITOR.subject());
+        members().removeMember(ADMIN, slug, new SpaceMemberId(ISSUER, EDITOR.subject()));
         Optional<TokenIdentity> afterRemoval = tokens().authenticate(created.secret());
 
         // then
@@ -294,7 +457,7 @@ class ApiTokensIntegrationTest extends PostgresIntegrationTest {
         // given
         Space space = seedSpaceWithMembers("stranger");
         String slug = space.slug();
-        TokenOwner stranger = new TokenOwner(uniqueSubject("stranger"));
+        TokenOwner stranger = new TokenOwner(ISSUER, uniqueSubject("stranger"));
 
         // when
         Throwable create = catchThrowable(
@@ -303,9 +466,14 @@ class ApiTokensIntegrationTest extends PostgresIntegrationTest {
         Throwable revoke = catchThrowable(() -> tokens().revoke(stranger, slug, UUID.randomUUID()));
 
         // then
-        assertThat(create).isInstanceOf(SpaceNotFoundException.class);
-        assertThat(list).isInstanceOf(SpaceNotFoundException.class);
-        assertThat(revoke).isInstanceOf(SpaceNotFoundException.class);
+        assertNotFound(create);
+        assertNotFound(list);
+        assertNotFound(revoke);
+    }
+
+    private static void assertNotFound(Throwable throwable) {
+        assertThat(throwable).isInstanceOf(ApiException.class);
+        assertThat(((ApiException) throwable).getErrorCode()).isEqualTo(CommonError.NOT_FOUND);
     }
 
     private void expireAt(UUID tokenId, Instant expiresAt) {
@@ -314,6 +482,21 @@ class ApiTokensIntegrationTest extends PostgresIntegrationTest {
                 .param("expiresAt", value)
                 .param("id", tokenId)
                 .update();
+    }
+
+    private void setRevokedAt(UUID tokenId, Instant revokedAt) {
+        OffsetDateTime value = OffsetDateTime.ofInstant(revokedAt, ZoneOffset.UTC);
+        jdbc().sql("UPDATE api_token SET revoked_at = :revokedAt WHERE id = :id")
+                .param("revokedAt", value)
+                .param("id", tokenId)
+                .update();
+    }
+
+    private long countToken(UUID tokenId) {
+        return jdbc().sql("SELECT count(*) FROM api_token WHERE id = :id")
+                .param("id", tokenId)
+                .query(Long.class)
+                .single();
     }
 
     private Instant lastUsedAt(UUID tokenId) {
@@ -332,12 +515,16 @@ class ApiTokensIntegrationTest extends PostgresIntegrationTest {
         return bean(SpaceService.class);
     }
 
+    private SpaceMembers members() {
+        return bean(SpaceMembers.class);
+    }
+
     private Space seedSpaceWithMembers(String prefix) {
         SpaceService service = spaces();
-        PutResult created = service.put(ADMIN, uniqueSlug(prefix), "Space " + prefix);
+        PutResult created = service.put(ADMIN, uniqueSlug(prefix), "Space " + prefix, null);
         Space space = created.space();
-        service.addMember(ADMIN, space.slug(), EDITOR.subject(), SpaceRole.EDITOR);
-        service.addMember(ADMIN, space.slug(), VIEWER.subject(), SpaceRole.VIEWER);
+        members().addMember(ADMIN, space.slug(), new SpaceMember(ISSUER, EDITOR.subject(), SpaceRole.EDITOR));
+        members().addMember(ADMIN, space.slug(), new SpaceMember(ISSUER, VIEWER.subject(), SpaceRole.VIEWER));
         return space;
     }
 

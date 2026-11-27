@@ -2,6 +2,7 @@ import { Button, Drawer, Group, Stack } from '@mantine/core'
 import { IconArrowBackUp } from '@tabler/icons-react'
 import type { ReactElement } from 'react'
 import { useTranslation } from 'react-i18next'
+import { SettingSource } from '../../shared/api/generated/enums'
 import { SettingField } from './SettingField'
 import { sheetStyles } from './styles'
 import type { SettingFieldError, SettingRowData } from './types'
@@ -9,6 +10,7 @@ import type { SettingFieldError, SettingRowData } from './types'
 interface SettingsSheetProps {
   row: SettingRowData | null
   canEdit: boolean
+  restoring: boolean
   error: SettingFieldError | undefined
   onChange: (key: string, value: string) => void
   onRestore: (key: string) => void
@@ -24,9 +26,10 @@ function SheetActions(props: SettingsSheetProps): ReactElement {
 
   return (
     <Group justify="space-between">
-      {props.canEdit && row.source === 'space' ? (
+      {props.canEdit && row.source === SettingSource.SPACE ? (
         <Button
           variant="subtle"
+          disabled={props.restoring}
           leftSection={<IconArrowBackUp size={16} />}
           onClick={() => {
             props.onRestore(row.key)

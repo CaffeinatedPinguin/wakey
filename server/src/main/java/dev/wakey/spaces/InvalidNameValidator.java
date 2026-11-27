@@ -1,5 +1,6 @@
 package dev.wakey.spaces;
 
+import dev.wakey.web.DisplayText;
 import jakarta.validation.ConstraintValidator;
 import jakarta.validation.ConstraintValidatorContext;
 import org.jspecify.annotations.Nullable;
@@ -20,7 +21,6 @@ public final class InvalidNameValidator implements ConstraintValidator<InvalidNa
             return true;
         }
         String normalized = SpaceName.normalize(value);
-        int length = normalized.codePointCount(0, normalized.length());
-        return length >= 1 && length <= max && !SpaceText.hasForbiddenCodePoint(normalized);
+        return DisplayText.isValid(normalized, max, false);
     }
 }

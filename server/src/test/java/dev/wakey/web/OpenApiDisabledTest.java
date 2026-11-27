@@ -6,11 +6,13 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import dev.wakey.testsupport.PostgresIntegrationTest;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.context.WebApplicationContext;
 
+@TestPropertySource(properties = "springdoc.api-docs.enabled=false")
 class OpenApiDisabledTest extends PostgresIntegrationTest {
 
     private WebApplicationContext webApplicationContext;

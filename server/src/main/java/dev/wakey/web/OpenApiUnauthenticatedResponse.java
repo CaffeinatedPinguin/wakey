@@ -1,8 +1,5 @@
 package dev.wakey.web;
 
-import io.swagger.v3.oas.models.media.Content;
-import io.swagger.v3.oas.models.media.MediaType;
-import io.swagger.v3.oas.models.media.Schema;
 import io.swagger.v3.oas.models.responses.ApiResponse;
 import io.swagger.v3.oas.models.responses.ApiResponses;
 import org.springdoc.core.customizers.OperationCustomizer;
@@ -21,18 +18,10 @@ final class OpenApiUnauthenticatedResponse {
                 responses = new ApiResponses();
                 operation.setResponses(responses);
             }
-            responses.addApiResponse(UNAUTHORIZED, errorResponse(errorSchemaRef));
+            String detail = CommonError.UNAUTHENTICATED.getDetail();
+            ApiResponse response = OpenApiErrorResponse.of(errorSchemaRef, detail);
+            responses.addApiResponse(UNAUTHORIZED, response);
             return operation;
         };
-    }
-
-    private static ApiResponse errorResponse(String errorSchemaRef) {
-        Schema<?> schema = new Schema<>().$ref(errorSchemaRef);
-        MediaType mediaType = new MediaType().schema(schema);
-        Content content = new Content();
-        content.addMediaType(org.springframework.http.MediaType.APPLICATION_PROBLEM_JSON_VALUE, mediaType);
-        return new ApiResponse()
-                .description(CommonError.UNAUTHENTICATED.getDetail())
-                .content(content);
     }
 }

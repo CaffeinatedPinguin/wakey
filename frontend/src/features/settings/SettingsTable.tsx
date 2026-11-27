@@ -7,6 +7,7 @@ import type { SettingFieldErrors, SettingsGroup } from './types'
 interface SettingsTableProps {
   group: SettingsGroup
   canEdit: boolean
+  restoring: boolean
   fieldErrors: SettingFieldErrors
   onChange: (key: string, value: string) => void
   onRestore: (key: string) => void
@@ -31,6 +32,7 @@ export function SettingsTable(props: SettingsTableProps): ReactElement {
             key={row.key}
             row={row}
             canEdit={props.canEdit}
+            restoring={props.restoring}
             error={props.fieldErrors[row.key]}
             onChange={props.onChange}
             onRestore={props.onRestore}

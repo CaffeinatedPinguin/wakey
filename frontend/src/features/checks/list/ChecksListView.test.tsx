@@ -1,9 +1,9 @@
 import { cleanup, fireEvent, screen, within } from '@testing-library/react'
 import { afterEach, beforeAll, beforeEach, expect, it } from 'vitest'
 import i18n from '../../../app/i18n'
+import { renderChecksList } from '../../../test/checks'
 import { installChecksTranslations } from '../../../test/checksListI18n'
 import { installViewport } from '../../../test/viewport'
-import { renderChecksList } from './testSupport'
 
 const DESKTOP_WIDTH = 1024
 
@@ -43,7 +43,7 @@ it('the filter bar shows facet counts and reports changes', () => {
 
   expect(result.viewProps.onFiltersChange).toHaveBeenCalledWith({
     q: '',
-    state: ['down'],
+    state: ['DOWN'],
     type: [],
     tag: [],
     group: [],
@@ -72,7 +72,7 @@ it('bulk actions replace the filter bar while rows are selected', () => {
   expect(screen.queryByLabelText('Szukaj')).toBeNull()
   fireEvent.click(screen.getByRole('button', { name: 'Pauza' }))
 
-  expect(result.viewProps.onBulkAction).toHaveBeenCalledWith('pause')
+  expect(result.viewProps.onBulkAction).toHaveBeenCalledWith('PAUSE')
 
   cleanup()
   renderChecksList()
@@ -89,7 +89,7 @@ it('selecting all results is reported through onSelectionChange', () => {
 })
 
 it('the checks list explains the empty state with a next action', () => {
-  const result = renderChecksList({ status: 'empty', rows: [], totalCount: 0 })
+  const result = renderChecksList({ status: 'success', rows: [], totalCount: 0 })
 
   expect(screen.getByText('Brak checków')).toBeDefined()
   fireEvent.click(screen.getByRole('button', { name: 'Dodaj pierwszy check' }))
@@ -99,7 +99,7 @@ it('the checks list explains the empty state with a next action', () => {
 })
 
 it('no results caused by filters offers to clear them', () => {
-  const result = renderChecksList({ status: 'noResults', rows: [] })
+  const result = renderChecksList({ status: 'success', rows: [], hasActiveFilters: true })
 
   expect(screen.getByText('Brak checków spełniających kryteria')).toBeDefined()
   fireEvent.click(screen.getByRole('button', { name: 'Wyczyść filtry' }))
@@ -109,7 +109,7 @@ it('no results caused by filters offers to clear them', () => {
 })
 
 it('the checks list shows a skeleton while loading', () => {
-  const { container } = renderChecksList({ status: 'loading', rows: [], totalCount: 0 })
+  const { container } = renderChecksList({ status: 'pending', rows: [], totalCount: 0 })
 
   expect(screen.getByRole('status', { name: 'Ładowanie checków…' })).toBeDefined()
   expect(container.querySelectorAll('.mantine-Skeleton-root').length).toBeGreaterThan(0)

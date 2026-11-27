@@ -1,3 +1,5 @@
+import { BulkCheckAction } from '../shared/api/generated/enums'
+import type { SpaceRole } from '../shared/api/generated/enums'
 import type {
   CountChecksResponse as StateCountsResponse,
   GetCheckResponse as CheckResponse,
@@ -16,7 +18,7 @@ export interface SpaceFixture {
   slug: string
   name: string
   admin: boolean
-  role: 'EDITOR' | 'VIEWER' | null
+  role: SpaceRole | null
   version: number
 }
 
@@ -56,6 +58,13 @@ export function makeCheck(overrides: Partial<CheckResponse>): CheckResponse {
   return { ...CHECK_DEFAULTS, ...overrides }
 }
 
+export interface BulkCall {
+  action: string
+  ids: string[] | null
+  filter: Record<string, string> | null
+  expectedCount: number | null
+}
+
 export interface ChecksApiState {
   spaces: SpaceFixture[]
   checks: CheckResponse[]
@@ -66,7 +75,9 @@ export interface ChecksApiState {
   pauseCalls: string[]
   resumeCalls: string[]
   deleteCalls: string[]
+  bulkCalls: BulkCall[]
   failPause: MockReply | null
+  failBulk: MockReply | null
 }
 
 export interface ChecksApiMock {
@@ -85,7 +96,9 @@ function createState(): ChecksApiState {
     pauseCalls: [],
     resumeCalls: [],
     deleteCalls: [],
+    bulkCalls: [],
     failPause: null,
+    failBulk: null,
   }
 }
 
@@ -142,11 +155,62 @@ function handleCheckItem(
     : { status: 200, data: check }
 }
 
+function bulkOneCheck(state: ChecksApiState, action: string, id: string): boolean {
+  const check = findCheck(state, id)
+  if (check === undefined) {
+    return false
+  }
+  if (action === BulkCheckAction.DELETE) {
+    state.checks = state.checks.filter((item) => item.id !== id)
+    return true
+  }
+  if (action === BulkCheckAction.PAUSE) {
+    check.paused = true
+    check.pausedReason = 'MANUAL'
+    return true
+  }
+  if (action === BulkCheckAction.RESUME) {
+    check.paused = false
+    delete check.pausedReason
+    return true
+  }
+  return false
+}
+
+interface BulkBody {
+  action: string
+  ids?: string[]
+  filter?: Record<string, string>
+  expectedCount?: number
+}
+
+function handleBulk(state: ChecksApiState, body: string): MockReply {
+  const parsed = JSON.parse(body) as BulkBody
+  const ids = parsed.ids ?? state.checks.map((check) => check.id)
+  state.bulkCalls.push({
+    action: parsed.action,
+    ids: parsed.ids ?? null,
+    filter: parsed.filter ?? null,
+    expectedCount: parsed.expectedCount ?? null,
+  })
+  if (state.failBulk !== null) {
+    return state.failBulk
+  }
+  let affected = 0
+  for (const id of ids) {
+    if (bulkOneCheck(state, parsed.action, id)) {
+      affected += 1
+    }
+  }
+  return { status: 200, data: { affected } }
+}
+
 interface CheckRequest {
   slug: string
   tail: string[]
   method: string
   url: URL
+  body: string
 }
 
 function handleChecks(state: ChecksApiState, request: CheckRequest): MockReply {
@@ -157,6 +221,9 @@ function handleChecks(state: ChecksApiState, request: CheckRequest): MockReply {
   if (request.url.pathname === `${checksPath}/counts`) {
     state.countsCalls.push(request.url.pathname + request.url.search)
     return { status: 200, data: state.counts }
+  }
+  if (request.url.pathname === `${checksPath}/bulk` && request.method === 'post') {
+    return handleBulk(state, request.body)
   }
   const id = request.tail[1]
   if (id === undefined) {
@@ -188,7 +255,7 @@ function handleRequest(state: ChecksApiState, request: MockRequest): MockReply {
   const slug = decodeURIComponent(rest[0] ?? '')
   const tail = rest.slice(1)
   if (tail[0] === 'checks') {
-    return handleChecks(state, { slug, tail, method, url })
+    return handleChecks(state, { slug, tail, method, url, body: request.body })
   }
   return handleSpaces(state, rest)
 }

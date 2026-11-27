@@ -21,7 +21,7 @@ class PlansConfiguration {
     }
 
     @Bean
-    PlanCatalog planCatalog(Map<String, PlanProperties> plans, InstanceDefaultsProperties instanceDefaults) {
-        return PlanCatalog.from(plans, instanceDefaults);
+    PlanCatalog planCatalog(Map<String, PlanProperties> plans) {
+        return PlanCatalog.from(plans);
     }
 }

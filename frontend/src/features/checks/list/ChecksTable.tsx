@@ -1,17 +1,18 @@
 import { Badge, Checkbox, Group, Table, Text } from '@mantine/core'
 import type { ReactElement } from 'react'
 import { useTranslation } from 'react-i18next'
+import type { BulkCheckAction } from '../../../shared/api/generated/enums'
 import { StatusBadge } from '../../../shared/ui'
 import { monoStyle } from './listStyles'
 import { RowMenu } from './RowMenu'
 import { isRowSelected, pageSelection, rowSelection } from './selection'
-import type { CheckRowData, RowAction, SelectionState } from './types'
+import type { CheckRowData, SelectionState } from './types'
 
 export interface ChecksTableProps {
   rows: CheckRowData[]
   selection: SelectionState
   onSelectionChange: (selection: SelectionState) => void
-  onRowAction: (id: string, action: RowAction) => void
+  onRowAction: (id: string, action: BulkCheckAction) => void
 }
 
 interface CheckTableRowProps extends ChecksTableProps {

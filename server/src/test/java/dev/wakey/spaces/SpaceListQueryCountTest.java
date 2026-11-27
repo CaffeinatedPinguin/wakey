@@ -2,19 +2,17 @@ package dev.wakey.spaces;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import dev.wakey.security.CurrentUser;
 import dev.wakey.testsupport.PostgresIntegrationTest;
+import dev.wakey.testsupport.QueryCountingConfiguration;
+import dev.wakey.testsupport.QueryCountingDataSource;
+import dev.wakey.web.CurrentUser;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
-import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.Test;
-import org.springframework.boot.jdbc.autoconfigure.JdbcConnectionDetails;
-import org.springframework.boot.test.context.TestConfiguration;
-import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Import;
-import org.springframework.jdbc.datasource.DriverManagerDataSource;
 
-@Import(SpaceListQueryCountTest.CountingDataConfiguration.class)
+@Import(QueryCountingConfiguration.class)
 class SpaceListQueryCountTest extends PostgresIntegrationTest {
 
     private static final CurrentUser ADMIN = new CurrentUser("https://issuer.example.com", "query-count-admin", true);
@@ -38,25 +36,31 @@ class SpaceListQueryCountTest extends PostgresIntegrationTest {
         assertThat(queries).isLessThanOrEqualTo(2);
     }
 
-    private static void seed(SpaceService service, String prefix) {
-        String suffix = UUID.randomUUID().toString().substring(0, 8);
-        String slug = prefix + "-" + suffix;
+    @Test
+    void readingThePlanNameRunsOneQuery() {
+        // given
+        SpaceService service = bean(SpaceService.class);
+        QueryCountingDataSource dataSource = bean(QueryCountingDataSource.class);
+        String slug = prefix("plan-query");
+        UUID spaceId = service.put(ADMIN, slug, "Plan space", null).space().id();
+
+        // when
+        dataSource.reset();
+        Optional<String> planName = service.planNameOf(spaceId);
+        int queries = dataSource.statementCount();
+
+        // then
+        assertThat(planName).isEmpty();
+        assertThat(queries).isEqualTo(1);
+    }
+
+    private static void seed(SpaceService service, String text) {
+        String slug = prefix(text);
         service.put(ADMIN, slug, "Page space", null);
     }
 
-    @TestConfiguration(proxyBeanMethods = false)
-    static class CountingDataConfiguration {
-
-        @Bean
-        QueryCountingDataSource dataSource(JdbcConnectionDetails connectionDetails) {
-            @Nullable String username = connectionDetails.getUsername();
-            @Nullable String password = connectionDetails.getPassword();
-            DriverManagerDataSource delegate = new DriverManagerDataSource();
-            delegate.setDriverClassName(connectionDetails.getDriverClassName());
-            delegate.setUrl(connectionDetails.getJdbcUrl());
-            delegate.setUsername(username == null ? "" : username);
-            delegate.setPassword(password == null ? "" : password);
-            return new QueryCountingDataSource(delegate);
-        }
+    private static String prefix(String text) {
+        String suffix = UUID.randomUUID().toString().substring(0, 8);
+        return text + "-" + suffix;
     }
 }

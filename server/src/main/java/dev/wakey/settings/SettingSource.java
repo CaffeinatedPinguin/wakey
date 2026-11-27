@@ -4,6 +4,5 @@ package dev.wakey.settings;
 public enum SettingSource {
     SPACE,
     PLAN,
-    INSTANCE,
-    DEFAULT
+    INSTANCE
 }

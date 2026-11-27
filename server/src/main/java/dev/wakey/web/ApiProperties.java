@@ -23,6 +23,9 @@ public record ApiProperties(
     }
 
     public int pageSize(@Nullable Integer limit) {
-        return limit == null ? defaultPageSize : Math.min(limit, maxPageSize);
+        if (limit == null) {
+            return defaultPageSize;
+        }
+        return Math.max(1, Math.min(limit, maxPageSize));
     }
 }

@@ -9,6 +9,21 @@ import { installViewport } from './viewport'
 
 const DESKTOP_WIDTH = 1024
 
+interface Deferred {
+  promise: Promise<void>
+  resolve: () => void
+}
+
+function deferred(): Deferred {
+  let resolve: () => void = () => undefined
+  const promise = new Promise<void>((done) => {
+    resolve = () => {
+      done()
+    }
+  })
+  return { promise, resolve }
+}
+
 let api: ChecksApiMock
 
 function detailCheck() {
@@ -55,19 +70,77 @@ describe('the check details page', () => {
     expect(await screen.findByRole('heading', { name: 'Brak przestrzeni' })).toBeDefined()
     expect(screen.queryByRole('status', { name: 'Ładowanie checka…' })).toBeNull()
   })
+
+  it('the details page shows only tabs that have data', async () => {
+    // given a check whose detail endpoints do not exist yet
+    api.state.checks = [detailCheck()]
+    renderApp('/checks/c1?space=alpha')
+    await screen.findByRole('heading', { level: 1, name: 'API płatności' })
+
+    // then no empty tab is rendered
+    expect(screen.queryAllByRole('tab')).toHaveLength(0)
+  })
 })
 
-describe('the check details page actions', () => {
+function givenCheck(): void {
+  api.state.checks = [detailCheck()]
+  api.state.counts = countsFor(api.state.checks)
+}
+
+function holdPause(gate: Promise<void>): void {
+  installMockApi((request) => {
+    const reply = api.handler(request)
+    const isPause = request.method.toUpperCase() === 'POST' && request.url.endsWith('/pause')
+    return isPause ? { ...reply, waitFor: gate } : reply
+  })
+}
+
+async function findPauseButton(): Promise<HTMLElement> {
+  await screen.findByRole('heading', { level: 1, name: 'API płatności' })
+  return screen.getByRole('button', { name: 'Wstrzymaj' })
+}
+
+async function openDeleteDialog(): Promise<HTMLElement> {
+  fireEvent.click(screen.getByRole('button', { name: 'Usuń' }))
+  return screen.findByRole('dialog')
+}
+
+describe('the check details page action states', () => {
+  it('the details actions are disabled while one is running', async () => {
+    // given a check and a pause request held open
+    givenCheck()
+    const gate = deferred()
+    holdPause(gate.promise)
+    renderApp('/checks/c1?space=alpha')
+    const pause = await findPauseButton()
+
+    // when the action is clicked twice
+    fireEvent.click(pause)
+    await waitFor(() => {
+      expect(pause.hasAttribute('disabled')).toBe(true)
+    })
+    fireEvent.click(pause)
+
+    // then only one request is sent
+    gate.resolve()
+    await waitFor(() => {
+      expect(api.state.pauseCalls).toEqual(['c1'])
+    })
+  })
+})
+
+describe('the check details page deletion', () => {
   it('deleting a check from the details page returns to the list', async () => {
-    api.state.checks = [detailCheck()]
-    api.state.counts = countsFor(api.state.checks)
+    // given a check
+    givenCheck()
     const view = renderApp('/checks/c1?space=alpha')
     await screen.findByRole('heading', { level: 1, name: 'API płatności' })
 
-    fireEvent.click(screen.getByRole('button', { name: 'Usuń' }))
-    const dialog = await screen.findByRole('dialog')
+    // when the deletion is confirmed
+    const dialog = await openDeleteDialog()
     fireEvent.click(within(dialog).getByRole('button', { name: 'Usuń' }))
 
+    // then the details page returns to the list of the same space
     await waitFor(() => {
       expect(api.state.deleteCalls).toEqual(['c1'])
     })

@@ -1,6 +1,6 @@
 import { contract } from '../../../shared/api/generated/contract'
 import { serverClient } from '../../../shared/api/instances'
-import { spaceSettingsSchema } from './settings.schemas'
+import { spaceSettingsPageSchema } from './settings.schemas'
 import type { SpaceSetting } from './settings.schemas'
 
 export interface SettingChange {
@@ -26,7 +26,7 @@ export async function fetchSpaceSettings(
 ): Promise<SpaceSetting[]> {
   const url = spacePath(contract.getSpaceSettings.path, slug)
   const response = await serverClient.get<unknown>(url, { signal })
-  return spaceSettingsSchema.parse(response.data)
+  return spaceSettingsPageSchema.parse(response.data).items
 }
 
 export async function updateSpaceSetting(slug: string, change: SettingChange): Promise<void> {
@@ -39,10 +39,7 @@ export async function deleteSpaceSetting(slug: string, key: string): Promise<voi
   await serverClient.delete(url)
 }
 
-// "Restore all" is a sequence of the per-setting resets, so it needs no extra
-// endpoint.
-export async function resetSpaceSettings(slug: string, keys: readonly string[]): Promise<void> {
-  for (const key of keys) {
-    await deleteSpaceSetting(slug, key)
-  }
+export async function resetAllSpaceSettings(slug: string): Promise<void> {
+  const url = spacePath(contract.resetSpaceSettings.path, slug)
+  await serverClient.delete(url)
 }

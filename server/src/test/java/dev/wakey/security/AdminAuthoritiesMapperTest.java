@@ -12,9 +12,7 @@ import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.mapping.GrantedAuthoritiesMapper;
 import org.springframework.security.oauth2.core.oidc.OidcIdToken;
 import org.springframework.security.oauth2.core.oidc.user.OidcUserAuthority;
-import org.springframework.test.context.TestPropertySource;
 
-@TestPropertySource(properties = "wakey.security.admin-group=wakey-admins")
 class AdminAuthoritiesMapperTest extends PostgresIntegrationTest {
 
     @Test

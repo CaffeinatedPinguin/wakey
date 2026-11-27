@@ -1,17 +1,19 @@
 package dev.wakey.checks.internal;
 
-import dev.wakey.checks.Check;
 import dev.wakey.checks.CheckState;
 import dev.wakey.checks.CheckType;
 import dev.wakey.checks.PausedReason;
 import java.time.Instant;
-import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 import org.jspecify.annotations.Nullable;
+import org.springframework.data.annotation.Id;
+import org.springframework.data.relational.core.mapping.Table;
 
-/** One row of the check table together with its derived state; tags are loaded separately. */
-record CheckRow(
-        UUID id,
+/** A check row without its tags; the list reads the tags of a whole page with one derived query. */
+@Table("check")
+public record CheckRow(
+        @Id UUID id,
         UUID spaceId,
         String name,
         CheckType type,
@@ -24,13 +26,13 @@ record CheckRow(
         @Nullable String runbookUrl,
         boolean paused,
         @Nullable PausedReason pausedReason,
-        CheckState state,
+        CheckState lastState,
         long version,
         Instant createdAt,
         Instant updatedAt) {
 
-    Check toCheck(List<String> tags) {
-        return new Check(
+    CheckEntity toEntity(Set<CheckTag> tags) {
+        return new CheckEntity(
                 id,
                 spaceId,
                 name,
@@ -45,7 +47,7 @@ record CheckRow(
                 paused,
                 pausedReason,
                 tags,
-                state,
+                lastState,
                 version,
                 createdAt,
                 updatedAt);

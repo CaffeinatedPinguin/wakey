@@ -1,8 +1,5 @@
 package dev.wakey.spaces.web;
 
-import dev.wakey.security.CurrentUser;
-import dev.wakey.spaces.SpaceService;
-import dev.wakey.web.ApiProperties;
 import dev.wakey.web.CursorPage;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -27,49 +24,37 @@ import org.springframework.web.bind.annotation.RestController;
 @RequiredArgsConstructor
 final class SpaceMembersController {
 
-    private final SpaceService spaces;
-
-    private final ApiProperties apiProperties;
+    private final SpaceMembersResources resources;
 
     @RequestMapping(method = RequestMethod.GET)
     CursorPage<SpaceMemberResponse> listSpaceMembers(
             @PathVariable String slug,
             @RequestParam(required = false) @Positive Integer limit,
             @RequestParam(required = false) String cursor,
-            CurrentUser actor) {
-        int pageSize = apiProperties.pageSize(limit);
-        var after = SpacesHttp.afterMember(cursor);
-        var rows = spaces.listMembers(actor, slug, after, pageSize + 1);
-        return CursorPage.of(rows, pageSize, SpacesHttp::memberSortKey, SpaceMemberResponse::from);
+            SpaceReader reader) {
+        return resources.list(reader, slug, limit, cursor);
     }
 
     @RequestMapping(method = RequestMethod.POST)
     ResponseEntity<SpaceMemberResponse> addSpaceMember(
-            @PathVariable String slug, @Valid @RequestBody AddSpaceMemberRequest request, CurrentUser actor) {
-        var result = spaces.addMember(actor, slug, request.toMember());
-        var response = SpaceMemberResponse.from(result.member());
-        if (result.created()) {
-            return ResponseEntity.status(HttpStatus.CREATED).body(response);
-        }
-        return ResponseEntity.ok(response);
+            @PathVariable String slug, SpaceWriter writer, @Valid @RequestBody AddSpaceMemberRequest request) {
+        return resources.add(writer, slug, request);
     }
 
     @ResponseStatus(HttpStatus.NO_CONTENT)
     @RequestMapping(path = "/role", method = RequestMethod.PUT)
     void changeSpaceMemberRole(
             @PathVariable String slug,
+            SpaceWriter writer,
             @Valid @ParameterObject SpaceMemberQuery member,
-            @Valid @RequestBody ChangeSpaceMemberRoleRequest request,
-            CurrentUser actor) {
-        var memberId = member.toId();
-        var updated = request.toMember(memberId);
-        spaces.changeRole(actor, slug, updated);
+            @Valid @RequestBody ChangeSpaceMemberRoleRequest request) {
+        resources.changeRole(writer, slug, member, request);
     }
 
     @ResponseStatus(HttpStatus.NO_CONTENT)
     @RequestMapping(method = RequestMethod.DELETE)
     void removeSpaceMember(
-            @PathVariable String slug, @Valid @ParameterObject SpaceMemberQuery member, CurrentUser actor) {
-        spaces.removeMember(actor, slug, member.toId());
+            @PathVariable String slug, SpaceWriter writer, @Valid @ParameterObject SpaceMemberQuery member) {
+        resources.remove(writer, slug, member);
     }
 }

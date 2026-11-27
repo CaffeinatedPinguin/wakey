@@ -69,6 +69,7 @@ describe('API generator', () => {
       const spaceRoleValues = schemas.SpaceRole.enum
       const nameSchema = schemas.CreateSpaceRequest.properties.name
       const slugSchema = schemas.CreateSpaceRequest.properties.slug
+      const bulkIdsSchema = schemas.BulkChecksRequest.properties.ids
 
       const enums = readFileSync(join(outDir, 'enums.ts'), 'utf8')
       const limits = readFileSync(join(outDir, 'limits.ts'), 'utf8')
@@ -85,6 +86,9 @@ describe('API generator', () => {
       )
       expect(limits).toContain(
         `export const CREATE_SPACE_REQUEST_SLUG_PATTERN = '${slugSchema.pattern}'`,
+      )
+      expect(limits).toContain(
+        `export const BULK_CHECKS_REQUEST_IDS_MAX_ITEMS = ${bulkIdsSchema.maxItems}`,
       )
     },
     GENERATOR_TEST_TIMEOUT_MS,

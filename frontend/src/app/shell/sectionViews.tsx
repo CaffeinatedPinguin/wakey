@@ -1,5 +1,5 @@
 import { Button, Stack } from '@mantine/core'
-import { Link, useSearch } from '@tanstack/react-router'
+import { Link, getRouteApi } from '@tanstack/react-router'
 import type { ReactElement } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useMe } from '../../features/auth'
@@ -8,6 +8,8 @@ import { spaceFromSearch, useSpace } from '../../features/spaces'
 import { PageFrame } from '../../shared/ui/PageFrame'
 import { EmptySectionView } from './EmptySectionView'
 import { incidentsSection, statusPagesSection } from './panelNavigation'
+
+const panelRoute = getRouteApi('/panel')
 
 export function IncidentsSectionView(): ReactElement {
   return <EmptySectionView section={incidentsSection} />
@@ -19,7 +21,7 @@ export function StatusPagesSectionView(): ReactElement {
 
 export function SettingsSectionView(): ReactElement {
   const { t } = useTranslation()
-  const search = useSearch({ strict: false })
+  const search = panelRoute.useSearch()
   const spaceSlug = spaceFromSearch(search)
   // The settings page reuses the one space request of the shell, so its schema
   // and its query key stay in one place.

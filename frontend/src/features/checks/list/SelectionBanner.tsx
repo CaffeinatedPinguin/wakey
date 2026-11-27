@@ -1,6 +1,7 @@
 import { Button, Group, Text } from '@mantine/core'
 import type { ReactElement } from 'react'
 import { useTranslation } from 'react-i18next'
+import { SelectionMode } from './types'
 import type { SelectionState } from './types'
 
 export interface SelectionBannerProps {
@@ -13,10 +14,10 @@ export function SelectionBanner(props: SelectionBannerProps): ReactElement | nul
   const { t } = useTranslation()
   const { selection, totalCount, onSelectionChange } = props
 
-  if (selection.mode === 'none') {
+  if (selection.mode === SelectionMode.NONE) {
     return null
   }
-  if (selection.mode === 'all') {
+  if (selection.mode === SelectionMode.ALL) {
     return (
       <Text size="sm" fw={600}>
         {t('checks.list.selection.all', { count: totalCount, total: totalCount })}
@@ -31,7 +32,7 @@ export function SelectionBanner(props: SelectionBannerProps): ReactElement | nul
       <Button
         variant="subtle"
         onClick={() => {
-          onSelectionChange({ mode: 'all', ids: [] })
+          onSelectionChange({ mode: SelectionMode.ALL, ids: [] })
         }}
       >
         {t('checks.list.selection.selectAll', { count: totalCount, total: totalCount })}

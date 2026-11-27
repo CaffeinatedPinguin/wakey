@@ -1,24 +1,35 @@
-import type { StatusState } from '../../../shared/ui'
+import { CheckState } from '../../../shared/api/generated/enums'
+import { StatusState } from '../../../shared/ui'
 import type { CheckDetailsData } from '../details/checkDetailsTypes'
+import { FacetKey } from '../list/types'
 import type { CheckRowData, FacetOption, FilterFacet } from '../list/types'
 import type { CheckRecord, StateCounts } from './checks.schemas'
 
 const INTERVAL_SUFFIX = ' s'
-const UNKNOWN_VALUE = '—'
 
-const FACET_STATES: readonly StatusState[] = ['down', 'degraded', 'up', 'unknown']
+// One lookup from the contract state to the badge state: the list, the details
+// and the facet counts all read the same map.
+const STATE_COLOR: Record<CheckState, StatusState> = {
+  [CheckState.UP]: StatusState.UP,
+  [CheckState.DEGRADED]: StatusState.DEGRADED,
+  [CheckState.DOWN]: StatusState.DOWN,
+  [CheckState.UNKNOWN]: StatusState.UNKNOWN,
+}
 
-function statusOf(state: CheckRecord['state']): StatusState {
-  switch (state) {
-    case 'UP':
-      return 'up'
-    case 'DEGRADED':
-      return 'degraded'
-    case 'DOWN':
-      return 'down'
-    case 'UNKNOWN':
-      return 'unknown'
-  }
+const FACET_STATES: readonly CheckState[] = [
+  CheckState.DOWN,
+  CheckState.DEGRADED,
+  CheckState.UP,
+  CheckState.UNKNOWN,
+]
+
+// The counter field of a contract state is explicit, so the counts do not rely
+// on a state value happening to equal a field name.
+const STATE_COUNT_KEY: Record<CheckState, keyof StateCounts> = {
+  [CheckState.UP]: 'up',
+  [CheckState.DEGRADED]: 'degraded',
+  [CheckState.DOWN]: 'down',
+  [CheckState.UNKNOWN]: 'unknown',
 }
 
 export function toCheckRow(check: CheckRecord): CheckRowData {
@@ -27,7 +38,7 @@ export function toCheckRow(check: CheckRecord): CheckRowData {
     name: check.name,
     target: check.target,
     type: check.type,
-    state: statusOf(check.state),
+    state: STATE_COLOR[check.state],
     lastResultAt: check.lastResult?.checkedAt ?? null,
     intervalSeconds: check.intervalSeconds,
     ...(check.groupName === undefined ? {} : { group: check.groupName }),
@@ -39,36 +50,19 @@ export function toCheckDetails(check: CheckRecord): CheckDetailsData {
   return {
     name: check.name,
     target: check.target,
-    state: statusOf(check.state),
+    state: STATE_COLOR[check.state],
     paused: check.paused,
     lastCheckedAt: check.lastResult?.checkedAt ?? check.updatedAt,
     facts: {
-      uptime24h: UNKNOWN_VALUE,
-      dataCoverage: UNKNOWN_VALUE,
       interval: `${check.intervalSeconds.toString()}${INTERVAL_SUFFIX}`,
       timeout: `${check.timeoutSeconds.toString()}${INTERVAL_SUFFIX}`,
       type: check.type,
     },
-    configIssues: [],
-    events: [],
-    certificate: null,
-    changes: [],
   }
 }
 
-function countOf(counts: StateCounts, state: StatusState): number {
-  switch (state) {
-    case 'down':
-      return counts.down
-    case 'degraded':
-      return counts.degraded
-    case 'up':
-      return counts.up
-    case 'unknown':
-      return counts.unknown
-    case 'maintenance':
-      return 0
-  }
+function stateCount(counts: StateCounts, state: CheckState): number {
+  return counts[STATE_COUNT_KEY[state]]
 }
 
 export function stateFacets(
@@ -78,12 +72,12 @@ export function stateFacets(
   if (counts === undefined) {
     return []
   }
-  const options: FacetOption[] = FACET_STATES.map((state) => ({
+  const options: FacetOption<CheckState>[] = FACET_STATES.map((state) => ({
     value: state,
-    label: label(state),
-    count: countOf(counts, state),
+    label: label(STATE_COLOR[state]),
+    count: stateCount(counts, state),
   }))
-  return [{ key: 'state', options }]
+  return [{ key: FacetKey.STATE, options }]
 }
 
 export function totalFromCounts(counts: StateCounts | undefined): number | undefined {

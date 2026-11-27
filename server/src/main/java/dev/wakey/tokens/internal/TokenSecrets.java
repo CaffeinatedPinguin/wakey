@@ -8,9 +8,9 @@ import java.util.Base64;
 import java.util.HexFormat;
 
 /** Generates and hashes token secrets; a secret never leaves this class except in the create result. */
-final class TokenSecrets {
+public final class TokenSecrets {
 
-    static final String PREFIX = "wk_";
+    public static final String PREFIX = "wk_";
 
     private static final int SECRET_BYTES = 32;
 
@@ -20,14 +20,14 @@ final class TokenSecrets {
 
     private TokenSecrets() {}
 
-    static String generate() {
+    public static String generate() {
         byte[] randomBytes = new byte[SECRET_BYTES];
         RANDOM.nextBytes(randomBytes);
         String encoded = Base64.getUrlEncoder().withoutPadding().encodeToString(randomBytes);
         return PREFIX + encoded;
     }
 
-    static String hash(String secret) {
+    public static String hash(String secret) {
         try {
             MessageDigest digest = MessageDigest.getInstance("SHA-256");
             byte[] bytes = secret.getBytes(StandardCharsets.UTF_8);
