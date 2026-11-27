@@ -65,6 +65,7 @@ export const ErrorCode = {
   SLUG_TAKEN: 'slug_taken',
   TIMEOUT_EXCEEDS_INTERVAL: 'timeout_exceeds_interval',
   TOKEN_LIMIT: 'token_limit',
+  TOO_MANY_REQUESTS: 'too_many_requests',
   UNAUTHENTICATED: 'unauthenticated',
   UNKNOWN_PLAN: 'unknown_plan',
   UNSUPPORTED_MEDIA_TYPE: 'unsupported_media_type',

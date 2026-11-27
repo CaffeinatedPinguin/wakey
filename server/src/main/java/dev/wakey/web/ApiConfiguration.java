@@ -37,6 +37,7 @@ public class ApiConfiguration {
                 .addOpenApiCustomizer(openApi -> documentPublicApi(openApi, apiProperties, codes))
                 .addOperationCustomizer(OpenApiUnauthenticatedResponse.customizer(ERROR_SCHEMA_REF))
                 .addOperationCustomizer(OpenApiSlugNotFoundResponse.customizer(ERROR_SCHEMA_REF))
+                .addOperationCustomizer(OpenApiTooManyRequestsResponse.customizer(ERROR_SCHEMA_REF))
                 .build();
     }
 

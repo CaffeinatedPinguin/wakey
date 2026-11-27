@@ -513,7 +513,7 @@
       "ProblemDetail" : {
         "properties" : {
           "code" : {
-            "enum" : [ "bad_request", "validation_failed", "invalid_body", "invalid_cursor", "unauthenticated", "forbidden", "not_found", "method_not_allowed", "not_acceptable", "unsupported_media_type", "version_conflict", "internal_error", "out_of_plan", "plan_limit", "invalid_target", "invalid_timeout", "invalid_tags", "invalid_runbook_url", "invalid_group_name", "invalid_description", "location_error_cannot_be_down", "bulk_count_changed", "unknown_plan", "invalid_key", "invalid_value", "timeout_exceeds_interval", "slug_taken", "invalid_name", "invalid_slug", "invalid_subject", "invalid_issuer", "token_limit", "invalid_token", "insufficient_scope", "invalid_expiry" ],
+            "enum" : [ "bad_request", "validation_failed", "invalid_body", "invalid_cursor", "unauthenticated", "forbidden", "not_found", "method_not_allowed", "not_acceptable", "unsupported_media_type", "version_conflict", "too_many_requests", "internal_error", "out_of_plan", "plan_limit", "invalid_target", "invalid_timeout", "invalid_tags", "invalid_runbook_url", "invalid_group_name", "invalid_description", "location_error_cannot_be_down", "bulk_count_changed", "unknown_plan", "invalid_key", "invalid_value", "timeout_exceeds_interval", "slug_taken", "invalid_name", "invalid_slug", "invalid_subject", "invalid_issuer", "token_limit", "invalid_token", "insufficient_scope", "invalid_expiry" ],
             "type" : "string"
           },
           "detail" : {
@@ -833,6 +833,24 @@
               }
             },
             "description" : "Authentication is required."
+          },
+          "429" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description" : "Too many requests.",
+            "headers" : {
+              "Retry-After" : {
+                "description" : "Seconds to wait before retrying.",
+                "schema" : {
+                  "type" : "string"
+                }
+              }
+            }
           }
         },
         "summary" : "Return the authenticated user",
@@ -891,6 +909,24 @@
               }
             },
             "description" : "Authentication is required."
+          },
+          "429" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description" : "Too many requests.",
+            "headers" : {
+              "Retry-After" : {
+                "description" : "Seconds to wait before retrying.",
+                "schema" : {
+                  "type" : "string"
+                }
+              }
+            }
           }
         },
         "tags" : [ "spaces" ]
@@ -966,6 +1002,24 @@
               }
             },
             "description" : "A space with that slug already exists."
+          },
+          "429" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description" : "Too many requests.",
+            "headers" : {
+              "Retry-After" : {
+                "description" : "Seconds to wait before retrying.",
+                "schema" : {
+                  "type" : "string"
+                }
+              }
+            }
           }
         },
         "tags" : [ "spaces" ]
@@ -1023,6 +1077,24 @@
               }
             },
             "description" : "The requested resource was not found."
+          },
+          "429" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description" : "Too many requests.",
+            "headers" : {
+              "Retry-After" : {
+                "description" : "Seconds to wait before retrying.",
+                "schema" : {
+                  "type" : "string"
+                }
+              }
+            }
           }
         },
         "tags" : [ "spaces" ]
@@ -1128,6 +1200,24 @@
               }
             },
             "description" : "The resource changed since the supplied version."
+          },
+          "429" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description" : "Too many requests.",
+            "headers" : {
+              "Retry-After" : {
+                "description" : "Seconds to wait before retrying.",
+                "schema" : {
+                  "type" : "string"
+                }
+              }
+            }
           }
         },
         "summary" : "Create or rename a space idempotently",
@@ -1273,6 +1363,24 @@
               }
             },
             "description" : "The requested resource was not found."
+          },
+          "429" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description" : "Too many requests.",
+            "headers" : {
+              "Retry-After" : {
+                "description" : "Seconds to wait before retrying.",
+                "schema" : {
+                  "type" : "string"
+                }
+              }
+            }
           }
         },
         "summary" : "List the checks of a space",
@@ -1349,6 +1457,24 @@
               }
             },
             "description" : "The requested resource was not found."
+          },
+          "429" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description" : "Too many requests.",
+            "headers" : {
+              "Retry-After" : {
+                "description" : "Seconds to wait before retrying.",
+                "schema" : {
+                  "type" : "string"
+                }
+              }
+            }
           }
         },
         "summary" : "Create a check in a space",
@@ -1437,6 +1563,24 @@
               }
             },
             "description" : "The number of matching checks changed since the dialog was shown."
+          },
+          "429" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description" : "Too many requests.",
+            "headers" : {
+              "Retry-After" : {
+                "description" : "Seconds to wait before retrying.",
+                "schema" : {
+                  "type" : "string"
+                }
+              }
+            }
           }
         },
         "summary" : "Pause, resume or delete many checks at once",
@@ -1548,6 +1692,24 @@
               }
             },
             "description" : "The requested resource was not found."
+          },
+          "429" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description" : "Too many requests.",
+            "headers" : {
+              "Retry-After" : {
+                "description" : "Seconds to wait before retrying.",
+                "schema" : {
+                  "type" : "string"
+                }
+              }
+            }
           }
         },
         "summary" : "Count the checks of a space by state",
@@ -1607,6 +1769,24 @@
               }
             },
             "description" : "The requested resource was not found."
+          },
+          "429" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description" : "Too many requests.",
+            "headers" : {
+              "Retry-After" : {
+                "description" : "Seconds to wait before retrying.",
+                "schema" : {
+                  "type" : "string"
+                }
+              }
+            }
           }
         },
         "summary" : "Delete a check together with its results and tags",
@@ -1661,6 +1841,24 @@
               }
             },
             "description" : "The requested resource was not found."
+          },
+          "429" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description" : "Too many requests.",
+            "headers" : {
+              "Retry-After" : {
+                "description" : "Seconds to wait before retrying.",
+                "schema" : {
+                  "type" : "string"
+                }
+              }
+            }
           }
         },
         "summary" : "Read one check of a space with its newest result",
@@ -1763,6 +1961,24 @@
               }
             },
             "description" : "The check was changed by someone else."
+          },
+          "429" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description" : "Too many requests.",
+            "headers" : {
+              "Retry-After" : {
+                "description" : "Seconds to wait before retrying.",
+                "schema" : {
+                  "type" : "string"
+                }
+              }
+            }
           }
         },
         "summary" : "Replace a check, rejecting a stale version",
@@ -1849,6 +2065,24 @@
               }
             },
             "description" : "The requested resource was not found."
+          },
+          "429" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description" : "Too many requests.",
+            "headers" : {
+              "Retry-After" : {
+                "description" : "Seconds to wait before retrying.",
+                "schema" : {
+                  "type" : "string"
+                }
+              }
+            }
           }
         },
         "summary" : "Pause monitoring of a check",
@@ -1915,6 +2149,24 @@
               }
             },
             "description" : "The requested resource was not found."
+          },
+          "429" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description" : "Too many requests.",
+            "headers" : {
+              "Retry-After" : {
+                "description" : "Seconds to wait before retrying.",
+                "schema" : {
+                  "type" : "string"
+                }
+              }
+            }
           }
         },
         "summary" : "Resume monitoring of a check",
@@ -1996,6 +2248,24 @@
               }
             },
             "description" : "The requested resource was not found."
+          },
+          "429" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description" : "Too many requests.",
+            "headers" : {
+              "Retry-After" : {
+                "description" : "Seconds to wait before retrying.",
+                "schema" : {
+                  "type" : "string"
+                }
+              }
+            }
           }
         },
         "summary" : "Remove a member from a space",
@@ -2070,6 +2340,24 @@
               }
             },
             "description" : "The requested resource was not found."
+          },
+          "429" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description" : "Too many requests.",
+            "headers" : {
+              "Retry-After" : {
+                "description" : "Seconds to wait before retrying.",
+                "schema" : {
+                  "type" : "string"
+                }
+              }
+            }
           }
         },
         "tags" : [ "spaces" ]
@@ -2155,6 +2443,24 @@
               }
             },
             "description" : "The requested resource was not found."
+          },
+          "429" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description" : "Too many requests.",
+            "headers" : {
+              "Retry-After" : {
+                "description" : "Seconds to wait before retrying.",
+                "schema" : {
+                  "type" : "string"
+                }
+              }
+            }
           }
         },
         "summary" : "Add a member to a space",
@@ -2246,6 +2552,24 @@
               }
             },
             "description" : "The requested resource was not found."
+          },
+          "429" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description" : "Too many requests.",
+            "headers" : {
+              "Retry-After" : {
+                "description" : "Seconds to wait before retrying.",
+                "schema" : {
+                  "type" : "string"
+                }
+              }
+            }
           }
         },
         "summary" : "Change a member's role",
@@ -2317,6 +2641,24 @@
               }
             },
             "description" : "The requested resource was not found."
+          },
+          "429" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description" : "Too many requests.",
+            "headers" : {
+              "Retry-After" : {
+                "description" : "Seconds to wait before retrying.",
+                "schema" : {
+                  "type" : "string"
+                }
+              }
+            }
           }
         },
         "summary" : "Assign a plan to a space idempotently",
@@ -2368,6 +2710,24 @@
               }
             },
             "description" : "The requested resource was not found."
+          },
+          "429" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description" : "Too many requests.",
+            "headers" : {
+              "Retry-After" : {
+                "description" : "Seconds to wait before retrying.",
+                "schema" : {
+                  "type" : "string"
+                }
+              }
+            }
           }
         },
         "summary" : "Reset every space setting to the plan values",
@@ -2424,6 +2784,24 @@
               }
             },
             "description" : "The requested resource was not found."
+          },
+          "429" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description" : "Too many requests.",
+            "headers" : {
+              "Retry-After" : {
+                "description" : "Seconds to wait before retrying.",
+                "schema" : {
+                  "type" : "string"
+                }
+              }
+            }
           }
         },
         "summary" : "Read the effective settings of a space",
@@ -2493,6 +2871,24 @@
               }
             },
             "description" : "The requested resource was not found."
+          },
+          "429" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description" : "Too many requests.",
+            "headers" : {
+              "Retry-After" : {
+                "description" : "Seconds to wait before retrying.",
+                "schema" : {
+                  "type" : "string"
+                }
+              }
+            }
           }
         },
         "summary" : "Reset a space setting to the plan value",
@@ -2570,6 +2966,24 @@
               }
             },
             "description" : "The requested resource was not found."
+          },
+          "429" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description" : "Too many requests.",
+            "headers" : {
+              "Retry-After" : {
+                "description" : "Seconds to wait before retrying.",
+                "schema" : {
+                  "type" : "string"
+                }
+              }
+            }
           }
         },
         "summary" : "Set a space setting within the plan",
@@ -2618,6 +3032,24 @@
               }
             },
             "description" : "The requested resource was not found."
+          },
+          "429" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description" : "Too many requests.",
+            "headers" : {
+              "Retry-After" : {
+                "description" : "Seconds to wait before retrying.",
+                "schema" : {
+                  "type" : "string"
+                }
+              }
+            }
           }
         },
         "security" : [ {
@@ -2697,6 +3129,24 @@
               }
             },
             "description" : "The requested resource was not found."
+          },
+          "429" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description" : "Too many requests.",
+            "headers" : {
+              "Retry-After" : {
+                "description" : "Seconds to wait before retrying.",
+                "schema" : {
+                  "type" : "string"
+                }
+              }
+            }
           }
         },
         "security" : [ {
@@ -2759,6 +3209,24 @@
               }
             },
             "description" : "The requested resource was not found."
+          },
+          "429" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description" : "Too many requests.",
+            "headers" : {
+              "Retry-After" : {
+                "description" : "Seconds to wait before retrying.",
+                "schema" : {
+                  "type" : "string"
+                }
+              }
+            }
           }
         },
         "security" : [ {
