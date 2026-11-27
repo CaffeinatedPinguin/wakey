@@ -29,7 +29,7 @@ final class SpaceMembersResources {
     }
 
     ResponseEntity<SpaceMemberResponse> add(SpaceWriter writer, String slug, AddSpaceMemberRequest request) {
-        AddMemberResult result = members.addMember(writer.user(), slug, request.toMember());
+        AddMemberResult result = members.addMember(writer.user(), slug, request.toMember(), writer.viaToken());
         SpaceMemberResponse response = SpaceMemberResponse.from(result.member());
         if (result.created()) {
             return ResponseEntity.status(HttpStatus.CREATED).body(response);
@@ -39,10 +39,10 @@ final class SpaceMembersResources {
 
     void changeRole(SpaceWriter writer, String slug, SpaceMemberQuery member, ChangeSpaceMemberRoleRequest request) {
         SpaceMemberId memberId = member.toId();
-        members.changeRole(writer.user(), slug, request.toMember(memberId));
+        members.changeRole(writer.user(), slug, request.toMember(memberId), writer.viaToken());
     }
 
     void remove(SpaceWriter writer, String slug, SpaceMemberQuery member) {
-        members.removeMember(writer.user(), slug, member.toId());
+        members.removeMember(writer.user(), slug, member.toId(), writer.viaToken());
     }
 }

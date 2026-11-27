@@ -1,8 +1,8 @@
 package dev.wakey.settings.web;
 
+import dev.wakey.audit.AuditActor;
 import dev.wakey.settings.EffectiveSetting;
 import dev.wakey.settings.PlanAssignment;
-import dev.wakey.settings.SettingActor;
 import dev.wakey.settings.SettingCatalog;
 import dev.wakey.settings.SettingDefinition;
 import dev.wakey.settings.SettingValue;
@@ -41,18 +41,18 @@ class SettingsResources {
     }
 
     void set(CurrentUser actor, SpaceView view, SettingValue value, boolean token) {
-        SettingActor settingActor = new SettingActor(actor.subject(), token);
-        settings.set(view.id(), value, settingActor);
+        AuditActor auditActor = AuditActor.of(actor.subject(), token);
+        settings.set(view.id(), value, auditActor);
     }
 
     void reset(CurrentUser actor, SpaceView view, String key, boolean token) {
-        SettingActor settingActor = new SettingActor(actor.subject(), token);
-        settings.reset(view.id(), key, settingActor);
+        AuditActor auditActor = AuditActor.of(actor.subject(), token);
+        settings.reset(view.id(), key, auditActor);
     }
 
     void resetAll(CurrentUser actor, SpaceView view, boolean token) {
-        SettingActor settingActor = new SettingActor(actor.subject(), token);
-        settings.resetAll(view.id(), settingActor);
+        AuditActor auditActor = AuditActor.of(actor.subject(), token);
+        settings.resetAll(view.id(), auditActor);
     }
 
     void assign(CurrentUser actor, String slug, String requestedPlan, boolean token) {

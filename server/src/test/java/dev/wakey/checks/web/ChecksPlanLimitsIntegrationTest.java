@@ -136,7 +136,7 @@ class ChecksPlanLimitsIntegrationTest extends SecurityIntegrationTest {
         SpaceService spaces = bean(SpaceService.class);
         spaces.put(FIXTURE_ADMIN, slug, "Plan checks", null);
         spaces.assignPlan(FIXTURE_ADMIN, slug, "limited");
-        bean(SpaceMembers.class).addMember(FIXTURE_ADMIN, slug, new SpaceMember(ISSUER, member, role));
+        bean(SpaceMembers.class).addMember(FIXTURE_ADMIN, slug, new SpaceMember(ISSUER, member, role), false);
     }
 
     private MvcResult postCheck(String subject, String slug, String body) throws Exception {

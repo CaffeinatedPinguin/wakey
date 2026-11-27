@@ -10,6 +10,7 @@ import org.jspecify.annotations.Nullable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
+import tools.jackson.databind.json.JsonMapper;
 
 /** Append-only audit log; it is also the change history of a single object. */
 @Slf4j
@@ -17,9 +18,34 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 public class AuditLog {
 
+    private static final JsonMapper JSON = JsonMapper.builder().build();
+
     private final AuditStore store;
 
     private final Clock clock;
+
+    /**
+     * Appends one successful API write as part of the caller's transaction. It is the single write
+     * path of the audit log: it serializes the details once and builds the entry.
+     *
+     * @param change the write to append
+     */
+    @Transactional(propagation = Propagation.MANDATORY)
+    public void record(AuditChange change) {
+        String details = JSON.writeValueAsString(change.details());
+        AuditEntry entry = new AuditEntry(
+                change.action(),
+                change.objectType(),
+                change.objectId(),
+                AuditOutcome.SUCCESS,
+                AuditSource.API,
+                change.actor(),
+                change.spaceId(),
+                details);
+        UUID id = UUID.randomUUID();
+        store.append(entry, id, clock.instant());
+        log.debug("Recorded audit event {} for {} {}", entry.action(), entry.objectType(), entry.objectId());
+    }
 
     /**
      * Appends one entry as part of the caller's transaction, so the entry exists only when that

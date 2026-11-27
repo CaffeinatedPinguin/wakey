@@ -143,8 +143,10 @@ class SettingsControllerIntegrationTest extends SecurityIntegrationTest {
 
         // then
         assertThat(statusOf(result)).isEqualTo(204);
-        assertThat(history).hasSize(1);
-        AuditRecord change = history.getFirst();
+        AuditRecord change = history.stream()
+                .filter(record -> record.action().equals("space.plan"))
+                .findFirst()
+                .orElseThrow();
         assertThat(change.action()).isEqualTo("space.plan");
         assertThat(change.details()).isEqualTo("{\"old\":\"small\",\"new\":\"large\"}");
     }
@@ -591,7 +593,7 @@ class SettingsControllerIntegrationTest extends SecurityIntegrationTest {
     }
 
     private void addMember(String slug, String subject, SpaceRole role) {
-        bean(SpaceMembers.class).addMember(fixtureAdmin(), slug, new SpaceMember(ISSUER, subject, role));
+        bean(SpaceMembers.class).addMember(fixtureAdmin(), slug, new SpaceMember(ISSUER, subject, role), false);
     }
 
     private static RequestPostProcessor login(String subject, boolean admin) {

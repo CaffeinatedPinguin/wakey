@@ -1,6 +1,6 @@
 package dev.wakey.checks.web;
 
-import dev.wakey.checks.CheckActor;
+import dev.wakey.audit.AuditActor;
 import dev.wakey.checks.CheckDraft;
 import dev.wakey.checks.CheckFieldLimits;
 import dev.wakey.checks.CheckLimits;
@@ -78,8 +78,8 @@ public record CheckRequest(
     }
 
     /** The one place that turns the resolved writer of a write into the actor of the audit entry. */
-    static CheckActor actorOf(SpaceWriter writer) {
+    static AuditActor actorOf(SpaceWriter writer) {
         var user = writer.user();
-        return CheckActor.of(user.subject(), writer.viaToken());
+        return AuditActor.of(user.subject(), writer.viaToken());
     }
 }

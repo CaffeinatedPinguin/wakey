@@ -1,11 +1,9 @@
 package dev.wakey.checks.internal;
 
 import dev.wakey.checks.CheckResult;
-import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
-import org.springframework.data.domain.Limit;
 import org.springframework.data.jdbc.core.JdbcAggregateOperations;
 import org.springframework.stereotype.Component;
 
@@ -37,14 +35,6 @@ public class CheckResultStore {
     public Optional<CheckResult> latest(UUID checkId) {
         Optional<CheckResultEntity> found = results.findFirstByCheckIdOrderByCheckedAtDescIdDesc(checkId);
         return found.map(CheckResultEntity::toResult);
-    }
-
-    public List<CheckResult> recent(UUID checkId, int limit) {
-        if (limit <= 0) {
-            return List.of();
-        }
-        List<CheckResultEntity> rows = results.findByCheckIdOrderByCheckedAtDescIdDesc(checkId, Limit.of(limit));
-        return rows.stream().map(CheckResultEntity::toResult).toList();
     }
 
     private CheckResultEntity newest(UUID checkId) {

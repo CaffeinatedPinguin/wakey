@@ -30,12 +30,12 @@ class SpaceRoleTransactionTest extends PostgresIntegrationTest {
         String slug = uniqueSlug("rollback");
         String subject = uniqueSubject("role-change");
         service.put(ADMIN, slug, "Rollback space", null);
-        members.addMember(ADMIN, slug, new SpaceMember(ISSUER, subject, SpaceRole.VIEWER));
+        members.addMember(ADMIN, slug, new SpaceMember(ISSUER, subject, SpaceRole.VIEWER), false);
         CurrentUser member = new CurrentUser(ISSUER, subject, false);
 
         // when
         Throwable failure = catchThrowable(
-                () -> members.changeRole(ADMIN, slug, new SpaceMember(ISSUER, subject, SpaceRole.EDITOR)));
+                () -> members.changeRole(ADMIN, slug, new SpaceMember(ISSUER, subject, SpaceRole.EDITOR), false));
         SpaceView view = service.view(member, slug);
 
         // then

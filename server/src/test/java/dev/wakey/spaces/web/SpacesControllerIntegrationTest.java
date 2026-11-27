@@ -715,7 +715,7 @@ class SpacesControllerIntegrationTest extends SecurityIntegrationTest {
         SpaceService service = bean(SpaceService.class);
         CurrentUser admin = fixtureAdmin();
         PutResult created = service.put(admin, slug, name, null);
-        bean(SpaceMembers.class).addMember(admin, slug, new SpaceMember(ISSUER, member, role));
+        bean(SpaceMembers.class).addMember(admin, slug, new SpaceMember(ISSUER, member, role), false);
         return created.space();
     }
 

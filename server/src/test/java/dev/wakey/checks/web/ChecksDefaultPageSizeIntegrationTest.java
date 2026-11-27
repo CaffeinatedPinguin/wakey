@@ -4,7 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.oidcLogin;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 
-import dev.wakey.checks.CheckActor;
+import dev.wakey.audit.AuditActor;
 import dev.wakey.checks.CheckDraft;
 import dev.wakey.checks.CheckService;
 import dev.wakey.checks.CheckType;
@@ -37,7 +37,7 @@ class ChecksDefaultPageSizeIntegrationTest extends SecurityIntegrationTest {
 
     private static final CurrentUser FIXTURE_ADMIN = new CurrentUser(ISSUER, "fixture-admin", true);
 
-    private static final CheckActor ACTOR = new CheckActor("checks-default-page-test");
+    private static final AuditActor ACTOR = AuditActor.of("checks-default-page-test", false);
 
     @Test
     void theCheckListUsesTheConfiguredDefaultPageSize() throws Exception {
@@ -67,7 +67,8 @@ class ChecksDefaultPageSizeIntegrationTest extends SecurityIntegrationTest {
     private Space seedSpace(String slug, String member) {
         SpaceService spaces = bean(SpaceService.class);
         PutResult put = spaces.put(FIXTURE_ADMIN, slug, "Checks", null);
-        bean(SpaceMembers.class).addMember(FIXTURE_ADMIN, slug, new SpaceMember(ISSUER, member, SpaceRole.EDITOR));
+        bean(SpaceMembers.class)
+                .addMember(FIXTURE_ADMIN, slug, new SpaceMember(ISSUER, member, SpaceRole.EDITOR), false);
         return put.space();
     }
 

@@ -1,5 +1,6 @@
 package dev.wakey.settings;
 
+import dev.wakey.audit.AuditActor;
 import dev.wakey.settings.internal.PlanCatalog;
 import dev.wakey.settings.internal.SettingStore;
 import dev.wakey.spaces.SpaceService;
@@ -67,7 +68,7 @@ public class SpaceSettings {
 
     /** Stores a space override; a value outside the plan bound or a bad format is rejected. */
     @Transactional
-    public void set(UUID spaceId, SettingValue value, SettingActor actor) {
+    public void set(UUID spaceId, SettingValue value, AuditActor actor) {
         SpacePlan spacePlan = planOf(spaceId);
         PlanProperties plan = spacePlan.properties();
         SettingDefinition definition = catalog.require(value.key());
@@ -86,13 +87,13 @@ public class SpaceSettings {
                 value.key(),
                 spaceId,
                 canonical,
-                actorKind(actor),
+                actor.kind(),
                 actor.subject());
     }
 
     /** Removes a space override, falling back to the plan bound or the instance default. */
     @Transactional
-    public void reset(UUID spaceId, String key, SettingActor actor) {
+    public void reset(UUID spaceId, String key, AuditActor actor) {
         PlanProperties plan = planOf(spaceId).properties();
         SettingDefinition definition = catalog.require(key);
         spaceService.lock(spaceId);
@@ -102,7 +103,7 @@ public class SpaceSettings {
         definition.crossCheck(draft);
         SettingChange change = new SettingChange(RESET_ACTION, spaceId, key, oldValue, null, actor);
         audit.settingChanged(change);
-        log.info("Reset setting {} in space {} by {} {}", key, spaceId, actorKind(actor), actor.subject());
+        log.info("Reset setting {} in space {} by {} {}", key, spaceId, actor.kind(), actor.subject());
     }
 
     /**
@@ -110,7 +111,7 @@ public class SpaceSettings {
      * instance defaults. A space without overrides is a no-op.
      */
     @Transactional
-    public void resetAll(UUID spaceId, SettingActor actor) {
+    public void resetAll(UUID spaceId, AuditActor actor) {
         spaceService.lock(spaceId);
         Map<String, String> overrides = store.findAll(spaceId);
         for (Map.Entry<String, String> override : overrides.entrySet()) {
@@ -120,15 +121,7 @@ public class SpaceSettings {
             audit.settingChanged(change);
         }
         log.info(
-                "Reset all {} settings in space {} by {} {}",
-                overrides.size(),
-                spaceId,
-                actorKind(actor),
-                actor.subject());
-    }
-
-    private static String actorKind(SettingActor actor) {
-        return actor.token() ? "token" : "user";
+                "Reset all {} settings in space {} by {} {}", overrides.size(), spaceId, actor.kind(), actor.subject());
     }
 
     private EffectiveSetting resolve(SettingDefinition definition, PlanProperties plan, @Nullable String override) {

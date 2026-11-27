@@ -14,7 +14,6 @@ import dev.wakey.audit.AuditLog;
 import dev.wakey.audit.AuditPage;
 import dev.wakey.audit.AuditRecord;
 import dev.wakey.checks.Check;
-import dev.wakey.checks.CheckActor;
 import dev.wakey.checks.CheckDraft;
 import dev.wakey.checks.CheckError;
 import dev.wakey.checks.CheckResult;
@@ -69,7 +68,7 @@ class ChecksControllerIntegrationTest extends SecurityIntegrationTest {
 
     private static final CurrentUser FIXTURE_ADMIN = new CurrentUser(ISSUER, "fixture-admin", true);
 
-    private static final CheckActor ACTOR = new CheckActor("checks-http-test");
+    private static final AuditActor ACTOR = AuditActor.of("checks-http-test", false);
 
     @Test
     void editorCreatesACheckAndReadsItBack() throws Exception {
@@ -804,7 +803,7 @@ class ChecksControllerIntegrationTest extends SecurityIntegrationTest {
     private Space seedSpace(String slug, String member, SpaceRole role) {
         SpaceService spaces = bean(SpaceService.class);
         PutResult put = spaces.put(FIXTURE_ADMIN, slug, "Checks", null);
-        bean(SpaceMembers.class).addMember(FIXTURE_ADMIN, slug, new SpaceMember(ISSUER, member, role));
+        bean(SpaceMembers.class).addMember(FIXTURE_ADMIN, slug, new SpaceMember(ISSUER, member, role), false);
         return put.space();
     }
 

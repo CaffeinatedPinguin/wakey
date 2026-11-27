@@ -33,7 +33,8 @@ class PlanAssignmentTest extends PostgresIntegrationTest {
         PlanAssignment assignments = bean(PlanAssignment.class);
         String slug = uniqueSlug("plan-once");
         spaces.put(ADMIN, slug, "Plan once", null);
-        bean(SpaceMembers.class).addMember(ADMIN, slug, new SpaceMember(ISSUER, "plan-editor", SpaceRole.EDITOR));
+        bean(SpaceMembers.class)
+                .addMember(ADMIN, slug, new SpaceMember(ISSUER, "plan-editor", SpaceRole.EDITOR), false);
         CurrentUser editor = new CurrentUser(ISSUER, "plan-editor", false);
 
         // when

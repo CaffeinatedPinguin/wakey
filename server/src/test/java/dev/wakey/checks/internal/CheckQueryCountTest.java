@@ -2,8 +2,8 @@ package dev.wakey.checks.internal;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import dev.wakey.audit.AuditActor;
 import dev.wakey.checks.Check;
-import dev.wakey.checks.CheckActor;
 import dev.wakey.checks.CheckAuditLog;
 import dev.wakey.checks.CheckBulkAction;
 import dev.wakey.checks.CheckBulkCommand;
@@ -37,7 +37,7 @@ class CheckQueryCountTest extends PostgresIntegrationTest {
 
     private static final CurrentUser ADMIN = new CurrentUser(ISSUER, "queries-admin", true);
 
-    private static final CheckActor ACTOR = new CheckActor("queries-test");
+    private static final AuditActor ACTOR = AuditActor.of("queries-test", false);
 
     @Test
     void theListLoadsTheTagsOfAPageWithOneQuery() {

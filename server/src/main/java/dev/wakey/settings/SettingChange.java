@@ -1,5 +1,6 @@
 package dev.wakey.settings;
 
+import dev.wakey.audit.AuditActor;
 import java.util.UUID;
 import org.jspecify.annotations.Nullable;
 
@@ -10,4 +11,4 @@ record SettingChange(
         String key,
         @Nullable String oldValue,
         @Nullable String newValue,
-        SettingActor actor) {}
+        AuditActor actor) {}

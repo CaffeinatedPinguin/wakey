@@ -234,8 +234,8 @@ class TokensHttpIntegrationTest extends SecurityIntegrationTest {
 
         // when
         MvcResult beforeRemoval = performWithToken(get("/api/v1/me"), old);
-        members().removeMember(ADMIN, space.slug(), new SpaceMemberId(ISSUER, subject));
-        members().addMember(ADMIN, space.slug(), new SpaceMember(ISSUER, subject, SpaceRole.EDITOR));
+        members().removeMember(ADMIN, space.slug(), new SpaceMemberId(ISSUER, subject), false);
+        members().addMember(ADMIN, space.slug(), new SpaceMember(ISSUER, subject, SpaceRole.EDITOR), false);
         MvcResult afterReInvite = performWithToken(get("/api/v1/me"), old);
         CreatedToken fresh = createToken(subject, space.slug(), TokenScope.WRITE);
         MvcResult freshUse = performWithToken(get("/api/v1/me"), fresh);
@@ -371,7 +371,7 @@ class TokensHttpIntegrationTest extends SecurityIntegrationTest {
         String tokenIssuer = "https://token-owner.example.com";
         PutResult created = spaces().put(ADMIN, uniqueSlug("owner-issuer"), "Owner issuer", null);
         Space space = created.space();
-        members().addMember(ADMIN, space.slug(), new SpaceMember(tokenIssuer, subject, SpaceRole.EDITOR));
+        members().addMember(ADMIN, space.slug(), new SpaceMember(tokenIssuer, subject, SpaceRole.EDITOR), false);
         TokenOwner owner = new TokenOwner(tokenIssuer, subject);
         CreatedToken token =
                 bean(ApiTokens.class).create(owner, space.slug(), "owner", new TokenOptions(TokenScope.READ, null));
@@ -701,7 +701,7 @@ class TokensHttpIntegrationTest extends SecurityIntegrationTest {
 
         // when
         MvcResult before = performWithToken(post(WRITE_CALL), token);
-        members().changeRole(ADMIN, space.slug(), new SpaceMember(ISSUER, subject, SpaceRole.VIEWER));
+        members().changeRole(ADMIN, space.slug(), new SpaceMember(ISSUER, subject, SpaceRole.VIEWER), false);
         MvcResult after = performWithToken(post(WRITE_CALL), token);
 
         // then
@@ -763,7 +763,7 @@ class TokensHttpIntegrationTest extends SecurityIntegrationTest {
         String slug = uniqueSlug(prefix);
         PutResult created = service.put(ADMIN, slug, "Space " + prefix, null);
         Space space = created.space();
-        members().addMember(ADMIN, space.slug(), new SpaceMember(ISSUER, subject, role));
+        members().addMember(ADMIN, space.slug(), new SpaceMember(ISSUER, subject, role), false);
         return space;
     }
 

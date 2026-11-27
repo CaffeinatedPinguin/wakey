@@ -7,6 +7,7 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.spy;
 
+import dev.wakey.audit.AuditActor;
 import dev.wakey.audit.AuditLog;
 import dev.wakey.audit.AuditPage;
 import dev.wakey.audit.AuditRecord;
@@ -18,7 +19,6 @@ import dev.wakey.settings.GeneralSettingDefinitions;
 import dev.wakey.settings.InstanceDefaultsProperties;
 import dev.wakey.settings.Language;
 import dev.wakey.settings.PlanProperties;
-import dev.wakey.settings.SettingActor;
 import dev.wakey.settings.SettingAudit;
 import dev.wakey.settings.SettingCatalog;
 import dev.wakey.settings.SettingError;
@@ -50,7 +50,7 @@ import org.springframework.transaction.support.TransactionTemplate;
 
 class SpaceSettingsIntegrationTest extends PostgresIntegrationTest {
 
-    private static final SettingActor ACTOR = new SettingActor("settings-test", false);
+    private static final AuditActor ACTOR = AuditActor.of("settings-test", false);
 
     private static final CurrentUser ADMIN = new CurrentUser("https://issuer.example.com", "settings-admin", true);
 

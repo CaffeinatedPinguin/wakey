@@ -36,7 +36,7 @@ class AuditSubjectIntegrationTest extends SecurityIntegrationTest {
         SpaceService spaces = bean(SpaceService.class);
         spaces.put(ADMIN, slug, "Long subject", null);
         spaces.assignPlan(ADMIN, slug, "small");
-        bean(SpaceMembers.class).addMember(ADMIN, slug, new SpaceMember(ISSUER, subject, SpaceRole.EDITOR));
+        bean(SpaceMembers.class).addMember(ADMIN, slug, new SpaceMember(ISSUER, subject, SpaceRole.EDITOR), false);
         UUID spaceId = spaces.view(ADMIN, slug).id();
         MockHttpServletRequestBuilder write = put(SPACES + "/" + slug + "/settings/check.interval")
                 .contentType(MediaType.APPLICATION_JSON)

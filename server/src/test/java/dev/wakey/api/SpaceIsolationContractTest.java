@@ -204,7 +204,7 @@ class SpaceIsolationContractTest extends SecurityIntegrationTest {
 
     private void addMember(String slug, String subject, SpaceRole role) {
         SpaceMembers members = bean(SpaceMembers.class);
-        members.addMember(ADMIN, slug, new SpaceMember(ISSUER, subject, role));
+        members.addMember(ADMIN, slug, new SpaceMember(ISSUER, subject, role), false);
     }
 
     private CreatedToken createToken(String subject, String slug, TokenScope scope) {

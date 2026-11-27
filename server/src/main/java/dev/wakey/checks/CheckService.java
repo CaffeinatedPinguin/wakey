@@ -1,5 +1,6 @@
 package dev.wakey.checks;
 
+import dev.wakey.audit.AuditActor;
 import dev.wakey.checks.internal.CheckStore;
 import dev.wakey.checks.internal.CheckValidator;
 import dev.wakey.spaces.SpaceService;
@@ -33,13 +34,13 @@ public class CheckService {
 
     /** Creates a check in the given space after validation against the plan bounds of its space. */
     @Transactional
-    public Check create(UUID spaceId, CheckDraft check, CheckActor actor) {
+    public Check create(UUID spaceId, CheckDraft check, AuditActor actor) {
         CheckDraft validated = CheckValidator.validate(check);
         spaces.lock(spaceId);
         planLimits.requireForNew(spaceId, validated);
         Check created = store.insert(spaceId, validated);
         audit.created(actor, spaceId, created.id());
-        log.info("Created check {} in space {} by {} {}", created.id(), spaceId, actorKind(actor), actor.subject());
+        log.info("Created check {} in space {} by {} {}", created.id(), spaceId, actor.kind(), actor.subject());
         return created;
     }
 
@@ -48,13 +49,13 @@ public class CheckService {
      * the expected one is a conflict.
      */
     @Transactional
-    public Check update(UUID spaceId, CheckUpdate update, CheckActor actor) {
+    public Check update(UUID spaceId, CheckUpdate update, AuditActor actor) {
         Check existing = store.get(spaceId, update.id());
         CheckDraft validated = CheckValidator.validate(update.changes());
         planLimits.requireForUpdate(spaceId, validated);
         Check updated = store.update(existing, validated, update.expectedVersion());
         audit.updated(actor, spaceId, existing, validated);
-        log.info("Updated check {} in space {} by {} {}", existing.id(), spaceId, actorKind(actor), actor.subject());
+        log.info("Updated check {} in space {} by {} {}", existing.id(), spaceId, actor.kind(), actor.subject());
         return updated;
     }
 
@@ -85,7 +86,7 @@ public class CheckService {
 
     /** Pauses monitoring and stores the reason. */
     @Transactional
-    public void pause(UUID spaceId, UUID id, PausedReason reason, CheckActor actor) {
+    public void pause(UUID spaceId, UUID id, PausedReason reason, AuditActor actor) {
         boolean changed = store.pause(spaceId, id, reason);
         if (changed) {
             audit.paused(actor, spaceId, id, reason);
@@ -94,27 +95,27 @@ public class CheckService {
                     id,
                     spaceId,
                     reason,
-                    actorKind(actor),
+                    actor.kind(),
                     actor.subject());
         }
     }
 
     /** Resumes monitoring and clears the pause reason. */
     @Transactional
-    public void resume(UUID spaceId, UUID id, CheckActor actor) {
+    public void resume(UUID spaceId, UUID id, AuditActor actor) {
         boolean changed = store.resume(spaceId, id);
         if (changed) {
             audit.resumed(actor, spaceId, id);
-            log.info("Resumed check {} in space {} by {} {}", id, spaceId, actorKind(actor), actor.subject());
+            log.info("Resumed check {} in space {} by {} {}", id, spaceId, actor.kind(), actor.subject());
         }
     }
 
     /** Deletes the check together with its results and tags. */
     @Transactional
-    public void delete(UUID spaceId, UUID id, CheckActor actor) {
+    public void delete(UUID spaceId, UUID id, AuditActor actor) {
         store.delete(spaceId, id);
         audit.deleted(actor, spaceId, id);
-        log.info("Deleted check {} in space {} by {} {}", id, spaceId, actorKind(actor), actor.subject());
+        log.info("Deleted check {} in space {} by {} {}", id, spaceId, actor.kind(), actor.subject());
     }
 
     /**
@@ -123,7 +124,7 @@ public class CheckService {
      * not counted as affected and the whole action writes one audit entry.
      */
     @Transactional
-    public int bulk(UUID spaceId, CheckBulkCommand command, CheckActor actor) {
+    public int bulk(UUID spaceId, CheckBulkCommand command, AuditActor actor) {
         spaces.lock(spaceId);
         var targets = store.targets(spaceId, command.ids(), command.filter());
         int matched = targets.size();
@@ -141,7 +142,7 @@ public class CheckService {
                 command.action(),
                 affected,
                 spaceId,
-                actorKind(actor),
+                actor.kind(),
                 actor.subject());
         return affected;
     }
@@ -159,9 +160,5 @@ public class CheckService {
                     matched);
             throw exception;
         }
-    }
-
-    private static String actorKind(CheckActor actor) {
-        return actor.token() ? "token" : "user";
     }
 }
