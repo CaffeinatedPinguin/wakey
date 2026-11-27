@@ -2,7 +2,6 @@ package dev.wakey.tokens.web;
 
 import dev.wakey.spaces.web.SessionUser;
 import dev.wakey.spaces.web.SpaceReader;
-import dev.wakey.spaces.web.SpaceWriter;
 import dev.wakey.tokens.TokenSummary;
 import dev.wakey.web.CursorPage;
 import jakarta.validation.Valid;
@@ -27,7 +26,7 @@ final class TokensController {
     @CreateTokenOperation
     ResponseEntity<CreateTokenResponse> createToken(
             @PathVariable String slug,
-            SpaceWriter writer,
+            SpaceReader reader,
             SessionUser session,
             @Valid @RequestBody CreateTokenRequest request) {
         CreateTokenResponse response = resources.create(session, slug, request);
@@ -41,7 +40,7 @@ final class TokensController {
 
     @RevokeTokenOperation
     ResponseEntity<Void> revokeToken(
-            @PathVariable String slug, @PathVariable UUID id, SpaceWriter writer, SessionUser session) {
+            @PathVariable String slug, @PathVariable UUID id, SpaceReader reader, SessionUser session) {
         resources.revoke(session, slug, id);
         return ResponseEntity.noContent().build();
     }

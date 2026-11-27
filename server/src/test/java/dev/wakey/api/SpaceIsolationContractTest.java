@@ -52,6 +52,10 @@ class SpaceIsolationContractTest extends SecurityIntegrationTest {
 
     private static final String KEY = "{key}";
 
+    private static final String TOKEN_COLLECTION = "/api/v1/spaces/{slug}/tokens";
+
+    private static final String TOKEN_ITEM = TOKEN_COLLECTION + "/{id}";
+
     private static final String SAMPLE_KEY = "timezone";
 
     private static final String EMPTY_BODY = "{}";
@@ -125,7 +129,11 @@ class SpaceIsolationContractTest extends SecurityIntegrationTest {
         seedSpace(targetSlug, uniqueSubject("target-owner"), SpaceRole.EDITOR);
         addMember(targetSlug, viewer, SpaceRole.VIEWER);
         RequestPostProcessor login = login(viewer);
-        List<SpaceOperation> operations = writeOperations();
+        // Owning tokens is membership-based, not a space write: a viewer may create a READ token
+        // and revoke its own tokens, so those two operations are covered by the token tests.
+        List<SpaceOperation> operations = writeOperations().stream()
+                .filter(operation -> !operation.managesOwnTokens())
+                .toList();
 
         // when
         for (SpaceOperation operation : operations) {
@@ -226,6 +234,12 @@ class SpaceIsolationContractTest extends SecurityIntegrationTest {
 
         boolean write() {
             return WRITE_METHODS.contains(method);
+        }
+
+        boolean managesOwnTokens() {
+            boolean create = method.equals("post") && path.equals(TOKEN_COLLECTION);
+            boolean revoke = method.equals("delete") && path.equals(TOKEN_ITEM);
+            return create || revoke;
         }
     }
 }

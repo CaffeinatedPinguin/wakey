@@ -413,6 +413,67 @@ class TokensHttpIntegrationTest extends SecurityIntegrationTest {
     }
 
     @Test
+    void aViewerCreatesAReadToken() throws Exception {
+        // given
+        String viewer = uniqueSubject("viewer-read");
+        Space space = seedSpace("viewer-read", viewer, SpaceRole.VIEWER);
+        MockHttpServletRequestBuilder create = post(SPACES + "/" + space.slug() + TOKENS)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(tokenBody("viewer-read", TokenScope.READ))
+                .with(login(viewer))
+                .with(csrf());
+
+        // when
+        MvcResult result = mockMvc().perform(create).andReturn();
+
+        // then
+        JsonNode body = jsonOf(result);
+        JsonNode token = body.path("token");
+        String scope = token.path("scope").asString();
+        assertThat(statusOf(result)).isEqualTo(201);
+        assertThat(scope).isEqualTo(TokenScope.READ.name());
+    }
+
+    @Test
+    void aViewerCannotCreateAWriteToken() throws Exception {
+        // given
+        String viewer = uniqueSubject("viewer-write");
+        Space space = seedSpace("viewer-write", viewer, SpaceRole.VIEWER);
+        MockHttpServletRequestBuilder create = post(SPACES + "/" + space.slug() + TOKENS)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(tokenBody("viewer-write", TokenScope.WRITE))
+                .with(login(viewer))
+                .with(csrf());
+
+        // when
+        MvcResult result = mockMvc().perform(create).andReturn();
+
+        // then
+        assertThat(statusOf(result)).isEqualTo(403);
+        assertThat(codeOf(result)).isEqualTo(CommonError.FORBIDDEN.getCode());
+    }
+
+    @Test
+    void aViewerRevokesItsOwnToken() throws Exception {
+        // given
+        String viewer = uniqueSubject("viewer-revoke");
+        Space space = seedSpace("viewer-revoke", viewer, SpaceRole.VIEWER);
+        CreatedToken token = createToken(viewer, space.slug(), TokenScope.READ);
+        String itemPath = tokenItemPath(space.slug(), token);
+        MockHttpServletRequestBuilder revoke =
+                delete(itemPath).with(login(viewer)).with(csrf());
+
+        // when
+        MvcResult revokeResult = mockMvc().perform(revoke).andReturn();
+        MvcResult useResult = performWithToken(get("/api/v1/me"), token);
+
+        // then
+        assertThat(statusOf(revokeResult)).isEqualTo(204);
+        assertThat(statusOf(useResult)).isEqualTo(401);
+        assertThat(codeOf(useResult)).isEqualTo(TokenError.INVALID_TOKEN.getCode());
+    }
+
+    @Test
     void aTokenWithAWrongPrefixIsRejected() throws Exception {
         // given
         String subject = uniqueSubject("wrong-prefix");
