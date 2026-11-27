@@ -7,6 +7,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.jdbc.core.JdbcAggregateTemplate;
 import org.springframework.data.relational.core.query.Criteria;
@@ -14,6 +15,7 @@ import org.springframework.data.relational.core.query.Query;
 import org.springframework.stereotype.Component;
 
 /** The persistence adapter of the token aggregate: Spring Data JDBC writes and reads the rows. */
+@Slf4j
 @Component
 @RequiredArgsConstructor
 public class TokenStore {
@@ -53,11 +55,14 @@ public class TokenStore {
 
     public void revoke(UUID spaceId, TokenOwner owner, UUID tokenId, Instant now) {
         Optional<TokenEntity> found = tokenRows.findById(tokenId);
-        found.filter(token -> token.spaceId().equals(spaceId))
+        Optional<TokenEntity> revocable = found.filter(token -> token.spaceId().equals(spaceId))
                 .filter(token -> token.ownerIssuer().equals(owner.issuer()))
                 .filter(token -> token.ownerSubject().equals(owner.subject()))
-                .filter(token -> token.revokedAt() == null)
-                .ifPresent(token -> revokeNow(token, now));
+                .filter(token -> token.revokedAt() == null);
+        revocable.ifPresent(token -> revokeNow(token, now));
+        if (revocable.isPresent()) {
+            log.info("Revoked token {} of user {} in space {}", tokenId, owner.subject(), spaceId);
+        }
     }
 
     /**
@@ -74,6 +79,7 @@ public class TokenStore {
         for (TokenEntity token : active) {
             revokeNow(token, now);
         }
+        log.info("Revoked {} tokens of user {} in space {}", active.size(), ownerSubject, spaceId);
     }
 
     private static Criteria ownerCriteria(UUID spaceId, TokenOwner owner) {

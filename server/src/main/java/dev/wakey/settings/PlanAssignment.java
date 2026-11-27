@@ -5,6 +5,7 @@ import dev.wakey.spaces.SpaceService;
 import dev.wakey.spaces.SpaceView;
 import dev.wakey.web.CurrentUser;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -12,6 +13,7 @@ import org.springframework.transaction.annotation.Transactional;
  * Assigns a plan to a space. The admin rule belongs to the space writer; this use case resolves the
  * requested plan and records the change.
  */
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class PlanAssignment {
@@ -37,6 +39,13 @@ public class PlanAssignment {
             SettingActor settingActor = new SettingActor(actor.subject(), token);
             PlanChange change = new PlanChange(view.id(), slug, oldPlan, resolvedPlan, settingActor);
             audit.planChanged(change);
+            log.info(
+                    "Assigned plan {} to space {} (was {}) by {} {}",
+                    resolvedPlan,
+                    slug,
+                    oldPlan,
+                    token ? "token" : "user",
+                    actor.subject());
         }
     }
 }

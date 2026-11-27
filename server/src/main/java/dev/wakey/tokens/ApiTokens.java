@@ -15,6 +15,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -24,6 +25,7 @@ import org.springframework.transaction.annotation.Transactional;
  * {@link dev.wakey.web.ApiException}; a caller that cannot see the space gets the spaces module's
  * not-found error.
  */
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class ApiTokens {
@@ -69,6 +71,13 @@ public class ApiTokens {
                 null);
         store.insert(token);
         TokenSummary summary = new TokenSummary(token.id(), checkedName, scope, now, options.expiresAt(), null, null);
+        log.info(
+                "Created {} token {} for subject {} in space {} expiring at {}",
+                scope,
+                token.id(),
+                owner.subject(),
+                space.id(),
+                options.expiresAt());
         return new CreatedToken(secret, summary);
     }
 
@@ -78,18 +87,25 @@ public class ApiTokens {
      * call records the use.
      */
     public Optional<TokenIdentity> authenticate(String presentedSecret) {
-        if (!presentedSecret.startsWith(TokenSecrets.PREFIX)) {
-            return Optional.empty();
-        }
         Instant now = Instant.now(clock);
-        Optional<TokenEntity> found = store.findByHash(TokenSecrets.hash(presentedSecret));
+        boolean prefixed = presentedSecret.startsWith(TokenSecrets.PREFIX);
+        Optional<TokenEntity> found =
+                prefixed ? store.findByHash(TokenSecrets.hash(presentedSecret)) : Optional.empty();
+        if (!prefixed) {
+            log.debug("Rejected API token: unknown prefix");
+        } else if (found.isEmpty()) {
+            log.debug("Rejected API token: unknown");
+        }
         return found.flatMap(token -> authenticateStored(token, now));
     }
 
     /** Lists every token of the owner in a space, revoked and expired ones included. */
     public List<TokenSummary> list(TokenOwner owner, String spaceSlug) {
         var space = spaces.requireMember(spaceSlug, owner.issuer(), owner.subject());
-        return store.list(space.id(), owner);
+        List<TokenSummary> tokens = store.list(space.id(), owner);
+        int count = tokens.size();
+        log.debug("Listed {} tokens for subject {} in space {}", count, owner.subject(), space.id());
+        return tokens;
     }
 
     /** Revokes the owner's token in a space; revoking an already revoked token changes nothing. */
@@ -99,19 +115,53 @@ public class ApiTokens {
     }
 
     private Optional<TokenIdentity> authenticateStored(TokenEntity token, Instant now) {
-        if (!isUsable(token, now)) {
-            return Optional.empty();
+        Optional<String> rejection = rejectionReason(token, now);
+        if (rejection.isPresent()) {
+            return reject(token, rejection.get());
         }
-        return spaces.findMembership(token.spaceId(), token.ownerIssuer(), token.ownerSubject())
-                .map(membership -> useToken(token, membership, now));
+        return memberIdentity(token, now);
+    }
+
+    private Optional<TokenIdentity> memberIdentity(TokenEntity token, Instant now) {
+        Optional<SpaceAccess.Membership> membership =
+                spaces.findMembership(token.spaceId(), token.ownerIssuer(), token.ownerSubject());
+        if (membership.isEmpty()) {
+            return reject(token, "owner is not a member");
+        }
+        SpaceAccess.Membership found = membership.get();
+        return Optional.of(useToken(token, found, now));
+    }
+
+    private static Optional<TokenIdentity> reject(TokenEntity token, String reason) {
+        log.debug("Rejected API token {} in space {}: {}", token.id(), token.spaceId(), reason);
+        return Optional.empty();
+    }
+
+    private static Optional<String> rejectionReason(TokenEntity token, Instant now) {
+        Optional<String> reason = Optional.empty();
+        if (token.revokedAt() != null) {
+            reason = Optional.of("revoked");
+        } else if (isExpired(token, now)) {
+            reason = Optional.of("expired");
+        }
+        return reason;
+    }
+
+    private static boolean isExpired(TokenEntity token, Instant now) {
+        var expiresAt = token.expiresAt();
+        return expiresAt != null && !expiresAt.isAfter(now);
     }
 
     private TokenIdentity useToken(TokenEntity token, SpaceAccess.Membership membership, Instant now) {
         var lastUsedAt = token.lastUsedAt();
-        if (lastUsedAt == null || lastUsedAt.isBefore(now.minusSeconds(LAST_USED_REFRESH_SECONDS))) {
+        boolean refresh = lastUsedAt == null || lastUsedAt.isBefore(now.minusSeconds(LAST_USED_REFRESH_SECONDS));
+        if (refresh) {
             store.markUsed(token.id(), now);
+        } else {
+            log.debug("Skipping last_used_at update for token {}: refreshed recently", token.id());
         }
         TokenScope scope = membership.effectiveScope(token.scope());
+        log.debug("Authenticated token {} for space {}", token.id(), membership.slug());
         return new TokenIdentity(
                 token.id(), token.spaceId(), membership.slug(), token.ownerIssuer(), token.ownerSubject(), scope);
     }
@@ -121,14 +171,14 @@ public class ApiTokens {
         int maxPerOwner = properties.maxPerOwner();
         long active = store.countActive(spaceId, owner, now);
         if (active >= maxPerOwner) {
+            log.debug(
+                    "Space {} reached the token limit of {} for subject {} with {} active tokens",
+                    spaceId,
+                    maxPerOwner,
+                    owner.subject(),
+                    active);
             Map<String, Object> params = Map.of("bound", maxPerOwner);
             throw new ApiException(TokenError.TOKEN_LIMIT, params);
         }
-    }
-
-    private static boolean isUsable(TokenEntity token, Instant now) {
-        var expiresAt = token.expiresAt();
-        boolean notExpired = expiresAt == null || expiresAt.isAfter(now);
-        return token.revokedAt() == null && notExpired;
     }
 }

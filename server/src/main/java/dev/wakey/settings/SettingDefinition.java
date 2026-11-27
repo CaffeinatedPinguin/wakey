@@ -7,6 +7,7 @@ import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
+import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
 
 /**
@@ -14,6 +15,7 @@ import org.jspecify.annotations.Nullable;
  * validation rule, the side of its plan bound, the instance default and an optional cross-check
  * over the effective values of a space.
  */
+@Slf4j
 public record SettingDefinition(
         SettingKey key,
         SettingGroup group,
@@ -54,6 +56,7 @@ public record SettingDefinition(
     public void requireWithinBound(PlanProperties plan, String planName, String value) {
         Integer bound = bound(plan);
         if (bound != null && !withinBound(plan, value)) {
+            log.debug("Setting {} value {} is outside the {} bound of plan {}", key.key(), value, bound, planName);
             Map<String, Object> params = Map.of("bound", bound, "planName", planName, "key", key.key());
             throw new ApiException(SettingError.OUT_OF_PLAN, params);
         }

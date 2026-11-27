@@ -9,6 +9,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -19,6 +20,7 @@ import org.springframework.validation.annotation.Validated;
  * through {@link SpaceService#viewForWrite}; this class owns membership changes and publishes the
  * events that remove the affected sessions and tokens in the same transaction.
  */
+@Slf4j
 @Validated
 @Service
 @RequiredArgsConstructor
@@ -36,13 +38,26 @@ public class SpaceMembers {
      */
     public AddMemberResult addMember(CurrentUser actor, @InvalidSlug String slug, @Valid SpaceMember member) {
         SpaceView space = spaces.viewForWrite(actor, slug);
-        return store.addMember(space.id(), member);
+        AddMemberResult result = store.addMember(space.id(), member);
+        SpaceMember stored = result.member();
+        log.info(
+                "Member {} (issuer {}) in space {} has role {} (created: {}) by {} (admin: {})",
+                stored.subject(),
+                stored.issuer(),
+                space.id(),
+                stored.role(),
+                result.created(),
+                actor.subject(),
+                actor.admin());
+        return result;
     }
 
     /** Lists the members of a space the caller can read, ordered by issuer and subject. */
     public List<SpaceMember> listMembers(CurrentUser actor, @InvalidSlug String slug, SpaceMemberId after, int limit) {
         SpaceView space = spaces.view(actor, slug);
-        return store.listMembers(space.id(), after, limit);
+        List<SpaceMember> members = store.listMembers(space.id(), after, limit);
+        log.debug("Listed {} members in space {} with limit {}", members.size(), space.id(), limit);
+        return members;
     }
 
     /** Changes a member's role and ends that user's sessions when the role really changes. */
@@ -58,6 +73,15 @@ public class SpaceMembers {
             String issuer = member.issuer();
             String subject = member.subject();
             events.publishEvent(new SpaceMemberRoleChanged(spaceId, issuer, subject));
+            log.info(
+                    "Changed role of member {} (issuer {}) in space {} from {} to {} by {} (admin: {})",
+                    subject,
+                    issuer,
+                    spaceId,
+                    currentRole,
+                    member.role(),
+                    actor.subject(),
+                    actor.admin());
         }
     }
 
@@ -72,5 +96,12 @@ public class SpaceMembers {
         String issuer = member.issuer();
         String subject = member.subject();
         events.publishEvent(new SpaceMemberRemoved(spaceId, issuer, subject));
+        log.info(
+                "Removed member {} (issuer {}) from space {} by {} (admin: {})",
+                subject,
+                issuer,
+                spaceId,
+                actor.subject(),
+                actor.admin());
     }
 }

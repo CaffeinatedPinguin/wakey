@@ -10,6 +10,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
@@ -20,6 +21,7 @@ import org.springframework.validation.annotation.Validated;
  * The spaces use cases. It owns the access rules and the API errors; persistence lives in the
  * module's internal Spring Data JDBC adapter.
  */
+@Slf4j
 @Validated
 @Service
 @RequiredArgsConstructor
@@ -67,10 +69,18 @@ public class SpaceService {
         SpaceMemberId caller = memberIdOf(actor);
         Optional<SpaceMemberEntity> membership = store.findMember(space.id(), caller);
         if (!actor.admin() && membership.isEmpty()) {
+            log.debug("Space {} not visible to subject {}: not a member and not an admin", slug, actor.subject());
             throw new ApiException(CommonError.NOT_FOUND);
         }
         @Nullable SpaceMemberEntity member = membership.orElse(null);
-        return store.toView(space, actor.admin(), member);
+        SpaceView view = store.toView(space, actor.admin(), member);
+        log.debug(
+                "Resolved space {} for subject {}: admin {}, role {}",
+                slug,
+                actor.subject(),
+                actor.admin(),
+                view.role());
+        return view;
     }
 
     /** Reads one space as a non-admin member with the given identity; used by other modules. */
@@ -93,6 +103,7 @@ public class SpaceService {
     public SpaceView viewForWrite(CurrentUser actor, @InvalidSlug String slug) {
         SpaceView view = view(actor, slug);
         if (!view.canWrite()) {
+            log.debug("Write to space {} denied to subject {}: role {}", slug, actor.subject(), view.role());
             throw new ApiException(CommonError.FORBIDDEN);
         }
         return view;
@@ -125,10 +136,10 @@ public class SpaceService {
     public List<SpaceView> listVisible(CurrentUser actor, @Nullable String afterSlug, int limit) {
         String cursor = afterSlug == null ? "" : afterSlug;
         SpaceMemberId caller = memberIdOf(actor);
-        if (actor.admin()) {
-            return store.listAll(caller, cursor, limit, true);
-        }
-        return store.listForMember(caller, cursor, limit);
+        List<SpaceView> visible =
+                actor.admin() ? store.listAll(caller, cursor, limit, true) : store.listForMember(caller, cursor, limit);
+        log.debug("Listed {} spaces for subject {} with limit {}", visible.size(), actor.subject(), limit);
+        return visible;
     }
 
     /** Stores the plan of a space; the caller must be an application Admin. Repeating it changes nothing. */
@@ -156,7 +167,12 @@ public class SpaceService {
     }
 
     private SpaceEntity requireSpace(String slug) {
-        return store.findBySlug(slug).orElseThrow(() -> new ApiException(CommonError.NOT_FOUND));
+        Optional<SpaceEntity> found = store.findBySlug(slug);
+        if (found.isEmpty()) {
+            log.debug("Space {} not found", slug);
+            throw new ApiException(CommonError.NOT_FOUND);
+        }
+        return found.get();
     }
 
     private static SpaceMemberId memberIdOf(CurrentUser actor) {

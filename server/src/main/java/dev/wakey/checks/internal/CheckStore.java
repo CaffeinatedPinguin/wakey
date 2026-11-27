@@ -15,10 +15,13 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
+import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.stereotype.Component;
 
 /** The persistence adapter of the check aggregate: Spring Data JDBC repositories and criteria. */
+@Slf4j
 @Component
 @RequiredArgsConstructor
 public class CheckStore {
@@ -71,7 +74,18 @@ public class CheckStore {
 
     public Check update(Check existing, CheckDraft changes, long expectedVersion) {
         var now = clock.instant();
-        checks.save(CheckEntity.updated(existing, changes, expectedVersion, now));
+        CheckEntity updated = CheckEntity.updated(existing, changes, expectedVersion, now);
+        try {
+            checks.save(updated);
+        } catch (OptimisticLockingFailureException exception) {
+            log.debug(
+                    "Version conflict updating check {} in space {} with expected version {}",
+                    existing.id(),
+                    existing.spaceId(),
+                    expectedVersion,
+                    exception);
+            throw exception;
+        }
         return get(existing.spaceId(), existing.id());
     }
 

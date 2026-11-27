@@ -7,6 +7,7 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -16,6 +17,7 @@ import org.springframework.transaction.annotation.Transactional;
  * overrides accepted only within that plan. The service resolves the plan of a space itself, so a
  * caller never passes a plan name.
  */
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class SpaceSettings {
@@ -59,6 +61,7 @@ public class SpaceSettings {
             EffectiveSetting setting = resolve(definition, plan, override);
             effective.put(key, setting);
         }
+        log.debug("Read {} effective settings in space {}", effective.size(), spaceId);
         return effective;
     }
 
@@ -78,6 +81,13 @@ public class SpaceSettings {
         store.save(spaceId, value.key(), canonical);
         SettingChange change = new SettingChange(SET_ACTION, spaceId, value.key(), oldValue, canonical, actor);
         audit.settingChanged(change);
+        log.info(
+                "Set setting {} in space {} to {} by {} {}",
+                value.key(),
+                spaceId,
+                canonical,
+                actorKind(actor),
+                actor.subject());
     }
 
     /** Removes a space override, falling back to the plan bound or the instance default. */
@@ -92,6 +102,7 @@ public class SpaceSettings {
         definition.crossCheck(draft);
         SettingChange change = new SettingChange(RESET_ACTION, spaceId, key, oldValue, null, actor);
         audit.settingChanged(change);
+        log.info("Reset setting {} in space {} by {} {}", key, spaceId, actorKind(actor), actor.subject());
     }
 
     /**
@@ -108,6 +119,16 @@ public class SpaceSettings {
             SettingChange change = new SettingChange(RESET_ACTION, spaceId, key, override.getValue(), null, actor);
             audit.settingChanged(change);
         }
+        log.info(
+                "Reset all {} settings in space {} by {} {}",
+                overrides.size(),
+                spaceId,
+                actorKind(actor),
+                actor.subject());
+    }
+
+    private static String actorKind(SettingActor actor) {
+        return actor.token() ? "token" : "user";
     }
 
     private EffectiveSetting resolve(SettingDefinition definition, PlanProperties plan, @Nullable String override) {
