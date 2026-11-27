@@ -6,6 +6,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
+import java.util.regex.Pattern;
 import java.util.stream.Stream;
 import org.junit.jupiter.api.Test;
 
@@ -17,6 +18,8 @@ class PostgresOnlyRegistryTest {
     private static final String REGISTRY = "docs/decisions/0008-postgresql-only.md";
 
     private static final String MAIN_SOURCES = "server/src/main";
+
+    private static final Pattern ROW_FILE = Pattern.compile("`(server/src/main/[^`]+)`");
 
     @Test
     void everyPostgresOnlyMarkerHasARowInTheRegistry() throws IOException {
@@ -33,6 +36,37 @@ class PostgresOnlyRegistryTest {
         assertThat(missingRows)
                 .as("files with a postgres-only marker must have a row in ADR 0008")
                 .isEmpty();
+    }
+
+    @Test
+    void everyRegistryRowPointsAtAMarkedFile() throws IOException {
+        // given
+        Path repositoryRoot = repositoryRoot();
+        String registry = Files.readString(repositoryRoot.resolve(REGISTRY));
+        List<String> listedFiles = listedFiles(registry);
+
+        // when
+        List<String> staleRows = listedFiles.stream()
+                .filter(file -> !isMarked(repositoryRoot.resolve(file)))
+                .toList();
+
+        // then
+        assertThat(listedFiles).as("the registry lists PostgreSQL-only files").isNotEmpty();
+        assertThat(staleRows)
+                .as("ADR 0008 rows must point at existing files that still carry the postgres-only marker")
+                .isEmpty();
+    }
+
+    private static List<String> listedFiles(String registry) {
+        return ROW_FILE.matcher(registry)
+                .results()
+                .map(match -> match.group(1))
+                .distinct()
+                .toList();
+    }
+
+    private static boolean isMarked(Path path) {
+        return Files.isRegularFile(path) && containsMarker(path);
     }
 
     private static List<String> markedFiles(Path repositoryRoot) throws IOException {
