@@ -103,7 +103,7 @@ final class SpaceActors implements HandlerMethodArgumentResolver {
         Authentication authentication = authentication(request);
         if (TokenSpaces.of(authentication).isPresent()) {
             log.debug("Rejected a session-only argument for an API token request");
-            throw new ApiException(SessionError.INSUFFICIENT_SCOPE);
+            throw new ApiException(CommonError.INSUFFICIENT_SCOPE);
         }
         return new SessionUser(CurrentUser.from(authentication));
     }

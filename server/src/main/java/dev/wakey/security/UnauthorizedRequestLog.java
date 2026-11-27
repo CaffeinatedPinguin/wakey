@@ -27,8 +27,6 @@ final class UnauthorizedRequestLog implements AuthenticationEntryPoint {
     private static final int UNAUTHENTICATED_STATUS =
             CommonError.UNAUTHENTICATED.getStatus().value();
 
-    private static final String INVALID_TOKEN = "invalid-token";
-
     private static final String INVALID_TOKEN_CHALLENGE = "Bearer error=\"invalid_token\"";
 
     private static final String REQUEST_OBJECT_TYPE = "request";
@@ -56,7 +54,7 @@ final class UnauthorizedRequestLog implements AuthenticationEntryPoint {
 
     /** Rejects a presented token with the RFC 6750 challenge and a fixed reason. */
     void rejectInvalidToken(HttpServletRequest request, HttpServletResponse response) {
-        logRejected(INVALID_TOKEN, request);
+        logRejected(RejectReason.INVALID_TOKEN.getWireName(), request);
         if (response.isCommitted()) {
             return;
         }

@@ -29,16 +29,8 @@ public class ApiException extends RuntimeException {
         this(errorCode, List.of(), params, null);
     }
 
-    public ApiException(ErrorCode errorCode, Map<String, Object> params, Throwable cause) {
-        this(errorCode, List.of(), params, cause);
-    }
-
     public ApiException(ErrorCode errorCode, List<ApiFieldError> fieldErrors) {
         this(errorCode, fieldErrors, Map.of(), null);
-    }
-
-    public ApiException(ErrorCode errorCode, List<ApiFieldError> fieldErrors, Throwable cause) {
-        this(errorCode, fieldErrors, Map.of(), cause);
     }
 
     public ApiException(
@@ -54,7 +46,22 @@ public class ApiException extends RuntimeException {
 
     /** An error that points at one field with the error's own code. */
     public static ApiException withField(ErrorCode errorCode, String pointer) {
-        ApiFieldError fieldError = new ApiFieldError(pointer, errorCode.getCode(), Map.of());
-        return new ApiException(errorCode, List.of(fieldError));
+        return fieldError(errorCode, errorCode, pointer, null);
+    }
+
+    /** A validation error that points at one field with the field's own code. */
+    public static ApiException invalidField(ErrorCode fieldCode, String pointer) {
+        return invalidField(fieldCode, pointer, null);
+    }
+
+    /** A validation error that points at one field with the field's own code and an underlying cause. */
+    public static ApiException invalidField(ErrorCode fieldCode, String pointer, @Nullable Throwable cause) {
+        return fieldError(CommonError.VALIDATION_FAILED, fieldCode, pointer, cause);
+    }
+
+    private static ApiException fieldError(
+            ErrorCode errorCode, ErrorCode fieldCode, String pointer, @Nullable Throwable cause) {
+        ApiFieldError fieldError = new ApiFieldError(pointer, fieldCode.getCode(), Map.of());
+        return new ApiException(errorCode, List.of(fieldError), Map.of(), cause);
     }
 }

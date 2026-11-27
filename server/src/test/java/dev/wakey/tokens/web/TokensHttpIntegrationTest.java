@@ -10,6 +10,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 
 import dev.wakey.spaces.PutResult;
 import dev.wakey.spaces.Space;
+import dev.wakey.spaces.SpaceError;
 import dev.wakey.spaces.SpaceMember;
 import dev.wakey.spaces.SpaceMemberId;
 import dev.wakey.spaces.SpaceMembers;
@@ -122,7 +123,7 @@ class TokensHttpIntegrationTest extends SecurityIntegrationTest {
         String code = body.path("code").asString();
         assertThat(statusOf(result)).isEqualTo(403);
         assertThat(contentTypeOf(result)).isEqualTo(PROBLEM_JSON);
-        assertThat(code).isEqualTo(TokenError.INSUFFICIENT_SCOPE.getCode());
+        assertThat(code).isEqualTo(CommonError.INSUFFICIENT_SCOPE.getCode());
     }
 
     @Test
@@ -161,7 +162,7 @@ class TokensHttpIntegrationTest extends SecurityIntegrationTest {
         String source = interval.path("source").asString();
         assertThat(statusOf(written)).isEqualTo(204);
         assertThat(statusOf(rejected)).isEqualTo(403);
-        assertThat(rejectedCode).isEqualTo(TokenError.INSUFFICIENT_SCOPE.getCode());
+        assertThat(rejectedCode).isEqualTo(CommonError.INSUFFICIENT_SCOPE.getCode());
         assertThat(storedValue).isEqualTo("45");
         assertThat(source).isEqualTo("SPACE");
     }
@@ -313,6 +314,32 @@ class TokensHttpIntegrationTest extends SecurityIntegrationTest {
         assertThat(statusOf(result)).isEqualTo(400);
         assertThat(code).isEqualTo(CommonError.VALIDATION_FAILED.getCode());
         assertThat(pointer).isEqualTo("/expiresAt");
+    }
+
+    @Test
+    void aTokenNameWithAControlCharacterIsRejected() throws Exception {
+        // given
+        String subject = uniqueSubject("control-name");
+        Space space = seedSpace("control-name", subject, SpaceRole.EDITOR);
+        String body = "{\"name\":\"bad\\u0007name\",\"scope\":\"READ\"}";
+        MockHttpServletRequestBuilder create = post(SPACES + "/" + space.slug() + TOKENS)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(body)
+                .with(login(subject))
+                .with(csrf());
+
+        // when
+        MvcResult result = mockMvc().perform(create).andReturn();
+
+        // then
+        JsonNode bodyNode = jsonOf(result);
+        String code = bodyNode.path("code").asString();
+        String pointer = bodyNode.path("errors").path(0).path("pointer").asString();
+        String fieldCode = bodyNode.path("errors").path(0).path("code").asString();
+        assertThat(statusOf(result)).isEqualTo(400);
+        assertThat(code).isEqualTo(CommonError.VALIDATION_FAILED.getCode());
+        assertThat(pointer).isEqualTo("/name");
+        assertThat(fieldCode).isEqualTo(SpaceError.INVALID_NAME.getCode());
     }
 
     @Test
@@ -542,7 +569,7 @@ class TokensHttpIntegrationTest extends SecurityIntegrationTest {
 
         // then
         assertThat(statusOf(result)).isEqualTo(403);
-        assertThat(codeOf(result)).isEqualTo(TokenError.INSUFFICIENT_SCOPE.getCode());
+        assertThat(codeOf(result)).isEqualTo(CommonError.INSUFFICIENT_SCOPE.getCode());
         assertThat(headerOf(result, HttpHeaders.WWW_AUTHENTICATE)).isEqualTo("Bearer error=\"insufficient_scope\"");
     }
 
@@ -639,9 +666,9 @@ class TokensHttpIntegrationTest extends SecurityIntegrationTest {
         String createCode = jsonOf(createResult).path("code").asString();
         String listCode = jsonOf(listResult).path("code").asString();
         assertThat(statusOf(createResult)).isEqualTo(403);
-        assertThat(createCode).isEqualTo(TokenError.INSUFFICIENT_SCOPE.getCode());
+        assertThat(createCode).isEqualTo(CommonError.INSUFFICIENT_SCOPE.getCode());
         assertThat(statusOf(listResult)).isEqualTo(403);
-        assertThat(listCode).isEqualTo(TokenError.INSUFFICIENT_SCOPE.getCode());
+        assertThat(listCode).isEqualTo(CommonError.INSUFFICIENT_SCOPE.getCode());
     }
 
     @Test
@@ -667,13 +694,13 @@ class TokensHttpIntegrationTest extends SecurityIntegrationTest {
         // then
         String listedBody = listed.getResponse().getContentAsString();
         assertThat(statusOf(writeCreate)).isEqualTo(403);
-        assertThat(codeOf(writeCreate)).isEqualTo(TokenError.INSUFFICIENT_SCOPE.getCode());
+        assertThat(codeOf(writeCreate)).isEqualTo(CommonError.INSUFFICIENT_SCOPE.getCode());
         assertThat(statusOf(readCreate)).isEqualTo(403);
-        assertThat(codeOf(readCreate)).isEqualTo(TokenError.INSUFFICIENT_SCOPE.getCode());
+        assertThat(codeOf(readCreate)).isEqualTo(CommonError.INSUFFICIENT_SCOPE.getCode());
         assertThat(statusOf(writeList)).isEqualTo(403);
-        assertThat(codeOf(writeList)).isEqualTo(TokenError.INSUFFICIENT_SCOPE.getCode());
+        assertThat(codeOf(writeList)).isEqualTo(CommonError.INSUFFICIENT_SCOPE.getCode());
         assertThat(statusOf(readList)).isEqualTo(403);
-        assertThat(codeOf(readList)).isEqualTo(TokenError.INSUFFICIENT_SCOPE.getCode());
+        assertThat(codeOf(readList)).isEqualTo(CommonError.INSUFFICIENT_SCOPE.getCode());
         assertThat(statusOf(listed)).isEqualTo(200);
         assertThat(listedBody).doesNotContain("from-encoded");
     }
@@ -708,7 +735,7 @@ class TokensHttpIntegrationTest extends SecurityIntegrationTest {
         String code = jsonOf(after).path("code").asString();
         assertThat(statusOf(before)).isEqualTo(200);
         assertThat(statusOf(after)).isEqualTo(403);
-        assertThat(code).isEqualTo(TokenError.INSUFFICIENT_SCOPE.getCode());
+        assertThat(code).isEqualTo(CommonError.INSUFFICIENT_SCOPE.getCode());
     }
 
     private MvcResult performWithToken(MockHttpServletRequestBuilder request, CreatedToken token) throws Exception {

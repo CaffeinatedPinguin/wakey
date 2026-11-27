@@ -7,9 +7,9 @@ import dev.wakey.audit.ActorKind;
 import dev.wakey.audit.AuditLog;
 import dev.wakey.audit.AuditPage;
 import dev.wakey.audit.AuditRecord;
+import dev.wakey.spaces.InvalidName;
 import dev.wakey.spaces.PutResult;
 import dev.wakey.spaces.Space;
-import dev.wakey.spaces.SpaceError;
 import dev.wakey.spaces.SpaceMember;
 import dev.wakey.spaces.SpaceMemberId;
 import dev.wakey.spaces.SpaceMembers;
@@ -17,9 +17,10 @@ import dev.wakey.spaces.SpaceRole;
 import dev.wakey.spaces.SpaceService;
 import dev.wakey.testsupport.PostgresIntegrationTest;
 import dev.wakey.web.ApiException;
-import dev.wakey.web.ApiFieldError;
 import dev.wakey.web.CommonError;
 import dev.wakey.web.CurrentUser;
+import jakarta.validation.ConstraintViolation;
+import jakarta.validation.ConstraintViolationException;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
@@ -352,13 +353,14 @@ class ApiTokensIntegrationTest extends PostgresIntegrationTest {
                 () -> tokens().create(EDITOR_OWNER, slug, "bad\u0007name", new TokenOptions(TokenScope.READ, null)));
 
         // then
-        assertThat(rejected).isInstanceOf(ApiException.class);
-        ApiException exception = (ApiException) rejected;
-        assertThat(exception.getErrorCode()).isEqualTo(CommonError.VALIDATION_FAILED);
-        assertThat(exception.getFieldErrors()).hasSize(1);
-        ApiFieldError problem = exception.getFieldErrors().getFirst();
-        assertThat(problem.pointer()).isEqualTo("/name");
-        assertThat(problem.code()).isEqualTo(SpaceError.INVALID_NAME.getCode());
+        assertThat(rejected).isInstanceOf(ConstraintViolationException.class);
+        ConstraintViolationException exception = (ConstraintViolationException) rejected;
+        var violations = exception.getConstraintViolations();
+        ConstraintViolation<?> violation = violations.iterator().next();
+        String propertyPath = violation.getPropertyPath().toString();
+        var constraintType = violation.getConstraintDescriptor().getAnnotation().annotationType();
+        assertThat(propertyPath).endsWith(".name");
+        assertThat(constraintType).isEqualTo(InvalidName.class);
     }
 
     @Test

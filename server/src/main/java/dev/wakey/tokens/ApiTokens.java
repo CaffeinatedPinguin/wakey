@@ -51,7 +51,7 @@ public class ApiTokens {
      */
     @Transactional
     public CreatedToken create(TokenOwner owner, String spaceSlug, String name, TokenOptions options) {
-        String checkedName = TokenValidation.requireValidName(name);
+        String checkedName = spaceService.normalizeName(name);
         Instant now = Instant.now(clock);
         TokenValidation.requireFutureExpiry(options.expiresAt(), now);
         var space = spaces.requireMember(spaceSlug, owner.issuer(), owner.subject());

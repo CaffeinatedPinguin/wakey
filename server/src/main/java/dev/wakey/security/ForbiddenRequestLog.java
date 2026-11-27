@@ -6,7 +6,6 @@ import dev.wakey.audit.AuditEntry;
 import dev.wakey.audit.AuditLog;
 import dev.wakey.audit.AuditOutcome;
 import dev.wakey.audit.AuditSource;
-import dev.wakey.tokens.TokenError;
 import dev.wakey.web.ApiException;
 import dev.wakey.web.CommonError;
 import jakarta.servlet.http.HttpServletRequest;
@@ -31,8 +30,6 @@ final class ForbiddenRequestLog implements AccessDeniedHandler {
 
     private static final int FORBIDDEN_STATUS =
             CommonError.FORBIDDEN.getStatus().value();
-
-    private static final String INSUFFICIENT_SCOPE = "insufficient-scope";
 
     private static final String INSUFFICIENT_SCOPE_CHALLENGE = "Bearer error=\"insufficient_scope\"";
 
@@ -60,12 +57,12 @@ final class ForbiddenRequestLog implements AccessDeniedHandler {
 
     /** Rejects a token whose scope is too small, with the RFC 6750 challenge and a fixed reason. */
     void rejectInsufficientScope(HttpServletRequest request, HttpServletResponse response) {
-        logRejected(INSUFFICIENT_SCOPE, request);
+        logRejected(RejectReason.INSUFFICIENT_SCOPE.getWireName(), request);
         if (response.isCommitted()) {
             return;
         }
         response.setHeader(HttpHeaders.WWW_AUTHENTICATE, INSUFFICIENT_SCOPE_CHALLENGE);
-        render(request, response, new ApiException(TokenError.INSUFFICIENT_SCOPE));
+        render(request, response, new ApiException(CommonError.INSUFFICIENT_SCOPE));
     }
 
     private void render(HttpServletRequest request, HttpServletResponse response, RuntimeException exception) {

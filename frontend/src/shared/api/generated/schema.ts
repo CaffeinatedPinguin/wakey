@@ -555,7 +555,7 @@ export interface components {
         PausedReason: "MANUAL" | "PLAN_LIMIT" | "ABANDONED" | "UNVERIFIED";
         ProblemDetail: {
             /** @enum {string} */
-            code?: "bad_request" | "validation_failed" | "invalid_body" | "invalid_cursor" | "unauthenticated" | "forbidden" | "not_found" | "method_not_allowed" | "not_acceptable" | "unsupported_media_type" | "version_conflict" | "internal_error" | "out_of_plan" | "plan_limit" | "invalid_target" | "invalid_timeout" | "invalid_tags" | "invalid_runbook_url" | "invalid_group_name" | "invalid_description" | "location_error_cannot_be_down" | "bulk_count_changed" | "unknown_plan" | "invalid_key" | "invalid_value" | "timeout_exceeds_interval" | "slug_taken" | "invalid_name" | "invalid_slug" | "invalid_subject" | "invalid_issuer" | "token_limit" | "invalid_token" | "insufficient_scope" | "invalid_expiry";
+            code?: "bad_request" | "validation_failed" | "invalid_body" | "invalid_cursor" | "unauthenticated" | "forbidden" | "insufficient_scope" | "not_found" | "method_not_allowed" | "not_acceptable" | "unsupported_media_type" | "version_conflict" | "internal_error" | "timeout_exceeds_interval" | "plan_limit" | "invalid_target" | "invalid_timeout" | "invalid_tags" | "invalid_runbook_url" | "invalid_group_name" | "invalid_description" | "location_error_cannot_be_down" | "bulk_count_changed" | "out_of_plan" | "unknown_plan" | "invalid_key" | "invalid_value" | "slug_taken" | "invalid_name" | "invalid_slug" | "invalid_subject" | "invalid_issuer" | "token_limit" | "invalid_token" | "invalid_expiry";
             detail?: string;
             errors?: {
                 code?: string;

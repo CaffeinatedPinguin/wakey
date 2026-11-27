@@ -10,7 +10,9 @@ enum RejectReason {
     ACCESS_DENIED("access-denied"),
     CSRF_TOKEN_MISSING("csrf-token-missing"),
     CSRF_TOKEN_INVALID("csrf-token-invalid"),
-    MISSING_AUTHENTICATION("missing-authentication");
+    MISSING_AUTHENTICATION("missing-authentication"),
+    INVALID_TOKEN("invalid-token"),
+    INSUFFICIENT_SCOPE("insufficient-scope");
 
     private final String wireName;
 }

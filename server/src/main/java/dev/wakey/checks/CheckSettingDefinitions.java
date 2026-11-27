@@ -8,8 +8,6 @@ import dev.wakey.settings.SettingGroup;
 import dev.wakey.settings.SettingKey;
 import dev.wakey.settings.SettingType;
 import dev.wakey.web.ApiException;
-import dev.wakey.web.ApiFieldError;
-import dev.wakey.web.CommonError;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -105,9 +103,7 @@ public class CheckSettingDefinitions implements SettingDefinitionProvider {
         long timeout = SettingType.INTEGER.number(timeoutValue);
         long interval = SettingType.INTEGER.number(intervalValue);
         if (!CheckLimits.timeoutWithinInterval(timeout, interval)) {
-            ApiFieldError error =
-                    new ApiFieldError("/value", CheckSettingError.TIMEOUT_EXCEEDS_INTERVAL.getCode(), Map.of());
-            throw new ApiException(CommonError.VALIDATION_FAILED, List.of(error));
+            throw ApiException.invalidField(CheckSettingError.TIMEOUT_EXCEEDS_INTERVAL, "/value");
         }
     }
 }

@@ -8,8 +8,6 @@ import dev.wakey.checks.CheckType;
 import dev.wakey.checks.HttpUrlRule;
 import dev.wakey.spaces.SpaceError;
 import dev.wakey.web.ApiException;
-import dev.wakey.web.ApiFieldError;
-import dev.wakey.web.CommonError;
 import dev.wakey.web.DisplayText;
 import dev.wakey.web.ErrorCode;
 import java.net.URI;
@@ -64,7 +62,7 @@ public final class CheckValidator {
     private static String requireName(String name) {
         String normalized = DisplayText.normalize(name);
         if (!DisplayText.isValid(normalized, CheckFieldLimits.MAX_NAME_LENGTH, false)) {
-            throw invalid(SpaceError.INVALID_NAME, "name");
+            throw ApiException.invalidField(SpaceError.INVALID_NAME, "/name");
         }
         return normalized;
     }
@@ -73,7 +71,7 @@ public final class CheckValidator {
         String normalized = DisplayText.normalize(target);
         boolean withinLimits = DisplayText.isValid(normalized, CheckFieldLimits.MAX_TARGET_LENGTH, false);
         if (!withinLimits || !targetMatchesType(normalized, type)) {
-            throw invalid(CheckError.INVALID_TARGET, "target");
+            throw ApiException.invalidField(CheckError.INVALID_TARGET, "/target");
         }
         return normalized;
     }
@@ -88,7 +86,7 @@ public final class CheckValidator {
 
     private static void requireTimeout(int timeoutSeconds, int intervalSeconds) {
         if (!CheckLimits.timeoutWithinInterval(timeoutSeconds, intervalSeconds)) {
-            throw invalid(CheckError.INVALID_TIMEOUT, "timeoutSeconds");
+            throw ApiException.invalidField(CheckError.INVALID_TIMEOUT, "/timeoutSeconds");
         }
     }
 
@@ -96,11 +94,11 @@ public final class CheckValidator {
         Map<String, String> unique = new LinkedHashMap<>();
         for (String tag : tags) {
             if (tag == null) {
-                throw invalid(CheckError.INVALID_TAGS, "tags");
+                throw ApiException.invalidField(CheckError.INVALID_TAGS, "/tags");
             }
             String normalized = normalizeTag(tag);
             if (!DisplayText.isValid(normalized, CheckFieldLimits.MAX_TAG_LENGTH, false)) {
-                throw invalid(CheckError.INVALID_TAGS, "tags");
+                throw ApiException.invalidField(CheckError.INVALID_TAGS, "/tags");
             }
             unique.putIfAbsent(normalized.toLowerCase(Locale.ROOT), normalized);
         }
@@ -119,7 +117,7 @@ public final class CheckValidator {
         }
         boolean withinLimits = DisplayText.isValid(normalized, CheckFieldLimits.MAX_RUNBOOK_LENGTH, false);
         if (!withinLimits || !HttpUrlRule.isHttpUrl(normalized)) {
-            throw invalid(CheckError.INVALID_RUNBOOK_URL, "runbookUrl");
+            throw ApiException.invalidField(CheckError.INVALID_RUNBOOK_URL, "/runbookUrl");
         }
         return normalized;
     }
@@ -142,7 +140,7 @@ public final class CheckValidator {
         try {
             return new URI("tcp://" + value);
         } catch (URISyntaxException exception) {
-            throw invalid(CheckError.INVALID_TARGET, "target", exception);
+            throw ApiException.invalidField(CheckError.INVALID_TARGET, "/target", exception);
         }
     }
 
@@ -165,7 +163,7 @@ public final class CheckValidator {
             return null;
         }
         if (!DisplayText.isValid(normalized, rule.maxLength(), rule.multiline())) {
-            throw invalid(rule.code(), rule.pointer());
+            throw ApiException.invalidField(rule.code(), "/" + rule.pointer());
         }
         return normalized;
     }
@@ -176,16 +174,6 @@ public final class CheckValidator {
         }
         String normalized = DisplayText.normalize(value);
         return normalized.isEmpty() ? null : normalized;
-    }
-
-    private static ApiException invalid(ErrorCode code, String field) {
-        ApiFieldError problem = new ApiFieldError("/" + field, code.getCode(), Map.of());
-        return new ApiException(CommonError.VALIDATION_FAILED, List.of(problem));
-    }
-
-    private static ApiException invalid(ErrorCode code, String field, Throwable cause) {
-        ApiFieldError problem = new ApiFieldError("/" + field, code.getCode(), Map.of());
-        return new ApiException(CommonError.VALIDATION_FAILED, List.of(problem), Map.of(), cause);
     }
 
     private record TextRule(String pointer, ErrorCode code, int maxLength, boolean multiline) {}

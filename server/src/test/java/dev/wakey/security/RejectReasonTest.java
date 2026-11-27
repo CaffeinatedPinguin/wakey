@@ -18,6 +18,11 @@ class RejectReasonTest {
         // then
         assertThat(reasons)
                 .containsExactlyInAnyOrder(
-                        "access-denied", "csrf-token-missing", "csrf-token-invalid", "missing-authentication");
+                        "access-denied",
+                        "csrf-token-missing",
+                        "csrf-token-invalid",
+                        "missing-authentication",
+                        "invalid-token",
+                        "insufficient-scope");
     }
 }

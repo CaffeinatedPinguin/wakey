@@ -8,6 +8,7 @@ import dev.wakey.spaces.internal.SpaceStore;
 import dev.wakey.web.ApiException;
 import dev.wakey.web.CommonError;
 import dev.wakey.web.CurrentUser;
+import dev.wakey.web.DisplayText;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -45,7 +46,7 @@ public class SpaceService {
     public PutResult put(
             CurrentUser actor, @InvalidSlug String slug, @InvalidName String name, @Nullable Long expectedVersion) {
         actor.requireAdmin();
-        String checkedName = SpaceName.normalize(name);
+        String checkedName = DisplayText.normalize(name);
         Optional<SpaceEntity> found = store.findBySlug(slug);
         if (found.isEmpty()) {
             Optional<SpaceEntity> inserted = insert(slug, checkedName);
@@ -64,7 +65,7 @@ public class SpaceService {
     @Transactional
     public PutResult create(CurrentUser actor, @InvalidSlug String slug, @InvalidName String name) {
         actor.requireAdmin();
-        String checkedName = SpaceName.normalize(name);
+        String checkedName = DisplayText.normalize(name);
         Optional<SpaceEntity> inserted = insert(slug, checkedName);
         if (inserted.isEmpty()) {
             throw slugTaken();
@@ -72,6 +73,11 @@ public class SpaceService {
         SpaceEntity created = inserted.get();
         recordCreated(actor, created, checkedName);
         return new PutResult(store.toSpace(created), true);
+    }
+
+    /** Applies the one name rule and returns the normalized value; the tokens module shares it. */
+    public String normalizeName(@InvalidName String name) {
+        return DisplayText.normalize(name);
     }
 
     /** Reads one space together with the caller's role; a non-member non-admin gets 404. */
