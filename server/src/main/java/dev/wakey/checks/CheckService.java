@@ -3,7 +3,6 @@ package dev.wakey.checks;
 import dev.wakey.checks.internal.CheckStore;
 import dev.wakey.checks.internal.CheckValidator;
 import dev.wakey.spaces.SpaceService;
-import dev.wakey.web.ApiException;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -31,10 +30,12 @@ public class CheckService {
 
     private final CheckPlan planLimits;
 
+    private final EgressPolicy egressPolicy;
+
     /** Creates a check in the given space after validation against the plan bounds of its space. */
     @Transactional
     public Check create(UUID spaceId, CheckDraft check, CheckActor actor) {
-        CheckDraft validated = CheckValidator.validate(check);
+        CheckDraft validated = CheckValidator.validate(check, egressPolicy);
         spaces.lock(spaceId);
         planLimits.requireForNew(spaceId, validated);
         Check created = store.insert(spaceId, validated);
@@ -50,7 +51,7 @@ public class CheckService {
     @Transactional
     public Check update(UUID spaceId, CheckUpdate update, CheckActor actor) {
         Check existing = store.get(spaceId, update.id());
-        CheckDraft validated = CheckValidator.validate(update.changes());
+        CheckDraft validated = CheckValidator.validate(update.changes(), egressPolicy);
         planLimits.requireForUpdate(spaceId, validated);
         Check updated = store.update(existing, validated, update.expectedVersion());
         audit.updated(actor, spaceId, existing, validated);
@@ -147,18 +148,16 @@ public class CheckService {
     }
 
     private static void requireMatchingCount(CheckBulkCommand command, int matched, UUID spaceId) {
-        try {
-            command.requireMatchingCount(matched);
-        } catch (ApiException exception) {
-            Integer expected = command.expectedCount();
+        Integer expected = command.expectedCount();
+        if (expected != null && expected != matched) {
             log.debug(
                     "Bulk {} in space {} rejected: expected {} checks but {} matched",
                     command.action(),
                     spaceId,
                     expected,
                     matched);
-            throw exception;
         }
+        command.requireMatchingCount(matched);
     }
 
     private static String actorKind(CheckActor actor) {

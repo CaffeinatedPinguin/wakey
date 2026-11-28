@@ -19,6 +19,7 @@ import dev.wakey.web.ApiFieldError;
 import dev.wakey.web.CommonError;
 import dev.wakey.web.CurrentUser;
 import dev.wakey.web.ErrorCode;
+import java.net.InetAddress;
 import java.time.Instant;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
@@ -147,6 +148,24 @@ class CheckServiceIntegrationTest extends PostgresIntegrationTest {
 
         // then
         assertInvalidField(rejection, "/timeoutSeconds", CheckError.INVALID_TIMEOUT);
+    }
+
+    @Test
+    void theSavePathUsesTheInjectedEgressPolicy() {
+        // given
+        CheckDraft loopback = newCheck("loopback", CheckType.HTTP, "http://127.0.0.1/health");
+        CheckDraft metadata = newCheck("metadata", CheckType.TCP, "169.254.169.254:80");
+        EgressPolicy policy = bean(EgressPolicy.class);
+
+        // when
+        Throwable loopbackRejected = catchThrowable(() -> create(loopback));
+        Throwable metadataRejected = catchThrowable(() -> create(metadata));
+        boolean privateAllowed = policy.allows(InetAddress.ofLiteral("10.1.2.3"));
+
+        // then
+        assertThat(privateAllowed).isFalse();
+        assertInvalidField(loopbackRejected, "/target", CheckError.INVALID_TARGET);
+        assertInvalidField(metadataRejected, "/target", CheckError.INVALID_TARGET);
     }
 
     @Test

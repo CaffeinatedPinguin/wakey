@@ -55,6 +55,11 @@ public class CheckQueries {
         return entities(Query.query(criteria));
     }
 
+    List<CheckEntity> active() {
+        Criteria criteria = Criteria.where("paused").is(false);
+        return entities(Query.query(criteria));
+    }
+
     private List<CheckEntity> entities(Query query) {
         List<CheckRow> rows = findRows(query);
         if (rows.isEmpty()) {

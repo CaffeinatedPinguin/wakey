@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        https://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+  <changeSet id="check-state-interval" author="wakey">
+    <!-- postgres-only: native UUID and TIMESTAMPTZ column types; another database needs binary and timezone-aware equivalents. -->
+    <!-- An open interval has a null ended_at; one interval is always open after the first result. -->
+    <createTable tableName="check_state_interval">
+      <column name="id" type="UUID">
+        <constraints primaryKey="true" primaryKeyName="pk_check_state_interval" nullable="false"/>
+      </column>
+      <column name="check_id" type="UUID">
+        <constraints nullable="false"/>
+      </column>
+      <column name="space_id" type="UUID">
+        <constraints nullable="false"/>
+      </column>
+      <column name="state" type="VARCHAR(16)">
+        <constraints nullable="false"/>
+      </column>
+      <column name="started_at" type="TIMESTAMPTZ">
+        <constraints nullable="false"/>
+      </column>
+      <column name="ended_at" type="TIMESTAMPTZ"/>
+    </createTable>
+
+    <addForeignKeyConstraint baseTableName="check_state_interval"
+                             baseColumnNames="check_id"
+                             constraintName="fk_check_state_interval_check"
+                             referencedTableName="check"
+                             referencedColumnNames="id"
+                             onDelete="CASCADE"/>
+
+    <sql>
+      ALTER TABLE check_state_interval
+        ADD CONSTRAINT ck_check_state_interval_state
+          CHECK (state IN ('UP', 'DEGRADED', 'DOWN', 'UNKNOWN'));
+    </sql>
+
+    <createIndex tableName="check_state_interval" indexName="ix_check_state_interval_check_started">
+      <column name="check_id"/>
+      <column name="started_at"/>
+    </createIndex>
+  </changeSet>
+</databaseChangeLog>

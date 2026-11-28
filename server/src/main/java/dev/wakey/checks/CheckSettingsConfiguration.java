@@ -14,7 +14,7 @@ import org.springframework.context.annotation.Configuration;
  * contract. The codes stay in the modules that own them; this list only fixes their public order.
  */
 @Configuration(proxyBeanMethods = false)
-@EnableConfigurationProperties(CheckDefaultsProperties.class)
+@EnableConfigurationProperties({CheckDefaultsProperties.class, EgressProperties.class})
 public class CheckSettingsConfiguration {
 
     @Bean

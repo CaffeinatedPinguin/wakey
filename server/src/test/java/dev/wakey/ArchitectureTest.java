@@ -49,7 +49,7 @@ class ArchitectureTest {
     /** Every module lists the modules it may depend on; a new module or edge is a deliberate change. */
     private static final Map<String, Set<String>> MODULE_DEPENDENCIES = Map.ofEntries(
             dependencyEntry("audit"),
-            dependencyEntry("checks", "audit", "settings", "spaces", "web"),
+            dependencyEntry("checks", "audit", "leadership", "messaging", "settings", "spaces", "web"),
             dependencyEntry("config"),
             dependencyEntry("leadership"),
             dependencyEntry("messaging"),
