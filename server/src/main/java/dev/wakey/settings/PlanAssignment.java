@@ -35,14 +35,13 @@ public class PlanAssignment {
         SpaceView view = spaces.view(actor, slug);
         String oldPlan = plans.nameOrDefault(view.planName());
         spaces.assignPlan(actor, slug, planName);
-        String resolvedPlan = plans.requireExisting(planName);
-        if (!oldPlan.equals(resolvedPlan)) {
+        plans.plan(planName);
+        if (!oldPlan.equals(planName)) {
             AuditActor auditActor = AuditActor.of(actor.subject(), token);
-            PlanChange change = new PlanChange(view.id(), slug, oldPlan, resolvedPlan, auditActor);
-            audit.planChanged(change);
+            audit.planChanged(view, oldPlan, planName, auditActor);
             log.info(
                     "Assigned plan {} to space {} (was {}) by {} {}",
-                    resolvedPlan,
+                    planName,
                     slug,
                     oldPlan,
                     auditActor.kind(),

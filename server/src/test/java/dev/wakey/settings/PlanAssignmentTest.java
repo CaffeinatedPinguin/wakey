@@ -54,7 +54,6 @@ class PlanAssignmentTest extends PostgresIntegrationTest {
         SpaceView view = mock(SpaceView.class);
         when(writer.view(editor, "space")).thenReturn(view);
         when(plans.nameOrDefault(null)).thenReturn("small");
-        when(plans.requireExisting("small")).thenReturn("small");
 
         assignments.assign(editor, "space", "small", false);
 

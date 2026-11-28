@@ -152,6 +152,27 @@ class SettingsControllerIntegrationTest extends SecurityIntegrationTest {
     }
 
     @Test
+    void assigningTheSamePlanAgainRecordsNoSecondAuditEntry() throws Exception {
+        // given
+        String admin = uniqueSubject("plan-audit-once");
+        String slug = uniqueSlug("plan-audit-once");
+        createSpace(slug);
+        UUID spaceId = bean(SpaceService.class).view(fixtureAdmin(), slug).id();
+        AuditLog auditLog = bean(AuditLog.class);
+
+        // when
+        putPlan(admin, true, slug, "large");
+        putPlan(admin, true, slug, "large");
+        List<AuditRecord> history = auditLog.history(spaceId, "space", slug, new AuditPage(null, 10));
+
+        // then the second, idempotent assignment adds no audit entry
+        long planChanges = history.stream()
+                .filter(record -> record.action().equals("space.plan"))
+                .count();
+        assertThat(planChanges).isEqualTo(1L);
+    }
+
+    @Test
     void unknownPlanIsRejected() throws Exception {
         // given
         String admin = uniqueSubject("unknown-plan");

@@ -3,6 +3,7 @@ package dev.wakey.settings;
 import dev.wakey.audit.AuditActor;
 import dev.wakey.audit.AuditChange;
 import dev.wakey.audit.AuditLog;
+import dev.wakey.spaces.SpaceView;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import lombok.RequiredArgsConstructor;
@@ -30,11 +31,9 @@ public class SettingAudit {
         auditLog.record(entry);
     }
 
-    void planChanged(PlanChange change) {
-        Map<String, Object> details = changeDetails(change.oldPlan(), change.newPlan());
-        AuditActor actor = change.actor();
-        AuditChange entry =
-                new AuditChange(PLAN_ACTION, SPACE_OBJECT_TYPE, change.slug(), change.spaceId(), actor, details);
+    void planChanged(SpaceView space, String oldPlan, String newPlan, AuditActor actor) {
+        Map<String, Object> details = changeDetails(oldPlan, newPlan);
+        AuditChange entry = new AuditChange(PLAN_ACTION, SPACE_OBJECT_TYPE, space.slug(), space.id(), actor, details);
         auditLog.record(entry);
     }
 
