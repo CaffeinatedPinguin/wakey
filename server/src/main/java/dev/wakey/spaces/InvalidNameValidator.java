@@ -20,7 +20,7 @@ public final class InvalidNameValidator implements ConstraintValidator<InvalidNa
         if (value == null) {
             return true;
         }
-        String normalized = SpaceName.normalize(value);
+        String normalized = DisplayText.normalize(value);
         return DisplayText.isValid(normalized, max, false);
     }
 }

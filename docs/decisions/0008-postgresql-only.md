@@ -39,20 +39,13 @@ ma opisaną ścieżkę.
 
 | Funkcja | Plik | Co zmienić przy migracji |
 |---|---|---|
-| Właściwości limitów sesji `wakey.database.*` | `server/src/main/java/dev/wakey/config/DatabaseProperties.java` | Odwzorować limity w ustawieniach nowej bazy albo przenieść je do konfiguracji sterownika. |
-| Szablon `options` i log limitów sesji | `server/src/main/java/dev/wakey/config/DatabaseSessionLimitsConfiguration.java` | Zastąpić `-c idle_in_transaction_session_timeout=... -c lock_timeout=...` odpowiednikiem nowej bazy. |
-| Właściwość `options` pgjdbc z limitami sesji | `server/src/main/java/dev/wakey/config/PostgresSessionLimitsBeanPostProcessor.java` | Ustawić limity przez API nowego sterownika albo `SET` po otwarciu połączenia. |
 | Typ `BYTEA` dla atrybutów sesji | `server/src/main/resources/db/changelog/changes/0003-spring-session.xml` | Zmienić typ na odpowiednik binarny nowej bazy (np. `BLOB`) i usunąć znacznik. |
-| Konfiguracja limitów sesji | `server/src/main/resources/application.yml` | Przenieść `wakey.database.*` do konfiguracji nowej bazy i usunąć znacznik. |
+| Limity sesji przez `set_config` w `spring.datasource.hikari.connection-init-sql` | `server/src/main/resources/application.yml` | Zastąpić `set_config('idle_in_transaction_session_timeout', ...)` i `set_config('lock_timeout', ...)` odpowiednikiem nowej bazy i usunąć znacznik. |
 | Natywne typy `UUID` i `TIMESTAMPTZ` w tabelach przestrzeni | `server/src/main/resources/db/changelog/changes/0004-spaces.xml` | Zmienić kolumny na typ binarny i znacznik czasu z offsetem nowej bazy i usunąć znacznik. |
 | Natywne typy `UUID` i `TIMESTAMPTZ` w tabeli audytu | `server/src/main/resources/db/changelog/changes/0005-audit.xml` | Zmienić kolumny na typ binarny i znacznik czasu z offsetem nowej bazy i usunąć znacznik. |
 | Natywne typy `UUID` i `TIMESTAMPTZ` w tabeli tokenów API | `server/src/main/resources/db/changelog/changes/0006-api-tokens.xml` | Zmienić kolumny na typ binarny i znacznik czasu z offsetem nowej bazy i usunąć znacznik. |
 | Natywne typy `UUID` i `TIMESTAMPTZ` w tabeli ustawień przestrzeni | `server/src/main/resources/db/changelog/changes/0007-space-settings.xml` | Zmienić kolumny na typ binarny i znacznik czasu z offsetem nowej bazy i usunąć znacznik. |
 | Natywne typy `UUID` i `TIMESTAMPTZ`, ograniczenia CHECK tabel checków oraz kolumna `space_id` w `check_tag` | `server/src/main/resources/db/changelog/changes/0008-checks.xml` | Zmienić kolumny na typ binarny i znacznik czasu z offsetem nowej bazy i usunąć znacznik. |
-| Agregacja `COUNT(*) FILTER` licząca stany checków w jednym zapytaniu | `server/src/main/java/dev/wakey/checks/internal/CheckSql.java` | Zastąpić agregatami warunkowymi (`SUM(CASE ...)`) i usunąć znacznik. |
-| `INSERT ... ON CONFLICT ... DO NOTHING` dla przestrzeni i członkostw | `server/src/main/java/dev/wakey/spaces/internal/JdbcSpaceService.java` | Zastąpić `ON CONFLICT ... DO NOTHING` odpowiednikiem nowej bazy (np. `MERGE`) i usunąć znacznik. |
-| `INSERT ... ON CONFLICT ... DO UPDATE` dla nadpisań ustawień przestrzeni | `server/src/main/java/dev/wakey/settings/internal/JdbcSpaceSettings.java` | Zastąpić `ON CONFLICT ... DO UPDATE` odpowiednikiem nowej bazy (np. `MERGE`) i usunąć znacznik. |
-| Natywny typ `TIMESTAMPTZ` w kolumnie początku członkostwa w przestrzeni | `server/src/main/resources/db/changelog/changes/0011-member-since.xml` | Zmienić kolumnę na znacznik czasu z offsetem nowej bazy i usunąć znacznik. |
 
 ## Migracja na inną bazę
 

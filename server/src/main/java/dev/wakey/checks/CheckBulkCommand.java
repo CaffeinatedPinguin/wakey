@@ -1,7 +1,6 @@
 package dev.wakey.checks;
 
 import dev.wakey.web.ApiException;
-import dev.wakey.web.ApiFieldError;
 import dev.wakey.web.CommonError;
 import java.util.List;
 import java.util.Map;
@@ -21,16 +20,16 @@ public record CheckBulkCommand(
 
     public CheckBulkCommand {
         if (ids == null && filter == null) {
-            throw validation("/ids");
+            throw ApiException.invalidField(CommonError.VALIDATION_FAILED, "/ids");
         }
         if (ids != null && filter != null) {
-            throw validation("/filter");
+            throw ApiException.invalidField(CommonError.VALIDATION_FAILED, "/filter");
         }
         if (filter != null && expectedCount == null) {
-            throw validation("/expectedCount");
+            throw ApiException.invalidField(CommonError.VALIDATION_FAILED, "/expectedCount");
         }
         if (ids != null && expectedCount != null) {
-            throw validation("/expectedCount");
+            throw ApiException.invalidField(CommonError.VALIDATION_FAILED, "/expectedCount");
         }
     }
 
@@ -40,11 +39,5 @@ public record CheckBulkCommand(
         if (expected != null && expected != actual) {
             throw new ApiException(CheckError.BULK_COUNT_CHANGED, Map.of("expected", expected, "actual", actual));
         }
-    }
-
-    private static ApiException validation(String pointer) {
-        String code = CommonError.VALIDATION_FAILED.getCode();
-        ApiFieldError problem = new ApiFieldError(pointer, code, Map.of());
-        return new ApiException(CommonError.VALIDATION_FAILED, List.of(problem));
     }
 }

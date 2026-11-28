@@ -513,7 +513,7 @@
       "ProblemDetail" : {
         "properties" : {
           "code" : {
-            "enum" : [ "bad_request", "validation_failed", "invalid_body", "invalid_cursor", "unauthenticated", "forbidden", "not_found", "method_not_allowed", "not_acceptable", "unsupported_media_type", "version_conflict", "internal_error", "out_of_plan", "plan_limit", "invalid_target", "invalid_timeout", "invalid_tags", "invalid_runbook_url", "invalid_group_name", "invalid_description", "location_error_cannot_be_down", "bulk_count_changed", "unknown_plan", "invalid_key", "invalid_value", "timeout_exceeds_interval", "slug_taken", "invalid_name", "invalid_slug", "invalid_subject", "invalid_issuer", "token_limit", "invalid_token", "insufficient_scope", "invalid_expiry" ],
+            "enum" : [ "bad_request", "validation_failed", "invalid_body", "invalid_cursor", "unauthenticated", "forbidden", "insufficient_scope", "not_found", "method_not_allowed", "not_acceptable", "unsupported_media_type", "version_conflict", "internal_error", "timeout_exceeds_interval", "plan_limit", "invalid_target", "invalid_timeout", "invalid_tags", "invalid_runbook_url", "invalid_group_name", "invalid_description", "location_error_cannot_be_down", "bulk_count_changed", "out_of_plan", "unknown_plan", "invalid_key", "invalid_value", "slug_taken", "invalid_name", "invalid_slug", "invalid_subject", "invalid_issuer", "token_limit", "invalid_token", "invalid_expiry" ],
             "type" : "string"
           },
           "detail" : {
@@ -758,6 +758,7 @@
         "type" : "string"
       },
       "TokenSummary" : {
+        "description" : "A token as shown to its owner",
         "properties" : {
           "createdAt" : {
             "format" : "date-time",
@@ -836,28 +837,34 @@
           }
         },
         "summary" : "Return the authenticated user",
-        "tags" : [ "me-controller" ]
+        "tags" : [ "me" ]
       }
     },
     "/api/v1/spaces" : {
       "get" : {
         "operationId" : "listSpaces",
         "parameters" : [ {
-          "description" : "The page size, at least 1; values above the instance maximum are capped.",
+          "description" : "The page size, at least 1; values above the instance maximum are capped",
+          "example" : 20,
           "in" : "query",
           "name" : "limit",
           "required" : false,
           "schema" : {
+            "description" : "The page size, at least 1; values above the instance maximum are capped",
+            "example" : 20,
             "exclusiveMinimum" : 0,
+            "format" : "int32",
             "maximum" : 100,
             "minimum" : 1,
             "type" : "integer"
           }
         }, {
+          "description" : "The opaque cursor of the next page",
           "in" : "query",
           "name" : "cursor",
           "required" : false,
           "schema" : {
+            "description" : "The opaque cursor of the next page",
             "type" : "string"
           }
         } ],
@@ -1146,19 +1153,19 @@
             "type" : "string"
           }
         }, {
-          "description" : "The maximum number of items to return",
+          "description" : "The page size, at least 1; values above the instance maximum are capped",
           "example" : 20,
           "in" : "query",
           "name" : "limit",
           "required" : false,
           "schema" : {
-            "description" : "The maximum number of items to return",
+            "description" : "The page size, at least 1; values above the instance maximum are capped",
             "example" : 20,
             "exclusiveMinimum" : 0,
             "format" : "int32",
             "maximum" : 100,
             "minimum" : 1,
-            "type" : [ "integer", "null" ]
+            "type" : "integer"
           }
         }, {
           "description" : "The opaque cursor of the next page",
@@ -1167,7 +1174,7 @@
           "required" : false,
           "schema" : {
             "description" : "The opaque cursor of the next page",
-            "type" : [ "string", "null" ]
+            "type" : "string"
           }
         }, {
           "description" : "Text matched against the name and the target",
@@ -1188,7 +1195,7 @@
           "schema" : {
             "$ref" : "#/components/schemas/CheckState",
             "description" : "The current state, derived from the newest result",
-            "type" : [ "string", "null" ]
+            "type" : "string"
           }
         }, {
           "description" : "The protocol to measure",
@@ -1198,7 +1205,7 @@
           "schema" : {
             "$ref" : "#/components/schemas/CheckType",
             "description" : "The protocol to measure",
-            "type" : [ "string", "null" ]
+            "type" : "string"
           }
         }, {
           "description" : "A tag the check must carry",
@@ -1230,7 +1237,7 @@
           "schema" : {
             "$ref" : "#/components/schemas/PausedReason",
             "description" : "Why monitoring is paused",
-            "type" : [ "string", "null" ]
+            "type" : "string"
           }
         } ],
         "responses" : {
@@ -2012,21 +2019,27 @@
             "type" : "string"
           }
         }, {
-          "description" : "The page size, at least 1; values above the instance maximum are capped.",
+          "description" : "The page size, at least 1; values above the instance maximum are capped",
+          "example" : 20,
           "in" : "query",
           "name" : "limit",
           "required" : false,
           "schema" : {
+            "description" : "The page size, at least 1; values above the instance maximum are capped",
+            "example" : 20,
             "exclusiveMinimum" : 0,
+            "format" : "int32",
             "maximum" : 100,
             "minimum" : 1,
             "type" : "integer"
           }
         }, {
+          "description" : "The opaque cursor of the next page",
           "in" : "query",
           "name" : "cursor",
           "required" : false,
           "schema" : {
+            "description" : "The opaque cursor of the next page",
             "type" : "string"
           }
         } ],
@@ -2286,7 +2299,7 @@
                 }
               }
             },
-            "description" : "The plan is not configured on this instance."
+            "description" : "The requested plan is not configured on this instance."
           },
           "401" : {
             "content" : {
@@ -2320,7 +2333,7 @@
           }
         },
         "summary" : "Assign a plan to a space idempotently",
-        "tags" : [ "settings-controller" ]
+        "tags" : [ "settings" ]
       }
     },
     "/api/v1/spaces/{slug}/settings" : {
@@ -2371,7 +2384,7 @@
           }
         },
         "summary" : "Reset every space setting to the plan values",
-        "tags" : [ "settings-controller" ]
+        "tags" : [ "settings" ]
       },
       "get" : {
         "operationId" : "getSpaceSettings",
@@ -2427,7 +2440,7 @@
           }
         },
         "summary" : "Read the effective settings of a space",
-        "tags" : [ "settings-controller" ]
+        "tags" : [ "settings" ]
       }
     },
     "/api/v1/spaces/{slug}/settings/{key}" : {
@@ -2496,7 +2509,7 @@
           }
         },
         "summary" : "Reset a space setting to the plan value",
-        "tags" : [ "settings-controller" ]
+        "tags" : [ "settings" ]
       },
       "put" : {
         "operationId" : "putSpaceSetting",
@@ -2573,7 +2586,7 @@
           }
         },
         "summary" : "Set a space setting within the plan",
-        "tags" : [ "settings-controller" ]
+        "tags" : [ "settings" ]
       }
     },
     "/api/v1/spaces/{slug}/tokens" : {
@@ -2624,7 +2637,7 @@
           "sessionAuth" : [ ]
         } ],
         "summary" : "List the caller's API tokens in a space",
-        "tags" : [ "tokens-controller" ]
+        "tags" : [ "tokens" ]
       },
       "post" : {
         "operationId" : "createToken",
@@ -2703,7 +2716,7 @@
           "sessionAuth" : [ ]
         } ],
         "summary" : "Create an API token for a space",
-        "tags" : [ "tokens-controller" ]
+        "tags" : [ "tokens" ]
       }
     },
     "/api/v1/spaces/{slug}/tokens/{id}" : {
@@ -2765,7 +2778,7 @@
           "sessionAuth" : [ ]
         } ],
         "summary" : "Revoke one of the caller's API tokens",
-        "tags" : [ "tokens-controller" ]
+        "tags" : [ "tokens" ]
       }
     }
   },

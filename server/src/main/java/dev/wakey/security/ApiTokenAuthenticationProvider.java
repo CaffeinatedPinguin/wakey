@@ -2,18 +2,16 @@ package dev.wakey.security;
 
 import dev.wakey.tokens.ApiTokens;
 import java.util.Optional;
+import lombok.RequiredArgsConstructor;
 import org.springframework.security.authentication.AuthenticationProvider;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.core.Authentication;
 
 /** Turns a presented API token secret into the token's authentication through the tokens module. */
+@RequiredArgsConstructor
 final class ApiTokenAuthenticationProvider implements AuthenticationProvider {
 
     private final ApiTokens tokens;
-
-    ApiTokenAuthenticationProvider(ApiTokens tokens) {
-        this.tokens = tokens;
-    }
 
     @Override
     public Authentication authenticate(Authentication authentication) {

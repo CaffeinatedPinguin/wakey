@@ -1,7 +1,6 @@
 export { CenteredPage } from './CenteredPage'
 export { ColorSchemeToggle } from './ColorSchemeToggle'
 export { LanguageSwitch } from './LanguageSwitch'
-export { LoadingScreen } from './LoadingScreen'
 export { PageFrame } from './PageFrame'
 export { StatusBadge } from './StatusBadge'
 export { StatusState } from './statusState'

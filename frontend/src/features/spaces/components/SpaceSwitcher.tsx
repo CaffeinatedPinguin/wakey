@@ -10,7 +10,8 @@ import type { SpaceListActions, SpaceListState } from '../spaceTypes'
 import { CreateSpaceDialog } from './CreateSpaceDialog'
 import { DesktopContent, MobileContent } from './SwitcherContent'
 import { SwitcherTrigger } from './SwitcherTrigger'
-import { currentName as nameFromList, sheetStyles, touchStyle } from './switcherStyles'
+import { sheetStyles, touchStyle } from '../../../shared/theme/mantine/styles'
+import { currentName as nameFromList } from './switcherStyles'
 
 const SWITCHER_ICON_SIZE = 16
 

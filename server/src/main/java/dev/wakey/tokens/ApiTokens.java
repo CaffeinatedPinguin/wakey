@@ -1,13 +1,14 @@
 package dev.wakey.tokens;
 
+import dev.wakey.audit.AuditActor;
+import dev.wakey.audit.AuditChange;
+import dev.wakey.audit.AuditLog;
 import dev.wakey.spaces.SpaceService;
 import dev.wakey.tokens.internal.SpaceAccess;
 import dev.wakey.tokens.internal.TokenEntity;
-import dev.wakey.tokens.internal.TokenProperties;
 import dev.wakey.tokens.internal.TokenSecrets;
 import dev.wakey.tokens.internal.TokenStore;
 import dev.wakey.tokens.internal.TokenValidation;
-import dev.wakey.web.ApiException;
 import java.time.Clock;
 import java.time.Instant;
 import java.util.List;
@@ -32,6 +33,8 @@ public class ApiTokens {
 
     private static final int LAST_USED_REFRESH_SECONDS = 60;
 
+    private static final String OBJECT_TYPE = "api_token";
+
     private final TokenStore store;
 
     private final SpaceAccess spaces;
@@ -40,7 +43,7 @@ public class ApiTokens {
 
     private final Clock clock;
 
-    private final TokenProperties properties;
+    private final AuditLog audit;
 
     /**
      * Creates a token and returns its secret once; only the SHA-256 hash is stored. The secret is
@@ -48,11 +51,11 @@ public class ApiTokens {
      */
     @Transactional
     public CreatedToken create(TokenOwner owner, String spaceSlug, String name, TokenOptions options) {
-        String checkedName = TokenValidation.requireValidName(name);
+        String checkedName = spaceService.normalizeName(name);
         Instant now = Instant.now(clock);
         TokenValidation.requireFutureExpiry(options.expiresAt(), now);
         var space = spaces.requireMember(spaceSlug, owner.issuer(), owner.subject());
-        TokenScope scope = options.scope();
+        var scope = options.scope();
         SpaceAccess.requireWriteTokenAllowed(space, scope);
         requireTokenLimit(space.id(), owner, now);
         String secret = TokenSecrets.generate();
@@ -70,6 +73,11 @@ public class ApiTokens {
                 null,
                 null);
         store.insert(token);
+        Map<String, Object> details = Map.<String, Object>of("name", checkedName, "scope", scope.name());
+        String objectId = token.id().toString();
+        AuditActor actor = AuditActor.of(owner.subject(), false);
+        AuditChange change = new AuditChange("token.create", OBJECT_TYPE, objectId, space.id(), actor, details);
+        audit.record(change);
         TokenSummary summary = new TokenSummary(token.id(), checkedName, scope, now, options.expiresAt(), null, null);
         log.info(
                 "Created {} token {} for subject {} in space {} expiring at {}",
@@ -109,9 +117,23 @@ public class ApiTokens {
     }
 
     /** Revokes the owner's token in a space; revoking an already revoked token changes nothing. */
+    @Transactional
     public void revoke(TokenOwner owner, String spaceSlug, UUID tokenId) {
         var space = spaces.requireMember(spaceSlug, owner.issuer(), owner.subject());
-        store.revoke(space.id(), owner, tokenId, Instant.now(clock));
+        boolean revoked = store.revoke(space.id(), owner, tokenId, Instant.now(clock));
+        if (!revoked) {
+            log.debug(
+                    "Token {} was already revoked or does not belong to user {} in space {}",
+                    tokenId,
+                    owner.subject(),
+                    space.id());
+            return;
+        }
+        Map<String, Object> details = Map.of();
+        String objectId = tokenId.toString();
+        AuditActor actor = AuditActor.of(owner.subject(), false);
+        AuditChange change = new AuditChange("token.revoke", OBJECT_TYPE, objectId, space.id(), actor, details);
+        audit.record(change);
     }
 
     private Optional<TokenIdentity> authenticateStored(TokenEntity token, Instant now) {
@@ -147,6 +169,11 @@ public class ApiTokens {
         return reason;
     }
 
+    private void requireTokenLimit(UUID spaceId, TokenOwner owner, Instant now) {
+        spaceService.lock(spaceId);
+        store.requireCapacity(spaceId, owner, now);
+    }
+
     private static boolean isExpired(TokenEntity token, Instant now) {
         var expiresAt = token.expiresAt();
         return expiresAt != null && !expiresAt.isAfter(now);
@@ -160,25 +187,9 @@ public class ApiTokens {
         } else {
             log.debug("Skipping last_used_at update for token {}: refreshed recently", token.id());
         }
-        TokenScope scope = membership.effectiveScope(token.scope());
+        var scope = membership.effectiveScope(token.scope());
         log.debug("Authenticated token {} for space {}", token.id(), membership.slug());
         return new TokenIdentity(
                 token.id(), token.spaceId(), membership.slug(), token.ownerIssuer(), token.ownerSubject(), scope);
-    }
-
-    private void requireTokenLimit(UUID spaceId, TokenOwner owner, Instant now) {
-        spaceService.lock(spaceId);
-        int maxPerOwner = properties.maxPerOwner();
-        long active = store.countActive(spaceId, owner, now);
-        if (active >= maxPerOwner) {
-            log.debug(
-                    "Space {} reached the token limit of {} for subject {} with {} active tokens",
-                    spaceId,
-                    maxPerOwner,
-                    owner.subject(),
-                    active);
-            Map<String, Object> params = Map.of("bound", maxPerOwner);
-            throw new ApiException(TokenError.TOKEN_LIMIT, params);
-        }
     }
 }

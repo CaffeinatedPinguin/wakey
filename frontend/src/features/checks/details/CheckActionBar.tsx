@@ -5,7 +5,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { BulkCheckAction } from '../../../shared/api/generated/enums'
 import { useIsMobile } from '../../../shared/ui'
-import { touchStyle } from './detailsStyles'
+import { touchStyle } from '../../../shared/theme/mantine/styles'
 
 interface CheckActionBarProps {
   readonly paused: boolean

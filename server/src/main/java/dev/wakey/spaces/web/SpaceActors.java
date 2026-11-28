@@ -1,109 +1,111 @@
 package dev.wakey.spaces.web;
 
 import dev.wakey.spaces.SpaceService;
-import dev.wakey.spaces.SpaceView;
 import dev.wakey.web.ApiException;
 import dev.wakey.web.CommonError;
 import dev.wakey.web.CurrentUser;
 import dev.wakey.web.TokenSpaces;
 import java.security.Principal;
 import java.util.Map;
-import java.util.Set;
+import java.util.function.Function;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.jspecify.annotations.Nullable;
+import org.springframework.core.MethodParameter;
 import org.springframework.security.core.Authentication;
+import org.springframework.stereotype.Component;
+import org.springframework.web.bind.support.WebDataBinderFactory;
 import org.springframework.web.context.request.NativeWebRequest;
 import org.springframework.web.context.request.RequestAttributes;
+import org.springframework.web.method.support.HandlerMethodArgumentResolver;
+import org.springframework.web.method.support.ModelAndViewContainer;
 import org.springframework.web.servlet.HandlerMapping;
 
 /**
- * Turns the HTTP authentication into the space actor of one controller argument. It applies the
- * token scope, the space visibility and the write rule before a request body is read.
+ * Resolves the space actor arguments of the HTTP adapters from the request authentication. It
+ * applies the token scope, the space visibility and the write rule before a request body is read.
  */
-final class SpaceActors {
+@Slf4j
+@Component
+@RequiredArgsConstructor
+final class SpaceActors implements HandlerMethodArgumentResolver {
 
     private static final String SLUG_VARIABLE = "slug";
 
-    private static final Set<Class<?>> SUPPORTED_TYPES = Set.of(
-            CurrentUser.class,
-            SpaceReader.class,
-            SpaceWriter.class,
-            SpaceUpsert.class,
-            SessionUser.class,
-            SpaceCaller.class);
+    private final Map<Class<?>, Function<NativeWebRequest, Object>> resolvers = Map.of(
+            CurrentUser.class, SpaceActors::currentUser,
+            SpaceReader.class, this::spaceReader,
+            SpaceWriter.class, this::spaceWriter,
+            SpaceUpsert.class, this::spaceUpsert,
+            SessionUser.class, SpaceActors::sessionUser,
+            SpaceCaller.class, SpaceActors::spaceCaller);
 
     private final SpaceService spaces;
 
-    SpaceActors(SpaceService spaces) {
-        this.spaces = spaces;
+    @Override
+    public boolean supportsParameter(MethodParameter parameter) {
+        return resolvers.containsKey(parameter.getParameterType());
     }
 
-    boolean supports(Class<?> type) {
-        return SUPPORTED_TYPES.contains(type);
-    }
-
-    Object resolve(Class<?> type, NativeWebRequest request) {
-        Object resolved;
-        if (isSpaceType(type)) {
-            resolved = resolveSpace(type, request);
-        } else {
-            resolved = resolveCaller(type, request);
+    @Override
+    public @Nullable Object resolveArgument(
+            MethodParameter parameter,
+            @Nullable ModelAndViewContainer mavContainer,
+            NativeWebRequest request,
+            @Nullable WebDataBinderFactory binderFactory) {
+        Class<?> type = parameter.getParameterType();
+        Function<NativeWebRequest, Object> resolver = resolvers.get(type);
+        if (resolver == null) {
+            throw new IllegalStateException("Unsupported space actor type " + type.getName());
         }
-        return resolved;
+        return resolver.apply(request);
     }
 
-    private Object resolveSpace(Class<?> type, NativeWebRequest request) {
-        Authentication authentication = authentication(request);
+    private Object spaceReader(NativeWebRequest request) {
         String slug = slug(request);
-        TokenSpaces.requireSpace(authentication, slug);
-        CurrentUser user = CurrentUser.from(authentication);
-        Object argument;
-        if (type == SpaceReader.class) {
-            argument = new SpaceReader(user, spaces.view(user, slug));
-        } else if (type == SpaceWriter.class) {
-            SpaceView view = spaces.viewForWrite(user, slug);
-            boolean viaToken = TokenSpaces.of(authentication).isPresent();
-            argument = new SpaceWriter(user, view, viaToken);
-        } else {
-            requireUpsertAccess(user, slug);
-            argument = new SpaceUpsert(user);
-        }
-        return argument;
+        CurrentUser user = spaceUser(request, slug);
+        return new SpaceReader(user, spaces.view(user, slug));
     }
 
-    private Object resolveCaller(Class<?> type, NativeWebRequest request) {
-        Object argument;
-        if (type == CurrentUser.class) {
-            Authentication authentication = authentication(request);
-            argument = CurrentUser.from(authentication);
-        } else if (type == SpaceCaller.class) {
-            argument = spaceCaller(request);
-        } else {
-            argument = sessionUser(request);
-        }
-        return argument;
+    private Object spaceWriter(NativeWebRequest request) {
+        String slug = slug(request);
+        CurrentUser user = spaceUser(request, slug);
+        boolean viaToken = TokenSpaces.of(authentication(request)).isPresent();
+        return new SpaceWriter(user, spaces.viewForWrite(user, slug), viaToken);
     }
 
-    private void requireUpsertAccess(CurrentUser user, String slug) {
+    private Object spaceUpsert(NativeWebRequest request) {
+        String slug = slug(request);
+        CurrentUser user = spaceUser(request, slug);
         if (spaces.exists(slug)) {
             spaces.viewForWrite(user, slug);
         }
+        return new SpaceUpsert(user);
     }
 
-    private static SpaceCaller spaceCaller(NativeWebRequest request) {
+    private CurrentUser spaceUser(NativeWebRequest request, String slug) {
+        Authentication authentication = authentication(request);
+        TokenSpaces.requireSpace(authentication, slug);
+        return CurrentUser.from(authentication);
+    }
+
+    private static Object currentUser(NativeWebRequest request) {
+        return CurrentUser.from(authentication(request));
+    }
+
+    private static Object spaceCaller(NativeWebRequest request) {
         Authentication authentication = authentication(request);
         String slug = TokenSpaces.of(authentication).orElse("");
         return new SpaceCaller(CurrentUser.from(authentication), slug);
     }
 
-    private static SessionUser sessionUser(NativeWebRequest request) {
+    private static Object sessionUser(NativeWebRequest request) {
         Authentication authentication = authentication(request);
         if (TokenSpaces.of(authentication).isPresent()) {
-            throw new ApiException(SessionError.INSUFFICIENT_SCOPE);
+            log.debug("Rejected a session-only argument for an API token request");
+            throw new ApiException(CommonError.INSUFFICIENT_SCOPE);
         }
         return new SessionUser(CurrentUser.from(authentication));
-    }
-
-    private static boolean isSpaceType(Class<?> type) {
-        return type == SpaceReader.class || type == SpaceWriter.class || type == SpaceUpsert.class;
     }
 
     private static Authentication authentication(NativeWebRequest request) {

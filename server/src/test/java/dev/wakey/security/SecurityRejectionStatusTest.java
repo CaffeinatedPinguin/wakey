@@ -1,7 +1,9 @@
 package dev.wakey.security;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.mock;
 
+import dev.wakey.audit.AuditLog;
 import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -31,7 +33,7 @@ class SecurityRejectionStatusTest {
     @Test
     void anUnhandledUnauthenticatedRejectionStillAnswers401() {
         // given
-        UnauthorizedRequestLog entryPoint = new UnauthorizedRequestLog(UNHANDLED);
+        UnauthorizedRequestLog entryPoint = new UnauthorizedRequestLog(UNHANDLED, mock(AuditLog.class));
         MockHttpServletRequest request = new MockHttpServletRequest("GET", "/agent/v1/checks");
         MockHttpServletResponse response = new MockHttpServletResponse();
         AuthenticationException exception = new InsufficientAuthenticationException("n/a");
@@ -48,7 +50,7 @@ class SecurityRejectionStatusTest {
     @Test
     void anUnhandledForbiddenRejectionStillAnswers403() {
         // given
-        ForbiddenRequestLog handler = new ForbiddenRequestLog(UNHANDLED);
+        ForbiddenRequestLog handler = new ForbiddenRequestLog(UNHANDLED, mock(AuditLog.class));
         MockHttpServletRequest request = new MockHttpServletRequest("POST", "/logout");
         MockHttpServletResponse response = new MockHttpServletResponse();
         AccessDeniedException exception = new AccessDeniedException("n/a");

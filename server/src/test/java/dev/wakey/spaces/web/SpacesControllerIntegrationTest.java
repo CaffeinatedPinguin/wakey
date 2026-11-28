@@ -327,7 +327,7 @@ class SpacesControllerIntegrationTest extends SecurityIntegrationTest {
         String wrongMethodCode = wrongMethodBody.path("code").asString();
         assertThat(statusOf(badLimit)).isEqualTo(400);
         assertThat(contentTypeOf(badLimit)).isEqualTo(ERROR_MEDIA_TYPE);
-        assertThat(badLimitCode).isEqualTo(CommonError.BAD_REQUEST.getCode());
+        assertThat(badLimitCode).isEqualTo(CommonError.VALIDATION_FAILED.getCode());
         assertThat(statusOf(wrongMethod)).isEqualTo(405);
         assertThat(contentTypeOf(wrongMethod)).isEqualTo(ERROR_MEDIA_TYPE);
         assertThat(wrongMethodCode).isEqualTo(CommonError.METHOD_NOT_ALLOWED.getCode());
@@ -715,7 +715,7 @@ class SpacesControllerIntegrationTest extends SecurityIntegrationTest {
         SpaceService service = bean(SpaceService.class);
         CurrentUser admin = fixtureAdmin();
         PutResult created = service.put(admin, slug, name, null);
-        bean(SpaceMembers.class).addMember(admin, slug, new SpaceMember(ISSUER, member, role));
+        bean(SpaceMembers.class).addMember(admin, slug, new SpaceMember(ISSUER, member, role), false);
         return created.space();
     }
 

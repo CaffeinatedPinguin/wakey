@@ -33,7 +33,7 @@ public record SettingDefinition(
     /** Rejects a value that does not follow the catalog rule for this key. */
     public void validate(String value) {
         if (!validator.test(value)) {
-            throw SettingErrors.invalidValue();
+            throw ApiException.invalidField(SettingError.INVALID_VALUE, "/value");
         }
     }
 

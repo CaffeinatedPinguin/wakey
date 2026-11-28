@@ -4,7 +4,8 @@ import type { ReactElement } from 'react'
 import { useTranslation } from 'react-i18next'
 import { SpacesStatus } from '../spaceTypes'
 import type { SpaceListActions, SpaceListState, SpaceSummary } from '../spaceTypes'
-import { avatarStyle, sheetRowStyle, touchStyle } from './switcherStyles'
+import { touchStyle } from '../../../shared/theme/mantine/styles'
+import { avatarStyle, sheetRowStyle } from './switcherStyles'
 
 const SMALL_ICON_SIZE = 16
 const LARGE_ICON_SIZE = 18
@@ -142,7 +143,9 @@ function DesktopFooter({
   )
 }
 
-export function DesktopContent({ list, actions, close }: SpaceListContentProps): ReactElement {
+// The status view is the same in the menu and the sheet; only the ready list
+// differs between the two layouts.
+function statusContent(list: SpaceListState, actions: SpaceListActions): ReactElement | null {
   if (list.status === SpacesStatus.LOADING) {
     return <LoadingContent />
   }
@@ -151,6 +154,14 @@ export function DesktopContent({ list, actions, close }: SpaceListContentProps):
   }
   if (list.status === SpacesStatus.EMPTY) {
     return <EmptyContent canCreate={list.canCreate} onCreate={actions.onCreate} />
+  }
+  return null
+}
+
+export function DesktopContent({ list, actions, close }: SpaceListContentProps): ReactElement {
+  const status = statusContent(list, actions)
+  if (status !== null) {
+    return status
   }
 
   return (
@@ -259,14 +270,9 @@ function MobileFooter({
 }
 
 export function MobileContent({ list, actions, close }: SpaceListContentProps): ReactElement {
-  if (list.status === SpacesStatus.LOADING) {
-    return <LoadingContent />
-  }
-  if (list.status === SpacesStatus.ERROR) {
-    return <ErrorContent onRetry={actions.onRetry} />
-  }
-  if (list.status === SpacesStatus.EMPTY) {
-    return <EmptyContent canCreate={list.canCreate} onCreate={actions.onCreate} />
+  const status = statusContent(list, actions)
+  if (status !== null) {
+    return status
   }
 
   return (

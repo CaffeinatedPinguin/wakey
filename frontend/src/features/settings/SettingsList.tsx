@@ -56,10 +56,9 @@ interface SettingsListProps {
 export function SettingsList({ group, canEdit, onOpen }: SettingsListProps): ReactElement {
   return (
     <Stack gap={0}>
-      {group.rows.map((row) => {
-        const editable = canEdit && row.readOnlyOnMobile !== true
-        return <MobileRow key={row.key} row={row} editable={editable} onOpen={onOpen} />
-      })}
+      {group.rows.map((row) => (
+        <MobileRow key={row.key} row={row} editable={canEdit} onOpen={onOpen} />
+      ))}
     </Stack>
   )
 }

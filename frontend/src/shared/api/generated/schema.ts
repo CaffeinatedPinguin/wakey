@@ -555,7 +555,7 @@ export interface components {
         PausedReason: "MANUAL" | "PLAN_LIMIT" | "ABANDONED" | "UNVERIFIED";
         ProblemDetail: {
             /** @enum {string} */
-            code?: "bad_request" | "validation_failed" | "invalid_body" | "invalid_cursor" | "unauthenticated" | "forbidden" | "not_found" | "method_not_allowed" | "not_acceptable" | "unsupported_media_type" | "version_conflict" | "internal_error" | "out_of_plan" | "plan_limit" | "invalid_target" | "invalid_timeout" | "invalid_tags" | "invalid_runbook_url" | "invalid_group_name" | "invalid_description" | "location_error_cannot_be_down" | "bulk_count_changed" | "unknown_plan" | "invalid_key" | "invalid_value" | "timeout_exceeds_interval" | "slug_taken" | "invalid_name" | "invalid_slug" | "invalid_subject" | "invalid_issuer" | "token_limit" | "invalid_token" | "insufficient_scope" | "invalid_expiry";
+            code?: "bad_request" | "validation_failed" | "invalid_body" | "invalid_cursor" | "unauthenticated" | "forbidden" | "insufficient_scope" | "not_found" | "method_not_allowed" | "not_acceptable" | "unsupported_media_type" | "version_conflict" | "internal_error" | "timeout_exceeds_interval" | "plan_limit" | "invalid_target" | "invalid_timeout" | "invalid_tags" | "invalid_runbook_url" | "invalid_group_name" | "invalid_description" | "location_error_cannot_be_down" | "bulk_count_changed" | "out_of_plan" | "unknown_plan" | "invalid_key" | "invalid_value" | "slug_taken" | "invalid_name" | "invalid_slug" | "invalid_subject" | "invalid_issuer" | "token_limit" | "invalid_token" | "invalid_expiry";
             detail?: string;
             errors?: {
                 code?: string;
@@ -700,6 +700,7 @@ export interface components {
         };
         /** @enum {string} */
         TokenScope: "READ" | "WRITE";
+        /** @description A token as shown to its owner */
         TokenSummary: {
             /** Format: date-time */
             createdAt?: string;
@@ -755,8 +756,12 @@ export interface operations {
     listSpaces: {
         parameters: {
             query?: {
-                /** @description The page size, at least 1; values above the instance maximum are capped. */
+                /**
+                 * @description The page size, at least 1; values above the instance maximum are capped
+                 * @example 20
+                 */
                 limit?: number;
+                /** @description The opaque cursor of the next page */
                 cursor?: string;
             };
             header?: never;
@@ -991,12 +996,12 @@ export interface operations {
         parameters: {
             query?: {
                 /**
-                 * @description The maximum number of items to return
+                 * @description The page size, at least 1; values above the instance maximum are capped
                  * @example 20
                  */
-                limit?: number | null;
+                limit?: number;
                 /** @description The opaque cursor of the next page */
-                cursor?: string | null;
+                cursor?: string;
                 /** @description Text matched against the name and the target */
                 q?: string | null;
                 /** @description The current state, derived from the newest result */
@@ -1521,8 +1526,12 @@ export interface operations {
     listSpaceMembers: {
         parameters: {
             query?: {
-                /** @description The page size, at least 1; values above the instance maximum are capped. */
+                /**
+                 * @description The page size, at least 1; values above the instance maximum are capped
+                 * @example 20
+                 */
                 limit?: number;
+                /** @description The opaque cursor of the next page */
                 cursor?: string;
             };
             header?: never;
@@ -1790,7 +1799,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description The plan is not configured on this instance. */
+            /** @description The requested plan is not configured on this instance. */
             400: {
                 headers: {
                     [name: string]: unknown;

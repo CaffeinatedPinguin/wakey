@@ -3,9 +3,13 @@ package dev.wakey.tokens;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.catchThrowable;
 
+import dev.wakey.audit.ActorKind;
+import dev.wakey.audit.AuditLog;
+import dev.wakey.audit.AuditPage;
+import dev.wakey.audit.AuditRecord;
+import dev.wakey.spaces.InvalidName;
 import dev.wakey.spaces.PutResult;
 import dev.wakey.spaces.Space;
-import dev.wakey.spaces.SpaceError;
 import dev.wakey.spaces.SpaceMember;
 import dev.wakey.spaces.SpaceMemberId;
 import dev.wakey.spaces.SpaceMembers;
@@ -13,9 +17,10 @@ import dev.wakey.spaces.SpaceRole;
 import dev.wakey.spaces.SpaceService;
 import dev.wakey.testsupport.PostgresIntegrationTest;
 import dev.wakey.web.ApiException;
-import dev.wakey.web.ApiFieldError;
 import dev.wakey.web.CommonError;
 import dev.wakey.web.CurrentUser;
+import jakarta.validation.ConstraintViolation;
+import jakarta.validation.ConstraintViolationException;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
@@ -77,6 +82,47 @@ class ApiTokensIntegrationTest extends PostgresIntegrationTest {
         assertThat(tokenHash).hasSize(64).matches("[0-9a-f]{64}").isEqualTo(sha256Hex(secret));
         assertThat(storedRow).doesNotContain(secret);
         assertThat(created.toString()).doesNotContain(secret);
+    }
+
+    @Test
+    void creatingATokenIsAudited() {
+        // given
+        Space space = seedSpaceWithMembers("audited-token");
+        String slug = space.slug();
+
+        // when
+        CreatedToken created = tokens().create(EDITOR_OWNER, slug, "audited", new TokenOptions(TokenScope.READ, null));
+        UUID tokenId = created.token().id();
+        List<AuditRecord> history =
+                bean(AuditLog.class).history(space.id(), "api_token", tokenId.toString(), new AuditPage(null, 10));
+
+        // then
+        assertThat(history).extracting(AuditRecord::action).containsExactly("token.create");
+        AuditRecord event = history.getFirst();
+        var actor = event.actor();
+        assertThat(actor.subject()).isEqualTo(EDITOR.subject());
+        assertThat(actor.kind()).isEqualTo(ActorKind.USER);
+        assertThat(event.details()).contains("audited").doesNotContain(created.secret());
+    }
+
+    @Test
+    void revokingATokenIsAudited() {
+        // given
+        Space space = seedSpaceWithMembers("revoked-audit");
+        String slug = space.slug();
+        CreatedToken created =
+                tokens().create(EDITOR_OWNER, slug, "revoked-audit", new TokenOptions(TokenScope.READ, null));
+        UUID tokenId = created.token().id();
+
+        // when
+        tokens().revoke(EDITOR_OWNER, slug, tokenId);
+        List<AuditRecord> history =
+                bean(AuditLog.class).history(space.id(), "api_token", tokenId.toString(), new AuditPage(null, 10));
+
+        // then
+        assertThat(history).extracting(AuditRecord::action).containsExactly("token.revoke", "token.create");
+        AuditRecord revoked = history.getFirst();
+        assertThat(revoked.details()).isEqualTo("{}");
     }
 
     @Test
@@ -149,7 +195,7 @@ class ApiTokensIntegrationTest extends PostgresIntegrationTest {
                 tokens().create(VIEWER_OWNER, revokedSpace.slug(), "viewer", new TokenOptions(TokenScope.READ, null));
 
         // when
-        members().removeMember(ADMIN, revokedSpace.slug(), new SpaceMemberId(ISSUER, EDITOR.subject()));
+        members().removeMember(ADMIN, revokedSpace.slug(), new SpaceMemberId(ISSUER, EDITOR.subject()), false);
         Optional<TokenIdentity> afterRemoval = tokens().authenticate(revokedToken.secret());
         Optional<TokenIdentity> otherSpaceStill = tokens().authenticate(otherSpaceToken.secret());
         Optional<TokenIdentity> otherMemberStill = tokens().authenticate(otherMemberToken.secret());
@@ -204,8 +250,8 @@ class ApiTokensIntegrationTest extends PostgresIntegrationTest {
         PutResult created = spaces().put(ADMIN, uniqueSlug("owner-issuers"), "Owner issuers", null);
         Space space = created.space();
         String slug = space.slug();
-        members().addMember(ADMIN, slug, new SpaceMember(ISSUER, subject, SpaceRole.EDITOR));
-        members().addMember(ADMIN, slug, new SpaceMember(otherIssuer, subject, SpaceRole.EDITOR));
+        members().addMember(ADMIN, slug, new SpaceMember(ISSUER, subject, SpaceRole.EDITOR), false);
+        members().addMember(ADMIN, slug, new SpaceMember(otherIssuer, subject, SpaceRole.EDITOR), false);
         TokenOwner firstOwner = new TokenOwner(ISSUER, subject);
         TokenOwner secondOwner = new TokenOwner(otherIssuer, subject);
         for (int index = 0; index < 50; index++) {
@@ -307,13 +353,14 @@ class ApiTokensIntegrationTest extends PostgresIntegrationTest {
                 () -> tokens().create(EDITOR_OWNER, slug, "bad\u0007name", new TokenOptions(TokenScope.READ, null)));
 
         // then
-        assertThat(rejected).isInstanceOf(ApiException.class);
-        ApiException exception = (ApiException) rejected;
-        assertThat(exception.getErrorCode()).isEqualTo(CommonError.VALIDATION_FAILED);
-        assertThat(exception.getFieldErrors()).hasSize(1);
-        ApiFieldError problem = exception.getFieldErrors().getFirst();
-        assertThat(problem.pointer()).isEqualTo("/name");
-        assertThat(problem.code()).isEqualTo(SpaceError.INVALID_NAME.getCode());
+        assertThat(rejected).isInstanceOf(ConstraintViolationException.class);
+        ConstraintViolationException exception = (ConstraintViolationException) rejected;
+        var violations = exception.getConstraintViolations();
+        ConstraintViolation<?> violation = violations.iterator().next();
+        String propertyPath = violation.getPropertyPath().toString();
+        var constraintType = violation.getConstraintDescriptor().getAnnotation().annotationType();
+        assertThat(propertyPath).endsWith(".name");
+        assertThat(constraintType).isEqualTo(InvalidName.class);
     }
 
     @Test
@@ -343,7 +390,7 @@ class ApiTokensIntegrationTest extends PostgresIntegrationTest {
 
         // when
         Optional<TokenIdentity> before = tokens().authenticate(created.secret());
-        members().changeRole(ADMIN, slug, new SpaceMember(ISSUER, EDITOR.subject(), SpaceRole.VIEWER));
+        members().changeRole(ADMIN, slug, new SpaceMember(ISSUER, EDITOR.subject(), SpaceRole.VIEWER), false);
         Optional<TokenIdentity> after = tokens().authenticate(created.secret());
 
         // then
@@ -362,7 +409,7 @@ class ApiTokensIntegrationTest extends PostgresIntegrationTest {
 
         // when
         Optional<TokenIdentity> beforeRemoval = tokens().authenticate(created.secret());
-        members().removeMember(ADMIN, slug, new SpaceMemberId(ISSUER, EDITOR.subject()));
+        members().removeMember(ADMIN, slug, new SpaceMemberId(ISSUER, EDITOR.subject()), false);
         Optional<TokenIdentity> afterRemoval = tokens().authenticate(created.secret());
 
         // then
@@ -495,8 +542,8 @@ class ApiTokensIntegrationTest extends PostgresIntegrationTest {
         SpaceService service = spaces();
         PutResult created = service.put(ADMIN, uniqueSlug(prefix), "Space " + prefix, null);
         Space space = created.space();
-        members().addMember(ADMIN, space.slug(), new SpaceMember(ISSUER, EDITOR.subject(), SpaceRole.EDITOR));
-        members().addMember(ADMIN, space.slug(), new SpaceMember(ISSUER, VIEWER.subject(), SpaceRole.VIEWER));
+        members().addMember(ADMIN, space.slug(), new SpaceMember(ISSUER, EDITOR.subject(), SpaceRole.EDITOR), false);
+        members().addMember(ADMIN, space.slug(), new SpaceMember(ISSUER, VIEWER.subject(), SpaceRole.VIEWER), false);
         return space;
     }
 

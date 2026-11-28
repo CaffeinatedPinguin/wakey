@@ -1,9 +1,16 @@
 package dev.wakey.tokens.internal;
 
+import dev.wakey.audit.ActorKind;
+import dev.wakey.audit.AuditActor;
+import dev.wakey.audit.AuditChange;
+import dev.wakey.audit.AuditLog;
+import dev.wakey.tokens.TokenError;
 import dev.wakey.tokens.TokenOwner;
 import dev.wakey.tokens.TokenSummary;
+import dev.wakey.web.ApiException;
 import java.time.Instant;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
@@ -13,6 +20,7 @@ import org.springframework.data.jdbc.core.JdbcAggregateTemplate;
 import org.springframework.data.relational.core.query.Criteria;
 import org.springframework.data.relational.core.query.Query;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Transactional;
 
 /** The persistence adapter of the token aggregate: Spring Data JDBC writes and reads the rows. */
 @Slf4j
@@ -24,12 +32,32 @@ public class TokenStore {
 
     private final JdbcAggregateTemplate aggregates;
 
+    private final AuditLog audit;
+
+    private final TokenProperties properties;
+
     public void insert(TokenEntity token) {
         aggregates.insert(token);
     }
 
     public Optional<TokenEntity> findByHash(String tokenHash) {
         return tokenRows.findByTokenHash(tokenHash);
+    }
+
+    /** Rejects one more token of the owner when the space reached the configured owner limit. */
+    public void requireCapacity(UUID spaceId, TokenOwner owner, Instant now) {
+        int maxPerOwner = properties.maxPerOwner();
+        long active = countActive(spaceId, owner, now);
+        if (active >= maxPerOwner) {
+            log.debug(
+                    "Space {} reached the token limit of {} for subject {} with {} active tokens",
+                    spaceId,
+                    maxPerOwner,
+                    owner.subject(),
+                    active);
+            Map<String, Object> params = Map.of("bound", maxPerOwner);
+            throw new ApiException(TokenError.TOKEN_LIMIT, params);
+        }
     }
 
     public long countActive(UUID spaceId, TokenOwner owner, Instant now) {
@@ -53,16 +81,18 @@ public class TokenStore {
         aggregates.update(new TokenUsage(tokenId, usedAt));
     }
 
-    public void revoke(UUID spaceId, TokenOwner owner, UUID tokenId, Instant now) {
+    public boolean revoke(UUID spaceId, TokenOwner owner, UUID tokenId, Instant now) {
         Optional<TokenEntity> found = tokenRows.findById(tokenId);
         Optional<TokenEntity> revocable = found.filter(token -> token.spaceId().equals(spaceId))
                 .filter(token -> token.ownerIssuer().equals(owner.issuer()))
                 .filter(token -> token.ownerSubject().equals(owner.subject()))
                 .filter(token -> token.revokedAt() == null);
         revocable.ifPresent(token -> revokeNow(token, now));
-        if (revocable.isPresent()) {
-            log.info("Revoked token {} of user {} in space {}", tokenId, owner.subject(), spaceId);
+        if (revocable.isEmpty()) {
+            return false;
         }
+        log.info("Revoked token {} of user {} in space {}", tokenId, owner.subject(), spaceId);
+        return true;
     }
 
     /**
@@ -70,7 +100,8 @@ public class TokenStore {
      * The active rows are read with one query and then updated in place, so a token keeps its id,
      * version and dependent rows; the owner's token limit bounds the number of updates.
      */
-    public void revokeAll(UUID spaceId, String ownerIssuer, String ownerSubject, Instant now) {
+    @Transactional
+    public int revokeAll(UUID spaceId, String ownerIssuer, String ownerSubject, Instant now) {
         Criteria criteria = Criteria.where("spaceId").is(spaceId);
         criteria = criteria.and("ownerIssuer").is(ownerIssuer);
         criteria = criteria.and("ownerSubject").is(ownerSubject);
@@ -80,6 +111,20 @@ public class TokenStore {
             revokeNow(token, now);
         }
         log.info("Revoked {} tokens of user {} in space {}", active.size(), ownerSubject, spaceId);
+        recordRevokedAll(spaceId, ownerIssuer, ownerSubject, active.size());
+        return active.size();
+    }
+
+    private void recordRevokedAll(UUID spaceId, String ownerIssuer, String ownerSubject, int revoked) {
+        if (revoked == 0) {
+            return;
+        }
+        Map<String, Object> details =
+                Map.<String, Object>of("issuer", ownerIssuer, "subject", ownerSubject, "revoked", revoked);
+        String objectId = spaceId.toString();
+        AuditActor actor = new AuditActor(null, ActorKind.SYSTEM);
+        AuditChange change = new AuditChange("token.revoke_all", "space_member", objectId, spaceId, actor, details);
+        audit.record(change);
     }
 
     private static Criteria ownerCriteria(UUID spaceId, TokenOwner owner) {

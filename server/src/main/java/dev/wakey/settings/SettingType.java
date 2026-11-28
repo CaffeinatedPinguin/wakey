@@ -1,5 +1,7 @@
 package dev.wakey.settings;
 
+import dev.wakey.web.ApiException;
+
 /** The value shape of a catalog entry; it owns parsing and canonicalisation. */
 public enum SettingType {
     STRING,
@@ -19,7 +21,7 @@ public enum SettingType {
         try {
             return Long.parseLong(value);
         } catch (NumberFormatException exception) {
-            throw SettingErrors.invalidValue(exception);
+            throw ApiException.invalidField(SettingError.INVALID_VALUE, "/value", exception);
         }
     }
 }

@@ -1,5 +1,6 @@
 package dev.wakey.settings;
 
+import dev.wakey.audit.AuditActor;
 import dev.wakey.settings.internal.PlanCatalog;
 import dev.wakey.spaces.SpaceService;
 import dev.wakey.spaces.SpaceView;
@@ -34,17 +35,16 @@ public class PlanAssignment {
         SpaceView view = spaces.view(actor, slug);
         String oldPlan = plans.nameOrDefault(view.planName());
         spaces.assignPlan(actor, slug, planName);
-        String resolvedPlan = plans.requireExisting(planName);
-        if (!oldPlan.equals(resolvedPlan)) {
-            SettingActor settingActor = new SettingActor(actor.subject(), token);
-            PlanChange change = new PlanChange(view.id(), slug, oldPlan, resolvedPlan, settingActor);
-            audit.planChanged(change);
+        plans.plan(planName);
+        if (!oldPlan.equals(planName)) {
+            AuditActor auditActor = AuditActor.of(actor.subject(), token);
+            audit.planChanged(view, oldPlan, planName, auditActor);
             log.info(
                     "Assigned plan {} to space {} (was {}) by {} {}",
-                    resolvedPlan,
+                    planName,
                     slug,
                     oldPlan,
-                    token ? "token" : "user",
+                    auditActor.kind(),
                     actor.subject());
         }
     }

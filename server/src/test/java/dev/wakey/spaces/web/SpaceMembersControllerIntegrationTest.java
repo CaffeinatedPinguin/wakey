@@ -8,12 +8,22 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 
+import dev.wakey.audit.ActorKind;
+import dev.wakey.audit.AuditActor;
+import dev.wakey.audit.AuditLog;
+import dev.wakey.audit.AuditPage;
+import dev.wakey.audit.AuditRecord;
 import dev.wakey.spaces.SpaceError;
 import dev.wakey.spaces.SpaceMember;
 import dev.wakey.spaces.SpaceMembers;
 import dev.wakey.spaces.SpaceRole;
 import dev.wakey.spaces.SpaceService;
 import dev.wakey.testsupport.SecurityIntegrationTest;
+import dev.wakey.tokens.ApiTokens;
+import dev.wakey.tokens.CreatedToken;
+import dev.wakey.tokens.TokenOptions;
+import dev.wakey.tokens.TokenOwner;
+import dev.wakey.tokens.TokenScope;
 import dev.wakey.web.CommonError;
 import dev.wakey.web.CurrentUser;
 import java.time.Instant;
@@ -24,6 +34,7 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
@@ -258,6 +269,74 @@ class SpaceMembersControllerIntegrationTest extends SecurityIntegrationTest {
     }
 
     @Test
+    void aMemberChangeWithATokenIsAuditedAsATokenAction() throws Exception {
+        // given
+        String subject = uniqueSubject("member-token-audit");
+        String slug = uniqueSlug("member-token-audit");
+        String added = uniqueSubject("token-added-member");
+        seedSpace(slug);
+        addMemberToSpace(slug, subject, SpaceRole.EDITOR);
+        CreatedToken token = bean(ApiTokens.class)
+                .create(new TokenOwner(ISSUER, subject), slug, "audit", new TokenOptions(TokenScope.WRITE, null));
+
+        // when
+        MockHttpServletRequestBuilder request = post(SPACES_PATH + "/" + slug + "/members")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(memberBody(added, SpaceRole.VIEWER))
+                .header(HttpHeaders.AUTHORIZATION, "Bearer " + token.secret());
+        MvcResult result = mockMvc().perform(request).andReturn();
+        UUID spaceId = bean(SpaceService.class).view(fixtureAdmin(), slug).id();
+        List<AuditRecord> history =
+                bean(AuditLog.class).history(spaceId, "space_member", spaceId.toString(), new AuditPage(null, 20));
+
+        // then
+        assertThat(statusOf(result)).isEqualTo(201);
+        AuditRecord event = history.stream()
+                .filter(record -> record.action().equals("space_member.add"))
+                .filter(record -> record.details().contains(added))
+                .findFirst()
+                .orElseThrow();
+        AuditActor actor = event.actor();
+        assertThat(actor.kind()).isEqualTo(ActorKind.TOKEN);
+        assertThat(actor.subject()).isEqualTo(subject);
+    }
+
+    @Test
+    void aMemberRemovalWithATokenIsAuditedAsATokenAction() throws Exception {
+        // given
+        String subject = uniqueSubject("member-token-remove");
+        String slug = uniqueSlug("member-token-remove");
+        String removed = uniqueSubject("token-removed-member");
+        seedSpace(slug);
+        addMemberToSpace(slug, subject, SpaceRole.EDITOR);
+        addMemberToSpace(slug, removed, SpaceRole.VIEWER);
+        CreatedToken token = bean(ApiTokens.class)
+                .create(new TokenOwner(ISSUER, subject), slug, "audit", new TokenOptions(TokenScope.WRITE, null));
+
+        // when
+        MockHttpServletRequestBuilder request = delete(SPACES_PATH + "/" + slug + "/members")
+                .param("issuer", ISSUER)
+                .param("subject", removed)
+                .header(HttpHeaders.AUTHORIZATION, "Bearer " + token.secret());
+        MvcResult result = mockMvc().perform(request).andReturn();
+        SpaceService spaces = bean(SpaceService.class);
+        UUID spaceId = spaces.view(fixtureAdmin(), slug).id();
+        List<AuditRecord> history =
+                bean(AuditLog.class).history(spaceId, "space_member", spaceId.toString(), new AuditPage(null, 20));
+
+        // then
+        assertThat(statusOf(result)).isEqualTo(204);
+        AuditRecord event = history.stream()
+                .filter(record -> record.action().equals("space_member.remove"))
+                .filter(record -> record.details().contains(removed))
+                .findFirst()
+                .orElseThrow();
+        AuditActor actor = event.actor();
+        assertThat(actor.kind()).isEqualTo(ActorKind.TOKEN);
+        assertThat(actor.subject()).isEqualTo(subject);
+    }
+
+    @Test
     void aCallerWhoCannotManageTheSpaceCannotChangeMembers() throws Exception {
         // given
         String slug = uniqueSlug("no-manage");
@@ -356,7 +435,7 @@ class SpaceMembersControllerIntegrationTest extends SecurityIntegrationTest {
 
     private void addMemberToSpace(String slug, String issuer, String subject, SpaceRole role) {
         SpaceMembers members = bean(SpaceMembers.class);
-        members.addMember(fixtureAdmin(), slug, new SpaceMember(issuer, subject, role));
+        members.addMember(fixtureAdmin(), slug, new SpaceMember(issuer, subject, role), false);
     }
 
     private Session createSession(String subject) {

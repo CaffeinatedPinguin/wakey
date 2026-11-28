@@ -1,8 +1,6 @@
 package dev.wakey.settings;
 
 import dev.wakey.web.ApiException;
-import dev.wakey.web.ApiFieldError;
-import dev.wakey.web.CommonError;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -29,8 +27,7 @@ public final class SettingCatalog {
     public SettingDefinition require(String key) {
         SettingDefinition definition = definitionsByKey.get(key);
         if (definition == null) {
-            ApiFieldError problem = new ApiFieldError("/key", SettingError.INVALID_KEY.getCode(), Map.of());
-            throw new ApiException(CommonError.VALIDATION_FAILED, List.of(problem));
+            throw ApiException.invalidField(SettingError.INVALID_KEY, "/key");
         }
         return definition;
     }

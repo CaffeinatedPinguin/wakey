@@ -1,15 +1,22 @@
 import { SegmentedControl } from '@mantine/core'
 import type { ReactElement } from 'react'
 import { useTranslation } from 'react-i18next'
+import { commonResources } from '../../shared/i18n/resources'
 
-const languages = [
-  { value: 'pl', label: 'PL' },
-  { value: 'en', label: 'EN' },
-]
+// The interface languages are the keys of the translation resources, so a
+// language added there reaches the switcher without a second list to edit.
+const uiLanguages = Object.keys(commonResources).map((code) => ({
+  value: code,
+  label: code.toUpperCase(),
+}))
+
+const defaultLanguage = 'pl'
 
 export function LanguageSwitch(): ReactElement {
   const { t, i18n } = useTranslation()
-  const value = i18n.language.toLowerCase().startsWith('en') ? 'en' : 'pl'
+  const value =
+    uiLanguages.find((language) => i18n.language.toLowerCase().startsWith(language.value))?.value ??
+    defaultLanguage
 
   return (
     <SegmentedControl
@@ -18,7 +25,7 @@ export function LanguageSwitch(): ReactElement {
       onChange={(next) => {
         void i18n.changeLanguage(next)
       }}
-      data={languages}
+      data={uiLanguages}
       aria-label={t('common.language')}
     />
   )

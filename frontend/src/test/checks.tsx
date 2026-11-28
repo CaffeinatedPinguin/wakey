@@ -8,7 +8,7 @@ import type {
 } from '../features/checks/list/ChecksListView'
 import { FacetKey } from '../features/checks/list/types'
 import type { CheckRowData, FilterFacet, ListFilters } from '../features/checks/list/types'
-import { CheckState, CheckType } from '../shared/api/generated/enums'
+import { CheckState } from '../shared/api/generated/enums'
 import { renderWithProviders } from './providers'
 
 export const testRows: CheckRowData[] = [
@@ -42,10 +42,6 @@ export const testFacets: FilterFacet[] = [
       { value: CheckState.DOWN, label: 'Nie działa', count: 7 },
       { value: CheckState.UP, label: 'Działa', count: 219 },
     ],
-  },
-  {
-    key: FacetKey.TYPE,
-    options: [{ value: CheckType.HTTP, label: 'HTTP', count: 180 }],
   },
 ]
 

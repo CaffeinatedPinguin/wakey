@@ -2,17 +2,14 @@ package dev.wakey.checks;
 
 import dev.wakey.checks.internal.CheckResultStore;
 import dev.wakey.web.ApiException;
-import dev.wakey.web.ApiFieldError;
-import dev.wakey.web.CommonError;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 /** The append-only results of checks. */
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class CheckResults {
@@ -27,20 +24,9 @@ public class CheckResults {
     @Transactional
     public void record(UUID checkId, CheckResult result) {
         if (result.state() == CheckState.DOWN && result.errorCategory() == ErrorCategory.LOCATION_NETWORK) {
-            ApiFieldError problem =
-                    new ApiFieldError("/state", CheckError.LOCATION_ERROR_CANNOT_BE_DOWN.getCode(), Map.of());
-            throw new ApiException(CommonError.VALIDATION_FAILED, List.of(problem));
+            throw ApiException.invalidField(CheckError.LOCATION_ERROR_CANNOT_BE_DOWN, "/state");
         }
         store.record(checkId, result);
-    }
-
-    /** The newest result of the check, if any. */
-    public Optional<CheckResult> latest(UUID checkId) {
-        return store.latest(checkId);
-    }
-
-    /** The newest results of the check, newest first. */
-    public List<CheckResult> recent(UUID checkId, int limit) {
-        return store.recent(checkId, limit);
+        log.debug("Recorded {} result for check {}", result.state(), checkId);
     }
 }

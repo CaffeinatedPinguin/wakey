@@ -72,10 +72,6 @@ final class ApiFieldErrors {
         return filled;
     }
 
-    private static String pointerOf(FieldError error) {
-        return pointerOf(error.getField());
-    }
-
     private static String pointerOf(String field) {
         if (field.isEmpty()) {
             return "";

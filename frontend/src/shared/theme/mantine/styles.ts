@@ -33,6 +33,20 @@ export const overlayTransition = {
   timingFunction: 'ease-out',
 }
 
+export const touchStyle = { minHeight: 'var(--app-size-control-touch)' } as const
+
+// A bottom sheet sized by its content, capped at 80% of the dynamic viewport.
+// The override is needed because Mantine stretches a bottom drawer with flex-basis 100%.
+export const sheetStyles = {
+  content: {
+    flex: '0 0 auto',
+    width: '100%',
+    height: 'auto',
+    maxHeight: '80dvh',
+    borderRadius: 'var(--app-radius-overlay) var(--app-radius-overlay) 0 0',
+  },
+} as const
+
 export const overlayStyles = {
   content: { background: 'var(--app-color-surface-raised)' },
   header: {

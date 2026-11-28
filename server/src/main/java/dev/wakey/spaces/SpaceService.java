@@ -1,17 +1,23 @@
 package dev.wakey.spaces;
 
+import dev.wakey.audit.AuditActor;
+import dev.wakey.audit.AuditChange;
+import dev.wakey.audit.AuditLog;
 import dev.wakey.spaces.internal.SpaceEntity;
-import dev.wakey.spaces.internal.SpaceMemberEntity;
 import dev.wakey.spaces.internal.SpaceStore;
 import dev.wakey.web.ApiException;
 import dev.wakey.web.CommonError;
 import dev.wakey.web.CurrentUser;
+import dev.wakey.web.DisplayText;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
+import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
@@ -29,51 +35,62 @@ public class SpaceService {
 
     private final SpaceStore store;
 
+    private final AuditLog audit;
+
     /**
      * Creates a space or renames it by slug. A repeat with the same name and the current version (or
      * no version) changes nothing while every other write bumps the version; a stale {@code
      * expectedVersion} is a conflict.
      */
+    @Transactional
     public PutResult put(
             CurrentUser actor, @InvalidSlug String slug, @InvalidName String name, @Nullable Long expectedVersion) {
         actor.requireAdmin();
-        String checkedName = SpaceName.normalize(name);
+        String checkedName = DisplayText.normalize(name);
         Optional<SpaceEntity> found = store.findBySlug(slug);
         if (found.isEmpty()) {
-            Optional<SpaceEntity> inserted = store.insert(slug, checkedName);
+            Optional<SpaceEntity> inserted = insert(slug, checkedName);
             if (inserted.isPresent()) {
                 SpaceEntity created = inserted.get();
+                recordCreated(actor, created, checkedName);
                 return new PutResult(store.toSpace(created), true);
             }
             found = store.findBySlug(slug);
         }
         SpaceEntity existing = found.orElseThrow(() -> new ApiException(CommonError.NOT_FOUND));
-        return keepOrRename(existing, checkedName, expectedVersion);
+        return keepOrRename(actor, existing, checkedName, expectedVersion);
     }
 
-    /** Creates a space only when its slug is still free; an existing name is never changed. */
+    /** Creates a space only while its slug is free; an existing name is never changed. */
+    @Transactional
     public PutResult create(CurrentUser actor, @InvalidSlug String slug, @InvalidName String name) {
         actor.requireAdmin();
-        String checkedName = SpaceName.normalize(name);
-        Optional<SpaceEntity> inserted = store.insert(slug, checkedName);
+        String checkedName = DisplayText.normalize(name);
+        Optional<SpaceEntity> inserted = insert(slug, checkedName);
         if (inserted.isEmpty()) {
             throw slugTaken();
         }
         SpaceEntity created = inserted.get();
+        recordCreated(actor, created, checkedName);
         return new PutResult(store.toSpace(created), true);
+    }
+
+    /** Applies the one name rule and returns the normalized value; the tokens module shares it. */
+    public String normalizeName(@InvalidName String name) {
+        return DisplayText.normalize(name);
     }
 
     /** Reads one space together with the caller's role; a non-member non-admin gets 404. */
     public SpaceView view(CurrentUser actor, @InvalidSlug String slug) {
         SpaceEntity space = requireSpace(slug);
         SpaceMemberId caller = memberIdOf(actor);
-        Optional<SpaceMemberEntity> membership = store.findMember(space.id(), caller);
+        var membership = store.findMember(space.id(), caller);
         if (!actor.admin() && membership.isEmpty()) {
             log.debug("Space {} not visible to subject {}: not a member and not an admin", slug, actor.subject());
             throw new ApiException(CommonError.NOT_FOUND);
         }
-        @Nullable SpaceMemberEntity member = membership.orElse(null);
-        SpaceView view = store.toView(space, actor.admin(), member);
+        var member = membership.orElse(null);
+        SpaceView view = SpaceStore.toView(space, actor.admin(), member);
         log.debug(
                 "Resolved space {} for subject {}: admin {}, role {}",
                 slug,
@@ -96,7 +113,7 @@ public class SpaceService {
         }
         SpaceEntity space = found.get();
         SpaceMemberId caller = new SpaceMemberId(issuer, subject);
-        return store.findMember(space.id(), caller).map(member -> store.toView(space, false, member));
+        return store.findMember(space.id(), caller).map(member -> SpaceStore.toView(space, false, member));
     }
 
     /** Reads one space for a write: a stranger gets 404 and a viewer gets 403. */
@@ -148,16 +165,60 @@ public class SpaceService {
         SpaceEntity space = requireSpace(slug);
         if (!planName.equals(space.planName())) {
             store.updatePlan(space, planName);
+            log.info("Assigned plan {} to space {} by {} (admin: {})", planName, slug, actor.subject(), actor.admin());
+        } else {
+            log.debug("Space {} already uses plan {}; nothing to change", slug, planName);
         }
     }
 
-    private PutResult keepOrRename(SpaceEntity existing, String name, @Nullable Long expectedVersion) {
+    private Optional<SpaceEntity> insert(String slug, String name) {
+        try {
+            return Optional.of(store.insert(slug, name));
+        } catch (DuplicateKeyException exception) {
+            log.debug("A space with slug {} already exists", slug, exception);
+            return Optional.empty();
+        }
+    }
+
+    private PutResult keepOrRename(
+            CurrentUser actor, SpaceEntity existing, String name, @Nullable Long expectedVersion) {
         if (nothingChanges(existing, name, expectedVersion)) {
+            log.debug("Space {} already has name {}; nothing to change", existing.slug(), name);
             return new PutResult(store.toSpace(existing), false);
         }
         long version = expectedVersion == null ? existing.version() : expectedVersion;
         SpaceEntity renamed = store.rename(existing, name, version);
+        recordRenamed(actor, existing, renamed);
         return new PutResult(store.toSpace(renamed), false);
+    }
+
+    private void recordCreated(CurrentUser actor, SpaceEntity created, String name) {
+        Map<String, Object> details = Map.<String, Object>of("name", name);
+        AuditActor auditActor = AuditActor.of(actor.subject(), false);
+        AuditChange change = new AuditChange("space.put", "space", created.slug(), created.id(), auditActor, details);
+        audit.record(change);
+        log.info(
+                "Created space {} with name {} by {} (admin: {})",
+                created.slug(),
+                name,
+                actor.subject(),
+                actor.admin());
+    }
+
+    private void recordRenamed(CurrentUser actor, SpaceEntity before, SpaceEntity after) {
+        Map<String, Object> details = new LinkedHashMap<>();
+        details.put("oldName", before.name());
+        details.put("newName", after.name());
+        AuditActor auditActor = AuditActor.of(actor.subject(), false);
+        AuditChange change = new AuditChange("space.put", "space", after.slug(), after.id(), auditActor, details);
+        audit.record(change);
+        log.info(
+                "Renamed space {} from {} to {} by {} (admin: {})",
+                after.slug(),
+                before.name(),
+                after.name(),
+                actor.subject(),
+                actor.admin());
     }
 
     private static boolean nothingChanges(SpaceEntity existing, String name, @Nullable Long expectedVersion) {

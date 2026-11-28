@@ -4,6 +4,7 @@ import { Link } from '@tanstack/react-router'
 import type { CSSProperties, ReactElement } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useLogout } from '../../features/auth'
+import { sheetStyles } from '../../shared/theme/mantine/styles'
 import { ColorSchemeToggle } from '../../shared/ui/ColorSchemeToggle'
 import { LanguageSwitch } from '../../shared/ui/LanguageSwitch'
 import { moreNavigation, navigationActiveOptions, navigationActiveStyle } from './panelNavigation'
@@ -20,18 +21,6 @@ interface PanelMoreDrawerProps {
 
 interface MoreSheetLinksProps {
   onClose: () => void
-}
-
-// Bottom sheet sized by its content, capped at 80% of the dynamic viewport.
-// The override is needed because Mantine stretches a bottom drawer with flex-basis 100%.
-const sheetStyles = {
-  content: {
-    flex: '0 0 auto',
-    width: '100%',
-    height: 'auto',
-    maxHeight: '80dvh',
-    borderRadius: 'var(--app-radius-overlay) var(--app-radius-overlay) 0 0',
-  },
 }
 
 const sheetLinkStyle: CSSProperties = {

@@ -1,17 +1,15 @@
 package dev.wakey.settings;
 
 import com.fasterxml.jackson.annotation.JsonValue;
+import lombok.RequiredArgsConstructor;
 
 /** The supported languages; the code is the stored and reported setting value. */
+@RequiredArgsConstructor
 public enum Language {
     PL("pl"),
     EN("en");
 
     private final String code;
-
-    Language(String code) {
-        this.code = code;
-    }
 
     /** The stored code; it is also the JSON form of the enum, so the contract lists {@code pl}/{@code en}. */
     @JsonValue

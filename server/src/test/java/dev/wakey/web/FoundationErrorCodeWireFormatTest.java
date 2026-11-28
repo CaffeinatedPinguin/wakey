@@ -34,7 +34,7 @@ class FoundationErrorCodeWireFormatTest {
         assertCode(CheckSettingError.TIMEOUT_EXCEEDS_INTERVAL, "timeout_exceeds_interval", HttpStatus.BAD_REQUEST);
         assertCode(TokenError.TOKEN_LIMIT, "token_limit", HttpStatus.BAD_REQUEST);
         assertCode(TokenError.INVALID_TOKEN, "invalid_token", HttpStatus.UNAUTHORIZED);
-        assertCode(TokenError.INSUFFICIENT_SCOPE, "insufficient_scope", HttpStatus.FORBIDDEN);
+        assertCode(CommonError.INSUFFICIENT_SCOPE, "insufficient_scope", HttpStatus.FORBIDDEN);
         assertCode(SpaceError.INVALID_NAME, "invalid_name", HttpStatus.BAD_REQUEST);
         assertCode(TokenError.INVALID_EXPIRY, "invalid_expiry", HttpStatus.BAD_REQUEST);
     }

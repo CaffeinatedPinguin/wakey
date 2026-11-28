@@ -1,12 +1,11 @@
 package dev.wakey.settings;
 
-import dev.wakey.audit.ActorKind;
 import dev.wakey.audit.AuditActor;
-import dev.wakey.audit.AuditEntry;
+import dev.wakey.audit.AuditChange;
 import dev.wakey.audit.AuditLog;
-import dev.wakey.audit.AuditOutcome;
-import dev.wakey.audit.AuditSource;
-import java.util.UUID;
+import dev.wakey.spaces.SpaceView;
+import java.util.LinkedHashMap;
+import java.util.Map;
 import lombok.RequiredArgsConstructor;
 import org.jspecify.annotations.Nullable;
 import org.springframework.stereotype.Component;
@@ -25,43 +24,23 @@ public class SettingAudit {
     private final AuditLog auditLog;
 
     void settingChanged(SettingChange change) {
-        String details = changeDetails(change.oldValue(), change.newValue());
-        Subject subject = new Subject(SETTING_OBJECT_TYPE, change.key(), change.spaceId());
-        append(change.action(), subject, change.actor(), details);
-    }
-
-    void planChanged(PlanChange change) {
-        String details = changeDetails(change.oldPlan(), change.newPlan());
-        Subject subject = new Subject(SPACE_OBJECT_TYPE, change.slug(), change.spaceId());
-        append(PLAN_ACTION, subject, change.actor(), details);
-    }
-
-    private void append(String action, Subject subject, SettingActor actor, String details) {
-        ActorKind kind = actor.token() ? ActorKind.TOKEN : ActorKind.USER;
-        AuditActor auditActor = new AuditActor(actor.subject(), kind);
-        AuditEntry entry = new AuditEntry(
-                action,
-                subject.objectType(),
-                subject.objectId(),
-                AuditOutcome.SUCCESS,
-                AuditSource.API,
-                auditActor,
-                subject.spaceId(),
-                details);
+        Map<String, Object> details = changeDetails(change.oldValue(), change.newValue());
+        AuditActor actor = change.actor();
+        AuditChange entry =
+                new AuditChange(change.action(), SETTING_OBJECT_TYPE, change.key(), change.spaceId(), actor, details);
         auditLog.record(entry);
     }
 
-    private record Subject(String objectType, String objectId, UUID spaceId) {}
-
-    private static String changeDetails(@Nullable String oldValue, @Nullable String newValue) {
-        return "{\"old\":" + jsonValue(oldValue) + ",\"new\":" + jsonValue(newValue) + "}";
+    void planChanged(SpaceView space, String oldPlan, String newPlan, AuditActor actor) {
+        Map<String, Object> details = changeDetails(oldPlan, newPlan);
+        AuditChange entry = new AuditChange(PLAN_ACTION, SPACE_OBJECT_TYPE, space.slug(), space.id(), actor, details);
+        auditLog.record(entry);
     }
 
-    private static String jsonValue(@Nullable String value) {
-        return value == null ? "null" : "\"" + escape(value) + "\"";
-    }
-
-    private static String escape(String value) {
-        return value.replace("\\", "\\\\").replace("\"", "\\\"");
+    private static Map<String, Object> changeDetails(@Nullable String oldValue, @Nullable String newValue) {
+        Map<String, Object> details = new LinkedHashMap<>();
+        details.put("old", oldValue);
+        details.put("new", newValue);
+        return details;
     }
 }

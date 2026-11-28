@@ -9,6 +9,7 @@ import { toCheckDetails } from './api/checks.adapters'
 import { useCheck } from './api/checks.queries'
 import { CheckDetailsView } from './details/CheckDetailsView'
 import { CheckDetailsMissingSpace } from './details/CheckDetailsStates'
+import { applyRow } from './rowActions'
 import { showActionError, useCheckActions } from './useCheckActions'
 import type { CheckActions } from './useCheckActions'
 
@@ -24,25 +25,12 @@ interface DetailActionContext {
   t: TFunction
 }
 
-async function performAction(action: BulkCheckAction, context: DetailActionContext): Promise<void> {
-  switch (action) {
-    case BulkCheckAction.PAUSE:
-      await context.actions.pause(context.checkId)
-      return
-    case BulkCheckAction.RESUME:
-      await context.actions.resume(context.checkId)
-      return
-    case BulkCheckAction.DELETE:
-      await context.actions.remove(context.checkId)
-  }
-}
-
 async function runDetailAction(
   action: BulkCheckAction,
   context: DetailActionContext,
 ): Promise<void> {
   try {
-    await performAction(action, context)
+    await applyRow(action, context.checkId, context.actions)
     context.actions.refresh()
     if (action === BulkCheckAction.DELETE) {
       context.goToList()

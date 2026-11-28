@@ -15,6 +15,7 @@ public enum CommonError implements ErrorCode {
     INVALID_CURSOR(HttpStatus.BAD_REQUEST, "The cursor is invalid."),
     UNAUTHENTICATED(HttpStatus.UNAUTHORIZED, "Authentication is required."),
     FORBIDDEN(HttpStatus.FORBIDDEN, "Access is denied."),
+    INSUFFICIENT_SCOPE(HttpStatus.FORBIDDEN, "The API token does not allow this request."),
     NOT_FOUND(HttpStatus.NOT_FOUND, "The requested resource was not found."),
     METHOD_NOT_ALLOWED(HttpStatus.METHOD_NOT_ALLOWED, "The HTTP method is not allowed for this resource."),
     NOT_ACCEPTABLE(HttpStatus.NOT_ACCEPTABLE, "The requested media type cannot be produced."),

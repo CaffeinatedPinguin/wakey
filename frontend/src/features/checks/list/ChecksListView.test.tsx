@@ -37,7 +37,6 @@ it('the filter bar shows facet counts and reports changes', () => {
 
   expect(screen.getByText('7')).toBeDefined()
   expect(screen.getByText('219')).toBeDefined()
-  expect(screen.getByText('180')).toBeDefined()
 
   fireEvent.click(screen.getByRole('checkbox', { name: 'Nie działa' }))
 

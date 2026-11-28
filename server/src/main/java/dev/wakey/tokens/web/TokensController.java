@@ -2,8 +2,8 @@ package dev.wakey.tokens.web;
 
 import dev.wakey.spaces.web.SessionUser;
 import dev.wakey.spaces.web.SpaceReader;
-import dev.wakey.tokens.TokenSummary;
 import dev.wakey.web.CursorPage;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
@@ -18,6 +18,7 @@ import org.springframework.web.bind.annotation.RestController;
  * These endpoints accept a session only, so a token cannot mint or revoke tokens.
  */
 @RestController
+@Tag(name = "tokens")
 @RequiredArgsConstructor
 final class TokensController {
 

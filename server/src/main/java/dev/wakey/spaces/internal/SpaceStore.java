@@ -15,18 +15,17 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
-import org.springframework.dao.DuplicateKeyException;
 import org.springframework.data.domain.Limit;
 import org.springframework.data.jdbc.core.JdbcAggregateTemplate;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Propagation;
+import org.springframework.transaction.annotation.Transactional;
 
 /**
  * The persistence adapter of the spaces aggregate: Spring Data JDBC repositories plus the aggregate
  * template. It returns domain records so the service keeps only the access rules.
  */
-@Slf4j
 @Component
 @RequiredArgsConstructor
 public class SpaceStore {
@@ -56,15 +55,12 @@ public class SpaceStore {
         return spaces.findForUpdateById(spaceId);
     }
 
-    public Optional<SpaceEntity> insert(String slug, String name) {
+    /** Inserts a space in its own savepoint so a duplicate slug leaves the caller's transaction usable. */
+    @Transactional(propagation = Propagation.NESTED)
+    public SpaceEntity insert(String slug, String name) {
         Instant now = clock.instant();
         SpaceEntity entity = new SpaceEntity(UUID.randomUUID(), slug, name, null, 0L, now, now);
-        try {
-            return Optional.of(spaces.save(entity));
-        } catch (DuplicateKeyException exception) {
-            log.debug("A space with slug {} already exists", slug, exception);
-            return Optional.empty();
-        }
+        return spaces.save(entity);
     }
 
     public SpaceEntity rename(SpaceEntity existing, String name, long version) {
@@ -135,6 +131,8 @@ public class SpaceStore {
         return viewsOf(page, bySpace, false);
     }
 
+    /** Adds a membership in its own savepoint so a concurrent duplicate leaves the caller's transaction usable. */
+    @Transactional(propagation = Propagation.NESTED)
     public AddMemberResult addMember(UUID spaceId, SpaceMember member) {
         SpaceMemberKey key = new SpaceMemberKey(spaceId, member.issuer(), member.subject());
         Optional<SpaceMemberEntity> existing = members.findById(key);
@@ -142,13 +140,8 @@ public class SpaceStore {
             SpaceMember stored = toMember(existing.get());
             return new AddMemberResult(stored, false);
         }
-        boolean created = insertMember(key, member.role());
-        SpaceMember stored = created ? member : memberFromRepository(key, member);
-        return new AddMemberResult(stored, created);
-    }
-
-    private SpaceMember memberFromRepository(SpaceMemberKey key, SpaceMember fallback) {
-        return members.findById(key).map(SpaceStore::toMember).orElse(fallback);
+        aggregates.insert(new SpaceMemberEntity(key, member.role()));
+        return new AddMemberResult(member, true);
     }
 
     /** Lists members ordered by issuer and subject, resuming after the given identity. */
@@ -163,16 +156,6 @@ public class SpaceStore {
         addMembers(page, sameIssuer, rowLimit);
         addMembers(page, laterIssuers, rowLimit);
         return page;
-    }
-
-    private boolean insertMember(SpaceMemberKey key, SpaceRole role) {
-        try {
-            aggregates.insert(new SpaceMemberEntity(key, role));
-            return true;
-        } catch (DuplicateKeyException exception) {
-            log.debug("Membership {} already exists", key, exception);
-            return false;
-        }
     }
 
     private static void addMembers(List<SpaceMember> target, List<SpaceMemberEntity> entities, int rowLimit) {
@@ -204,7 +187,7 @@ public class SpaceStore {
         return new Space(entity.id(), entity.slug(), entity.name(), entity.planName(), entity.version());
     }
 
-    public SpaceView toView(SpaceEntity entity, boolean admin, @Nullable SpaceMemberEntity member) {
+    public static SpaceView toView(SpaceEntity entity, boolean admin, @Nullable SpaceMemberEntity member) {
         @Nullable SpaceRole role = member == null ? null : member.role();
         return new SpaceView(
                 entity.id(), entity.slug(), entity.name(), entity.planName(), entity.version(), admin, role);
@@ -232,10 +215,7 @@ public class SpaceStore {
         List<SpaceView> views = new ArrayList<>(page.size());
         for (SpaceEntity space : page) {
             @Nullable SpaceMemberEntity member = memberships.get(space.id());
-            @Nullable SpaceRole role = member == null ? null : member.role();
-            SpaceView view = new SpaceView(
-                    space.id(), space.slug(), space.name(), space.planName(), space.version(), admin, role);
-            views.add(view);
+            views.add(toView(space, admin, member));
         }
         return views;
     }

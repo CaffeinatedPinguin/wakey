@@ -12,15 +12,13 @@ import io.swagger.v3.oas.models.media.Schema;
 import io.swagger.v3.oas.models.parameters.Parameter;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
-import org.jspecify.annotations.Nullable;
+import java.util.Optional;
 import org.springdoc.core.customizers.GlobalOpenApiCustomizer;
 import org.springdoc.core.customizers.GlobalOperationCustomizer;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.web.method.HandlerMethod;
 
-/** Registers the spaces error codes, parameter docs and the domain schema tweaks of the contract. */
+/** Registers the spaces error codes, the shared {@code {slug}} parameter and the domain schema tweaks. */
 @Configuration(proxyBeanMethods = false)
 class SpacesWebConfiguration {
 
@@ -32,14 +30,9 @@ class SpacesWebConfiguration {
 
     private static final String ROLE_PROPERTY = "role";
 
-    private static final String LIMIT_PARAMETER = "limit";
-
     private static final String SLUG_PARAMETER = "slug";
 
     private static final String PATH_LOCATION = "path";
-
-    private static final String LIMIT_DESCRIPTION =
-            "The page size, at least 1; values above the instance maximum are capped.";
 
     @Bean
     ErrorCodeSet spaceErrorCodes() {
@@ -53,96 +46,40 @@ class SpacesWebConfiguration {
     }
 
     @Bean
-    GlobalOperationCustomizer spacesParameterDocumentation() {
+    GlobalOperationCustomizer slugParameterPattern() {
         return (operation, handlerMethod) -> {
-            if (isSpacesController(handlerMethod)) {
-                documentParameters(operation);
-            }
+            documentSlugPattern(operation);
             return operation;
         };
     }
 
-    private static boolean isSpacesController(HandlerMethod handlerMethod) {
-        Class<?> beanType = handlerMethod.getBeanType();
-        return beanType == SpacesController.class || beanType == SpaceMembersController.class;
-    }
-
-    @Bean
-    GlobalOperationCustomizer spacesExceptionResponses() {
-        return new SpacesExceptionResponses();
-    }
-
-    private static void documentParameters(Operation operation) {
+    private static void documentSlugPattern(Operation operation) {
         List<Parameter> parameters = operation.getParameters();
         if (parameters != null) {
             for (Parameter parameter : parameters) {
-                documentParameter(parameter);
+                setSlugPattern(parameter);
             }
         }
     }
 
-    private static void documentParameter(Parameter parameter) {
-        String name = parameter.getName();
-        if (LIMIT_PARAMETER.equals(name)) {
-            documentLimit(parameter);
-        }
-        if (SLUG_PARAMETER.equals(name) && PATH_LOCATION.equals(parameter.getIn())) {
-            documentSlugPattern(parameter);
-        }
-    }
-
-    private static void documentLimit(Parameter parameter) {
-        parameter.setDescription(LIMIT_DESCRIPTION);
+    private static void setSlugPattern(Parameter parameter) {
         Schema<?> schema = parameter.getSchema();
-        if (schema != null) {
-            schema.setFormat(null);
-        }
-    }
-
-    private static void documentSlugPattern(Parameter parameter) {
-        Schema<?> schema = parameter.getSchema();
-        if (schema != null) {
+        if (isSlugPath(parameter) && schema != null) {
             schema.setPattern(SpaceSlug.PATTERN);
         }
     }
 
+    private static boolean isSlugPath(Parameter parameter) {
+        return SLUG_PARAMETER.equals(parameter.getName()) && PATH_LOCATION.equals(parameter.getIn());
+    }
+
     private static void makeSpaceResponseRoleNullable(OpenAPI openApi) {
-        Schema<?> role = spaceResponseRole(openApi);
-        if (role != null) {
-            makeNullable(role);
-        }
-    }
-
-    private static @Nullable Schema<?> spaceResponseRole(OpenAPI openApi) {
-        Components components = openApi.getComponents();
-        if (components == null) {
-            return null;
-        }
-        return spaceResponseRole(components);
-    }
-
-    private static @Nullable Schema<?> spaceResponseRole(Components components) {
-        Map<String, Schema> schemas = components.getSchemas();
-        if (schemas == null) {
-            return null;
-        }
-        return spaceResponseRole(schemas);
-    }
-
-    private static @Nullable Schema<?> spaceResponseRole(Map<String, Schema> schemas) {
-        Schema<?> response = schemas.get(SPACE_RESPONSE_SCHEMA);
-        if (response == null) {
-            return null;
-        }
-        return spaceResponseRole(response);
-    }
-
-    private static @Nullable Schema<?> spaceResponseRole(Schema<?> response) {
-        Map<String, Schema> properties = response.getProperties();
-        if (properties == null) {
-            return null;
-        }
-        return properties.get(ROLE_PROPERTY);
+        Optional.ofNullable(openApi.getComponents())
+                .map(Components::getSchemas)
+                .map(schemas -> (Schema<?>) schemas.get(SPACE_RESPONSE_SCHEMA))
+                .map(Schema::getProperties)
+                .map(properties -> (Schema<?>) properties.get(ROLE_PROPERTY))
+                .ifPresent(SpacesWebConfiguration::makeNullable);
     }
 
     private static void makeNullable(Schema<?> role) {

@@ -3,11 +3,11 @@ package dev.wakey.checks;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.catchThrowable;
 
+import dev.wakey.audit.AuditActor;
 import dev.wakey.audit.AuditLog;
 import dev.wakey.audit.AuditOutcome;
 import dev.wakey.audit.AuditPage;
 import dev.wakey.audit.AuditRecord;
-import dev.wakey.settings.SettingActor;
 import dev.wakey.settings.SettingError;
 import dev.wakey.settings.SettingValue;
 import dev.wakey.settings.SpaceSettings;
@@ -46,7 +46,7 @@ class CheckServiceIntegrationTest extends PostgresIntegrationTest {
 
     private static final CurrentUser ADMIN = new CurrentUser(ISSUER, "checks-admin", true);
 
-    private static final CheckActor ACTOR = new CheckActor("checks-test");
+    private static final AuditActor ACTOR = AuditActor.of("checks-test", false);
 
     private CheckService checks;
 
@@ -179,7 +179,7 @@ class CheckServiceIntegrationTest extends PostgresIntegrationTest {
         SpaceSettings settings = bean(SpaceSettings.class);
         CheckDraft draft = new CheckDraft(
                 "one rule", CheckType.HTTP, "https://one-rule.test", 10, 5, 1, null, null, null, List.of());
-        SettingActor actor = new SettingActor("one-rule-test", false);
+        AuditActor actor = AuditActor.of("one-rule-test", false);
         SettingValue value = new SettingValue("check.interval", "10");
 
         // when
@@ -469,7 +469,7 @@ class CheckServiceIntegrationTest extends PostgresIntegrationTest {
         Check upToDate = checks.get(spaceA, id);
         results.record(id, third);
         Check afterNewest = checks.get(spaceA, id);
-        Optional<CheckResult> latest = results.latest(id);
+        Optional<CheckResult> latest = checks.latest(id);
 
         // then
         assertThat(upToDate.state()).isEqualTo(CheckState.UP);
@@ -493,7 +493,7 @@ class CheckServiceIntegrationTest extends PostgresIntegrationTest {
         // when
         Check listed = checks.list(spaceA, CheckFilter.all(), null, 100).getFirst();
         Check details = checks.get(spaceA, checkId);
-        CheckResult latest = results.latest(checkId).orElseThrow();
+        CheckResult latest = checks.latest(checkId).orElseThrow();
 
         // then
         assertThat(listed.state()).isEqualTo(CheckState.UP);
@@ -607,7 +607,7 @@ class CheckServiceIntegrationTest extends PostgresIntegrationTest {
 
         // when
         Throwable rejected = catchThrowable(() -> results.record(id, rejectedResult));
-        Optional<CheckResult> afterRejection = results.latest(id);
+        Optional<CheckResult> afterRejection = checks.latest(id);
         results.record(id, degradedResult);
         results.record(id, targetDown);
         Check afterTargetDown = checks.get(spaceA, id);
@@ -631,7 +631,7 @@ class CheckServiceIntegrationTest extends PostgresIntegrationTest {
         // when
         checks.delete(spaceA, id, ACTOR);
         Throwable read = catchThrowable(() -> checks.get(spaceA, id));
-        Optional<CheckResult> latest = results.latest(id);
+        Optional<CheckResult> latest = checks.latest(id);
         long tagRows = countTags(id);
         long resultRows = countResults(id);
 

@@ -1,6 +1,5 @@
 package dev.wakey.spaces.web;
 
-import dev.wakey.spaces.SpaceService;
 import dev.wakey.web.CurrentUser;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
@@ -25,11 +24,10 @@ class SpaceActorWebConfiguration implements WebMvcConfigurer {
                         SpaceCaller.class);
     }
 
-    private final SpaceService spaces;
+    private final SpaceActors actors;
 
     @Override
     public void addArgumentResolvers(List<HandlerMethodArgumentResolver> resolvers) {
-        SpaceActors actors = new SpaceActors(spaces);
-        resolvers.add(new SpaceActorArgumentResolver(actors));
+        resolvers.add(actors);
     }
 }

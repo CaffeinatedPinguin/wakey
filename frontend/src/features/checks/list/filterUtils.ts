@@ -1,3 +1,4 @@
+import type { CheckState } from '../../../shared/api/generated/enums'
 import { FacetKey } from './types'
 import type { FacetOption, FilterFacet, ListFilters } from './types'
 
@@ -16,25 +17,21 @@ function pickedValue<Value extends string>(
   return options.find((option) => option.value === value)?.value
 }
 
+// One row per facet: it owns the matching ListFilters field, so adding a facet
+// does not add a branch to the two operations below.
+const FACET_FILTERS = {
+  [FacetKey.STATE]: {
+    values: (filters: ListFilters): readonly CheckState[] => filters.state,
+    choose: (filters: ListFilters, state: CheckState): ListFilters => ({
+      ...filters,
+      state: choose(filters.state, state),
+    }),
+  },
+}
+
 export function isFacetChosen(filters: ListFilters, facet: FilterFacet, value: string): boolean {
-  switch (facet.key) {
-    case FacetKey.STATE: {
-      const state = pickedValue(facet.options, value)
-      return state !== undefined && filters.state.includes(state)
-    }
-    case FacetKey.TYPE: {
-      const type = pickedValue(facet.options, value)
-      return type !== undefined && filters.type.includes(type)
-    }
-    case FacetKey.TAG: {
-      const tag = pickedValue(facet.options, value)
-      return tag !== undefined && filters.tag.includes(tag)
-    }
-    case FacetKey.GROUP: {
-      const group = pickedValue(facet.options, value)
-      return group !== undefined && filters.group.includes(group)
-    }
-  }
+  const picked = pickedValue(facet.options, value)
+  return picked !== undefined && FACET_FILTERS[facet.key].values(filters).includes(picked)
 }
 
 export function withFacetChoice(
@@ -42,22 +39,6 @@ export function withFacetChoice(
   facet: FilterFacet,
   value: string,
 ): ListFilters {
-  switch (facet.key) {
-    case FacetKey.STATE: {
-      const state = pickedValue(facet.options, value)
-      return state === undefined ? filters : { ...filters, state: choose(filters.state, state) }
-    }
-    case FacetKey.TYPE: {
-      const type = pickedValue(facet.options, value)
-      return type === undefined ? filters : { ...filters, type: choose(filters.type, type) }
-    }
-    case FacetKey.TAG: {
-      const tag = pickedValue(facet.options, value)
-      return tag === undefined ? filters : { ...filters, tag: choose(filters.tag, tag) }
-    }
-    case FacetKey.GROUP: {
-      const group = pickedValue(facet.options, value)
-      return group === undefined ? filters : { ...filters, group: choose(filters.group, group) }
-    }
-  }
+  const picked = pickedValue(facet.options, value)
+  return picked === undefined ? filters : FACET_FILTERS[facet.key].choose(filters, picked)
 }

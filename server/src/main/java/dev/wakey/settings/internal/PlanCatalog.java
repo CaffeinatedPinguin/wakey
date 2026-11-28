@@ -46,12 +46,6 @@ public final class PlanCatalog {
         return plan;
     }
 
-    /** Checks that a plan exists and returns its name; an unknown name is a domain error. */
-    public String requireExisting(String planName) {
-        plan(planName);
-        return planName;
-    }
-
     /** The name of the configured default plan; a space without an assigned plan resolves to it. */
     public String defaultPlanName() {
         return plans.entrySet().stream()

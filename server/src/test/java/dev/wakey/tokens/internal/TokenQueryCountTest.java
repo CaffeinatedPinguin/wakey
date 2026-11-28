@@ -41,7 +41,7 @@ class TokenQueryCountTest extends PostgresIntegrationTest {
         String slug = uniqueSlug("space-reads");
         spaces.put(ADMIN, slug, "Space reads", null);
         String subject = uniqueSubject("space-reads-editor");
-        members.addMember(ADMIN, slug, new SpaceMember(ISSUER, subject, SpaceRole.EDITOR));
+        members.addMember(ADMIN, slug, new SpaceMember(ISSUER, subject, SpaceRole.EDITOR), false);
         TokenOwner owner = new TokenOwner(ISSUER, subject);
         CreatedToken created = tokens.create(owner, slug, "reads", new TokenOptions(TokenScope.READ, null));
 
@@ -67,8 +67,8 @@ class TokenQueryCountTest extends PostgresIntegrationTest {
         UUID spaceId = space.id();
         String fewSubject = uniqueSubject("few");
         String manySubject = uniqueSubject("many");
-        members.addMember(ADMIN, slug, new SpaceMember(ISSUER, fewSubject, SpaceRole.EDITOR));
-        members.addMember(ADMIN, slug, new SpaceMember(ISSUER, manySubject, SpaceRole.EDITOR));
+        members.addMember(ADMIN, slug, new SpaceMember(ISSUER, fewSubject, SpaceRole.EDITOR), false);
+        members.addMember(ADMIN, slug, new SpaceMember(ISSUER, manySubject, SpaceRole.EDITOR), false);
         seedTokens(tokens, slug, fewSubject, 2);
         seedTokens(tokens, slug, manySubject, 10);
         Instant now = Instant.now(bean(Clock.class));

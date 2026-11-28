@@ -3,14 +3,13 @@ import type { ReactElement, ReactNode } from 'react'
 
 interface CenteredPageProps {
   children: ReactNode
-  fullScreen?: boolean
 }
 
-export function CenteredPage({ children, fullScreen = false }: CenteredPageProps): ReactElement {
+export function CenteredPage({ children }: CenteredPageProps): ReactElement {
   return (
     <Center
       w="100%"
-      mih={fullScreen ? '100dvh' : '100%'}
+      mih="100%"
       px={{
         base: 'var(--app-layout-gutter-compact)',
         sm: 'var(--app-layout-gutter)',

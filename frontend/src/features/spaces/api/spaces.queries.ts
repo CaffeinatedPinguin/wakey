@@ -7,7 +7,8 @@ import type {
 } from '@tanstack/react-query'
 import type { SpaceDetail, SpaceSummary } from '../spaceTypes'
 import { createSpace, fetchSpace, fetchSpaces } from './spaces.api'
-import type { CreateSpaceInput, SpacesPage } from './spaces.api'
+import type { SpacesPage } from './spaces.api'
+import type { CreateSpaceRequest } from '../../../shared/api/generated/types'
 
 export const spacesQueryKeys = {
   all: ['spaces'] as const,
@@ -37,7 +38,7 @@ export function useSpace(slug: string | undefined): UseQueryResult<SpaceDetail> 
   })
 }
 
-export function useCreateSpace(): UseMutationResult<SpaceSummary, Error, CreateSpaceInput> {
+export function useCreateSpace(): UseMutationResult<SpaceSummary, Error, CreateSpaceRequest> {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: createSpace,

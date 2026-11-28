@@ -1,11 +1,9 @@
 package dev.wakey.checks;
 
-import dev.wakey.audit.ActorKind;
 import dev.wakey.audit.AuditActor;
-import dev.wakey.audit.AuditEntry;
+import dev.wakey.audit.AuditChange;
 import dev.wakey.audit.AuditLog;
-import dev.wakey.audit.AuditOutcome;
-import dev.wakey.audit.AuditSource;
+import java.util.Map;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
@@ -21,56 +19,44 @@ public class CheckAuditLog {
 
     private final AuditLog auditLog;
 
-    void created(CheckActor actor, UUID spaceId, UUID id) {
-        String objectId = id.toString();
-        var details = new CheckChange("check.create", CheckAuditDetails.created());
-        record(actor, spaceId, new CheckTarget(OBJECT_TYPE, objectId), details);
+    void created(AuditActor actor, UUID spaceId, UUID id) {
+        AuditChange change = new AuditChange(
+                "check.create", OBJECT_TYPE, id.toString(), spaceId, actor, CheckAuditDetails.created());
+        auditLog.record(change);
     }
 
-    void updated(CheckActor actor, UUID spaceId, Check existing, CheckDraft changes) {
+    void updated(AuditActor actor, UUID spaceId, Check existing, CheckDraft changes) {
         String objectId = existing.id().toString();
-        String details = CheckAuditDetails.updated(existing, changes);
-        record(actor, spaceId, new CheckTarget(OBJECT_TYPE, objectId), new CheckChange("check.update", details));
+        Map<String, Object> details = CheckAuditDetails.updated(existing, changes);
+        AuditChange change = new AuditChange("check.update", OBJECT_TYPE, objectId, spaceId, actor, details);
+        auditLog.record(change);
     }
 
-    void paused(CheckActor actor, UUID spaceId, UUID id, PausedReason reason) {
+    void paused(AuditActor actor, UUID spaceId, UUID id, PausedReason reason) {
+        Map<String, Object> details = CheckAuditDetails.paused(reason);
         String objectId = id.toString();
-        String details = CheckAuditDetails.paused(reason);
-        record(actor, spaceId, new CheckTarget(OBJECT_TYPE, objectId), new CheckChange("check.pause", details));
+        AuditChange change = new AuditChange("check.pause", OBJECT_TYPE, objectId, spaceId, actor, details);
+        auditLog.record(change);
     }
 
-    void resumed(CheckActor actor, UUID spaceId, UUID id) {
+    void resumed(AuditActor actor, UUID spaceId, UUID id) {
         String objectId = id.toString();
-        var details = new CheckChange("check.resume", CheckAuditDetails.resumed());
-        record(actor, spaceId, new CheckTarget(OBJECT_TYPE, objectId), details);
+        AuditChange change =
+                new AuditChange("check.resume", OBJECT_TYPE, objectId, spaceId, actor, CheckAuditDetails.resumed());
+        auditLog.record(change);
     }
 
-    void deleted(CheckActor actor, UUID spaceId, UUID id) {
+    void deleted(AuditActor actor, UUID spaceId, UUID id) {
         String objectId = id.toString();
-        var details = new CheckChange("check.delete", CheckAuditDetails.deleted());
-        record(actor, spaceId, new CheckTarget(OBJECT_TYPE, objectId), details);
+        AuditChange change =
+                new AuditChange("check.delete", OBJECT_TYPE, objectId, spaceId, actor, CheckAuditDetails.deleted());
+        auditLog.record(change);
     }
 
-    void bulk(CheckActor actor, UUID spaceId, CheckBulkAction action, int affected) {
+    void bulk(AuditActor actor, UUID spaceId, CheckBulkAction action, int affected) {
+        Map<String, Object> details = CheckAuditDetails.bulk(action, affected);
         String objectId = spaceId.toString();
-        String details = CheckAuditDetails.bulk(action, affected);
-        record(actor, spaceId, new CheckTarget(SPACE_OBJECT_TYPE, objectId), new CheckChange("check.bulk", details));
+        AuditChange change = new AuditChange("check.bulk", SPACE_OBJECT_TYPE, objectId, spaceId, actor, details);
+        auditLog.record(change);
     }
-
-    private void record(CheckActor actor, UUID spaceId, CheckTarget target, CheckChange change) {
-        ActorKind kind = actor.token() ? ActorKind.TOKEN : ActorKind.USER;
-        AuditActor auditActor = new AuditActor(actor.subject(), kind);
-        AuditEntry entry = new AuditEntry(
-                change.action(),
-                target.objectType(),
-                target.objectId(),
-                AuditOutcome.SUCCESS,
-                AuditSource.API,
-                auditActor,
-                spaceId,
-                change.details());
-        auditLog.record(entry);
-    }
-
-    private record CheckTarget(String objectType, String objectId) {}
 }

@@ -143,10 +143,33 @@ class SettingsControllerIntegrationTest extends SecurityIntegrationTest {
 
         // then
         assertThat(statusOf(result)).isEqualTo(204);
-        assertThat(history).hasSize(1);
-        AuditRecord change = history.getFirst();
+        AuditRecord change = history.stream()
+                .filter(record -> record.action().equals("space.plan"))
+                .findFirst()
+                .orElseThrow();
         assertThat(change.action()).isEqualTo("space.plan");
         assertThat(change.details()).isEqualTo("{\"old\":\"small\",\"new\":\"large\"}");
+    }
+
+    @Test
+    void assigningTheSamePlanAgainRecordsNoSecondAuditEntry() throws Exception {
+        // given
+        String admin = uniqueSubject("plan-audit-once");
+        String slug = uniqueSlug("plan-audit-once");
+        createSpace(slug);
+        UUID spaceId = bean(SpaceService.class).view(fixtureAdmin(), slug).id();
+        AuditLog auditLog = bean(AuditLog.class);
+
+        // when
+        putPlan(admin, true, slug, "large");
+        putPlan(admin, true, slug, "large");
+        List<AuditRecord> history = auditLog.history(spaceId, "space", slug, new AuditPage(null, 10));
+
+        // then the second, idempotent assignment adds no audit entry
+        long planChanges = history.stream()
+                .filter(record -> record.action().equals("space.plan"))
+                .count();
+        assertThat(planChanges).isEqualTo(1L);
     }
 
     @Test
@@ -591,7 +614,7 @@ class SettingsControllerIntegrationTest extends SecurityIntegrationTest {
     }
 
     private void addMember(String slug, String subject, SpaceRole role) {
-        bean(SpaceMembers.class).addMember(fixtureAdmin(), slug, new SpaceMember(ISSUER, subject, role));
+        bean(SpaceMembers.class).addMember(fixtureAdmin(), slug, new SpaceMember(ISSUER, subject, role), false);
     }
 
     private static RequestPostProcessor login(String subject, boolean admin) {

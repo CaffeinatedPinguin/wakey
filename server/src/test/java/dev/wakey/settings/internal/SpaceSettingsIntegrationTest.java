@@ -7,6 +7,7 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.spy;
 
+import dev.wakey.audit.AuditActor;
 import dev.wakey.audit.AuditLog;
 import dev.wakey.audit.AuditPage;
 import dev.wakey.audit.AuditRecord;
@@ -18,7 +19,6 @@ import dev.wakey.settings.GeneralSettingDefinitions;
 import dev.wakey.settings.InstanceDefaultsProperties;
 import dev.wakey.settings.Language;
 import dev.wakey.settings.PlanProperties;
-import dev.wakey.settings.SettingActor;
 import dev.wakey.settings.SettingAudit;
 import dev.wakey.settings.SettingCatalog;
 import dev.wakey.settings.SettingError;
@@ -29,6 +29,7 @@ import dev.wakey.spaces.SpaceService;
 import dev.wakey.testsupport.PostgresIntegrationTest;
 import dev.wakey.web.ApiException;
 import dev.wakey.web.ApiFieldError;
+import dev.wakey.web.ApiProperties;
 import dev.wakey.web.CommonError;
 import dev.wakey.web.CurrentUser;
 import java.util.ArrayList;
@@ -49,7 +50,7 @@ import org.springframework.transaction.support.TransactionTemplate;
 
 class SpaceSettingsIntegrationTest extends PostgresIntegrationTest {
 
-    private static final SettingActor ACTOR = new SettingActor("settings-test", false);
+    private static final AuditActor ACTOR = AuditActor.of("settings-test", false);
 
     private static final CurrentUser ADMIN = new CurrentUser("https://issuer.example.com", "settings-admin", true);
 
@@ -82,7 +83,7 @@ class SpaceSettingsIntegrationTest extends PostgresIntegrationTest {
     }
 
     @Test
-    void noBuiltInDefaultsLiveInCode() {
+    void aMissingInstanceDefaultStopsTheStartup() {
         // given
         ApplicationContextRunner runner = new ApplicationContextRunner()
                 .withUserConfiguration(PlansConfiguration.class, CheckSettingsConfiguration.class);
@@ -93,15 +94,8 @@ class SpaceSettingsIntegrationTest extends PostgresIntegrationTest {
 
         // when no property is set
         runner.run(context -> {
-            // then every default comes from the @DefaultValue annotations
-            assertThat(context).hasNotFailed();
-            InstanceDefaultsProperties defaults = context.getBean(InstanceDefaultsProperties.class);
-            CheckDefaultsProperties check = context.getBean(CheckDefaultsProperties.class);
-            assertThat(defaults.timezone()).isEqualTo("UTC");
-            assertThat(defaults.language()).isEqualTo(Language.PL);
-            assertThat(check.interval()).isEqualTo(60);
-            assertThat(check.timeout()).isEqualTo(10);
-            assertThat(check.retries()).isEqualTo(1);
+            // then the missing values are rejected instead of starting with null and zero
+            assertThat(context).hasFailed();
         });
 
         // then there is no fourth, built-in source
@@ -357,8 +351,9 @@ class SpaceSettingsIntegrationTest extends PostgresIntegrationTest {
     @Test
     void onlyOneDefaultPlanIsAllowed() {
         // given
-        ApplicationContextRunner runner =
-                new ApplicationContextRunner().withUserConfiguration(PlansConfiguration.class);
+        ApplicationContextRunner runner = new ApplicationContextRunner()
+                .withUserConfiguration(PlansConfiguration.class)
+                .withPropertyValues("wakey.defaults.timezone=UTC", "wakey.defaults.language=pl");
 
         // when
         runner.withPropertyValues("wakey.plans.small.default=true", "wakey.plans.small.min-interval=30")
@@ -495,19 +490,23 @@ class SpaceSettingsIntegrationTest extends PostgresIntegrationTest {
                     assertThat(check.timeout()).isEqualTo(15);
                     assertThat(check.retries()).isEqualTo(2);
                 });
+    }
 
-        // when no property is set
-        runner.run(context -> {
-            // then the annotation defaults apply
-            assertThat(context).hasNotFailed();
-            InstanceDefaultsProperties fallback = context.getBean(InstanceDefaultsProperties.class);
-            CheckDefaultsProperties check = context.getBean(CheckDefaultsProperties.class);
-            assertThat(fallback.timezone()).isEqualTo("UTC");
-            assertThat(fallback.language()).isEqualTo(Language.PL);
-            assertThat(check.interval()).isEqualTo(60);
-            assertThat(check.timeout()).isEqualTo(10);
-            assertThat(check.retries()).isEqualTo(1);
-        });
+    @Test
+    void instanceDefaultsComeFromApplicationYaml() {
+        // when
+        InstanceDefaultsProperties defaults = bean(InstanceDefaultsProperties.class);
+        CheckDefaultsProperties check = bean(CheckDefaultsProperties.class);
+        ApiProperties api = bean(ApiProperties.class);
+
+        // then the values the test profile leaves alone come from application.yml
+        assertThat(defaults.timezone()).isEqualTo("Europe/Warsaw");
+        assertThat(defaults.language()).isEqualTo(Language.PL);
+        assertThat(check.interval()).isEqualTo(60);
+        assertThat(check.timeout()).isEqualTo(10);
+        assertThat(check.retries()).isEqualTo(1);
+        assertThat(api.defaultPageSize()).isEqualTo(20);
+        assertThat(api.maxPageSize()).isEqualTo(100);
     }
 
     @Test

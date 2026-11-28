@@ -3,6 +3,7 @@ package dev.wakey.tokens;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.catchThrowable;
 
+import dev.wakey.audit.AuditLog;
 import dev.wakey.spaces.SpaceMember;
 import dev.wakey.spaces.SpaceMemberId;
 import dev.wakey.spaces.SpaceMembers;
@@ -10,6 +11,7 @@ import dev.wakey.spaces.SpaceRole;
 import dev.wakey.spaces.SpaceService;
 import dev.wakey.spaces.SpaceView;
 import dev.wakey.testsupport.PostgresIntegrationTest;
+import dev.wakey.tokens.internal.TokenProperties;
 import dev.wakey.tokens.internal.TokenRepository;
 import dev.wakey.tokens.internal.TokenStore;
 import dev.wakey.web.CurrentUser;
@@ -37,11 +39,12 @@ class MemberRemovalRollbackIntegrationTest extends PostgresIntegrationTest {
         String slug = uniqueSlug("rollback");
         String subject = uniqueSubject("removed");
         service.put(ADMIN, slug, "Rollback space", null);
-        members.addMember(ADMIN, slug, new SpaceMember(ISSUER, subject, SpaceRole.VIEWER));
+        members.addMember(ADMIN, slug, new SpaceMember(ISSUER, subject, SpaceRole.VIEWER), false);
         CurrentUser member = new CurrentUser(ISSUER, subject, false);
 
         // when
-        Throwable failure = catchThrowable(() -> members.removeMember(ADMIN, slug, new SpaceMemberId(ISSUER, subject)));
+        Throwable failure =
+                catchThrowable(() -> members.removeMember(ADMIN, slug, new SpaceMemberId(ISSUER, subject), false));
         SpaceView view = service.view(member, slug);
 
         // then
@@ -62,19 +65,27 @@ class MemberRemovalRollbackIntegrationTest extends PostgresIntegrationTest {
 
         @Bean
         @Primary
-        TokenStore failingTokenStore(TokenRepository tokenRows, JdbcAggregateTemplate aggregates) {
-            return new FailingTokenStore(tokenRows, aggregates);
+        TokenStore failingTokenStore(
+                TokenRepository tokenRows,
+                JdbcAggregateTemplate aggregates,
+                AuditLog audit,
+                TokenProperties properties) {
+            return new FailingTokenStore(tokenRows, aggregates, audit, properties);
         }
     }
 
-    private static final class FailingTokenStore extends TokenStore {
+    static class FailingTokenStore extends TokenStore {
 
-        private FailingTokenStore(TokenRepository tokenRows, JdbcAggregateTemplate aggregates) {
-            super(tokenRows, aggregates);
+        FailingTokenStore(
+                TokenRepository tokenRows,
+                JdbcAggregateTemplate aggregates,
+                AuditLog audit,
+                TokenProperties properties) {
+            super(tokenRows, aggregates, audit, properties);
         }
 
         @Override
-        public void revokeAll(UUID spaceId, String ownerIssuer, String ownerSubject, Instant now) {
+        public int revokeAll(UUID spaceId, String ownerIssuer, String ownerSubject, Instant now) {
             throw new IllegalStateException("token store unavailable");
         }
     }

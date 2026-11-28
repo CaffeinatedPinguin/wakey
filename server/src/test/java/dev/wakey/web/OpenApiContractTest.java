@@ -250,7 +250,7 @@ class OpenApiContractTest extends SecurityIntegrationTest {
         int maximum = schema.path("maximum").asInt();
 
         // then
-        assertThat(description).isEqualTo("The maximum number of items to return");
+        assertThat(description).isEqualTo("The page size, at least 1; values above the instance maximum are capped");
         assertThat(example).isEqualTo(20);
         assertThat(minimum).isEqualTo(1);
         assertThat(maximum).isEqualTo(maxPageSize);

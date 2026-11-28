@@ -33,7 +33,8 @@ class PlanAssignmentTest extends PostgresIntegrationTest {
         PlanAssignment assignments = bean(PlanAssignment.class);
         String slug = uniqueSlug("plan-once");
         spaces.put(ADMIN, slug, "Plan once", null);
-        bean(SpaceMembers.class).addMember(ADMIN, slug, new SpaceMember(ISSUER, "plan-editor", SpaceRole.EDITOR));
+        bean(SpaceMembers.class)
+                .addMember(ADMIN, slug, new SpaceMember(ISSUER, "plan-editor", SpaceRole.EDITOR), false);
         CurrentUser editor = new CurrentUser(ISSUER, "plan-editor", false);
 
         // when
@@ -53,7 +54,6 @@ class PlanAssignmentTest extends PostgresIntegrationTest {
         SpaceView view = mock(SpaceView.class);
         when(writer.view(editor, "space")).thenReturn(view);
         when(plans.nameOrDefault(null)).thenReturn("small");
-        when(plans.requireExisting("small")).thenReturn("small");
 
         assignments.assign(editor, "space", "small", false);
 
